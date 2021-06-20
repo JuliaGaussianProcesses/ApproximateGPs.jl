@@ -4,7 +4,6 @@ using AbstractGPs
 using SparseGPs
 using Distributions
 using LinearAlgebra
-using StatsFuns
 using Optim
 
 using Plots
@@ -25,59 +24,67 @@ y = g.(x) + 0.3 * randn(N)
 scatter(x, y; xlabel="x", ylabel="y", legend=false)
 
 # %%
-M = 30 # number of inducing points
+M = 50 # number of inducing points
 
-function pack_params(θ, m, A)
-    return vcat(θ, m, vec(A))
-end
-
-function unpack_params(params, m; include_z=false)
-    if include_z
-        k = params[1:2]
-        z = params[3:m+2]
-        μ = params[m+3:2m+2]
-        s = params[2m+3:end]
-        Σ = reshape(s, (M, M))
-        return k, z, μ, Σ
-    else
-        k = params[1:2]
-        μ = params[3:m+2]
-        s = params[m+3:end]
-        Σ = reshape(s, (M, M))
-        return k, μ, Σ
-    end
-end
-
-x0 = pack_params(rand(2), zeros(M), vec(Matrix{Float64}(I, M, M)))
+# TODO: incorporate better inducing point selection from
+# https://github.com/JuliaGaussianProcesses/InducingPoints.jl?
 z = x[1:M]
 
 # %%
-function objective_function(x, y)
-    function neg_elbo(params)
-        # k, z, qμ, qΣ_L = split_params(params, M)
-        k, m, A = unpack_params(params, M)
-        kernel =
-            (softplus(k[1])) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
-        f = GP(kernel)
-        fx = f(x, 0.1)
-        q = MvNormal(m, A'A)
-        return -SparseGPs.elbo(fx, y, f(z), q)
-    end
-    return neg_elbo
+# A simple Flux model
+using Flux
+
+struct SVGPModel
+    k
+    m
+    A
+    z
 end
 
-# Currently fails at the cholesky factorisation of cov(f(z))
-opt = optimize(objective_function(x, y), x0, LBFGS())
+function make_kernel(k)
+    return Flux.softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(Flux.softplus(k[2])))
+end
 
-# %%
-opt_k, opt_μ, opt_Σ_L = unpack_params(opt.minimizer, M)
-opt_kernel =
-    softplus(opt_k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(opt_k[2]) + 0.01))
-opt_f = GP(opt_kernel)
-opt_q = MvNormal(opt_μ, opt_Σ_L * opt_Σ_L')
-ap = SparseGPs.approx_posterior(SVGP(), opt_f(z), opt_q)
-logpdf(ap(x), y)
+function (m::SVGPModel)(x, y)
+    kernel = make_kernel(m.k)
+    f = GP(kernel)
+    q = MvNormal(m.m, m.A'm.A + 0.001I)
+    fx = f(x, 0.1)
+    fu = f(m.z, 0.1)
+    return -SparseGPs.elbo(fx, y, fu, q)
+end
 
+function posterior(m::SVGPModel)
+    kernel = make_kernel(m.k)
+    f = GP(kernel)
+    fu = f(m.z, 0.1)
+    q = MvNormal(m.m, m.A'm.A + 0.0001I)
+    return SparseGPs.approx_posterior(SVGP(), fu, q)
+end
+
+k = [0.3, 10]
+m = zeros(M)
+A = Matrix{Float64}(I, M, M)
+
+model = SVGPModel(k, m, A, z)
+
+function flux_loss(x, y)
+    return model(x, y)
+end
+
+data = [(x, y)]
+opt = ADAM(0.01)
+parameters = Flux.params(k, m, A)
+
+println(flux_loss(x, y))
+
+for epoch in 1:300
+    Flux.train!(flux_loss, parameters, data, opt)
+end
+
+println(flux_loss(x, y))
+
+post = posterior(model)
 # %%
 scatter(
     x,
@@ -88,14 +95,13 @@ scatter(
     title="posterior (VI with sparse grid)",
     label="Train Data",
 )
-# scatter!(x, y; label="Test Data")
-plot!(-1:0.001:1, ap; label=false)
+plot!(-1:0.001:1, post; label="Posterior")
 vline!(z; label="Pseudo-points")
 
 
 # %% Find the exact posterior over u (e.g.
 # https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/ equations
-# (11) & (12)) As a sanity check -- this seems to work.
+# (11) & (12)) As a sanity check.
 
 function exact_q(fu, fx, y)
     σ² = fx.Σy[1]
@@ -107,16 +113,22 @@ function exact_q(fu, fx, y)
     return MvNormal(m, A)
 end
 
-kernel = 0.3 * (SqExponentialKernel() ∘ ScaleTransform(10))
+kernel = make_kernel([0.2, 11])
 f = GP(kernel)
-fx = f(x)
-fu = f(z)
+fx = f(x, 0.1)
+fu = f(z, 0.1)
 q_ex = exact_q(fu, fx, y)
 
 scatter(x, y)
 scatter!(z, q_ex.μ)
 
-ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex)
+# These two should be the same - and they are, the plot below shows almost identical predictions
+ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman 2013 (exact) posterior
+ap_tits = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
+
+# Should these be the same? (they currently aren't)
+SparseGPs.elbo(fx, y, fu, q_ex)
+AbstractGPs.elbo(fx, y, fu)
 
 # %%
 scatter(
@@ -128,5 +140,7 @@ scatter(
     title="posterior (VI with sparse grid)",
     label="Train Data",
 )
-plot!(-1:0.001:1, ap_ex; label=false)
+plot!(-1:0.001:1, ap_ex; label="SVGP posterior")
+plot!(-1:0.001:1, ap_tits; label="Titsias posterior")
 vline!(z; label="Pseudo-points")
+
