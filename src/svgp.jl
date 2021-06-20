@@ -1,7 +1,7 @@
 struct SVGP end # TODO: should probably just be VFE?
 
 function approx_posterior(::SVGP, fu::FiniteGP, q::MvNormal)
-    m, A = q.μ, q.Σ.chol
+    m, A = q.μ, cholesky(q.Σ)
     Kuu = cholesky(Symmetric(cov(fu)))
     B = Kuu.L \ A.L  
     data = (A=A, m=m, Kuu=Kuu, B=B, α=Kuu \ m, u=fu.x)
@@ -22,7 +22,7 @@ function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Kuu = f.data.Kuu
     B = f.data.B
     D = f.data.Kuu.L \ Cux
-    return cov(f.prior, x) - D' * B * B' * D
+    return cov(f.prior, x) - D'D + D' * B * B' * D 
 end
 
 function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
@@ -31,9 +31,8 @@ function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
 end
 
 function kl_divergence(q::MvNormal, p::AbstractMvNormal)
-    (1/2) * (logdet(q.Σ.chol)
-             - logdet(cov(p)) - length(mean(p))
-             + tr(inv(q.Σ.chol) * cov(p)) + Xt_invA_X(q.Σ.chol, (mean(q)-mean(p))))
+    (1/2) .* (logdet(cov(p)) - logdet(cov(q)) - length(mean(p)) + tr(cov(p) \ cov(q)) +
+              AbstractGPs.Xt_invA_X(cholesky(q.Σ), (mean(q) - mean(p))))
 end
 
 function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal)
@@ -45,8 +44,9 @@ function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal
     Σy = diag(fx.Σy)
 
     # TODO: general method for likelihoods - quadrature like GPFlow?
-    variational_exp = -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
-
+    variational_exp = -0.5 * (
+        log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy
+    )
     # TODO: rescale for minibatches
     return sum(variational_exp) - kl_term
 end
