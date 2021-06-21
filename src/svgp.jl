@@ -26,13 +26,22 @@ function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
 end
 
 function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
-    # TODO: implement properly
-    return mean(f, x), cov(f, x)
+    Cux = cov(f.prior, f.data.u, x)
+    Kuu = f.data.Kuu
+    B = f.data.B
+    D = f.data.Kuu.L \ Cux
+    μ = Cux' * f.data.α
+    Σ = cov(f.prior, x) - D'D + D' * B * B' * D 
+    return μ, Σ
 end
 
 function kl_divergence(q::MvNormal, p::AbstractMvNormal)
     (1/2) .* (logdet(cov(p)) - logdet(cov(q)) - length(mean(p)) + tr(cov(p) \ cov(q)) +
               AbstractGPs.Xt_invA_X(cholesky(q.Σ), (mean(q) - mean(p))))
+end
+
+function expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractVector)
+    return -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
 end
 
 function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal)
@@ -43,10 +52,7 @@ function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal
 
     Σy = diag(fx.Σy)
 
-    # TODO: general method for likelihoods - quadrature like GPFlow?
-    variational_exp = -0.5 * (
-        log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy
-    )
+    variational_exp = expected_loglik(y, f_mean, f_var, Σy)
     # TODO: rescale for minibatches
     return sum(variational_exp) - kl_term
 end
