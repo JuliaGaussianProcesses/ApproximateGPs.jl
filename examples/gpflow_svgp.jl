@@ -34,31 +34,31 @@ z = x[1:M]
 # A simple Flux model
 using Flux
 
-struct SVGPModel
-    k
-    m
-    A
-    z
+struct SVGPLayer
+    k # kernel parameters
+    m # variational mean
+    A # variational covariance
+    z # inducing points
 end
 
 function make_kernel(k)
     return Flux.softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(Flux.softplus(k[2])))
 end
 
-function (m::SVGPModel)(x, y)
+function (m::SVGPLayer)(x)
     kernel = make_kernel(m.k)
     f = GP(kernel)
-    q = MvNormal(m.m, m.A'm.A + 0.001I)
+    q = MvNormal(m.m, m.A'm.A)
     fx = f(x, 0.1)
     fu = f(m.z, 0.1)
-    return -SparseGPs.elbo(fx, y, fu, q)
+    return fx, fu, q
 end
 
-function posterior(m::SVGPModel)
+function posterior(m::SVGPLayer)
     kernel = make_kernel(m.k)
     f = GP(kernel)
     fu = f(m.z, 0.1)
-    q = MvNormal(m.m, m.A'm.A + 0.0001I)
+    q = MvNormal(m.m, m.A'm.A)
     return SparseGPs.approx_posterior(SVGP(), fu, q)
 end
 
@@ -66,10 +66,11 @@ k = [0.3, 10]
 m = zeros(M)
 A = Matrix{Float64}(I, M, M)
 
-model = SVGPModel(k, m, A, z)
+model = SVGPLayer(k, m, A, z)
 
 function flux_loss(x, y)
-    return model(x, y)
+    fx, fu, q = model(x)
+    return -SparseGPs.elbo(fx, y, fu, q)
 end
 
 data = [(x, y)]
