@@ -5,6 +5,7 @@ using SparseGPs
 using Distributions
 using LinearAlgebra
 using Optim
+using IterTools
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
@@ -17,7 +18,7 @@ function g(x)
     return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
 end
 
-N = 1000 # Number of training points
+N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
@@ -41,56 +42,68 @@ struct SVGPLayer
     z # inducing points
 end
 
+@Flux.functor SVGPLayer
+
 function make_kernel(k)
-    return Flux.softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(Flux.softplus(k[2])))
+    return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
 end
 
 function (m::SVGPLayer)(x)
     kernel = make_kernel(m.k)
     f = GP(kernel)
     q = MvNormal(m.m, m.A'm.A)
-    fx = f(x, 0.1)
-    fu = f(m.z, 0.1)
+    fx = f(x, 0.3)
+    fu = f(m.z, 0.3)
     return fx, fu, q
 end
 
 function posterior(m::SVGPLayer)
     kernel = make_kernel(m.k)
     f = GP(kernel)
-    fu = f(m.z, 0.1)
+    fu = f(m.z, 0.3)
     q = MvNormal(m.m, m.A'm.A)
     return SparseGPs.approx_posterior(SVGP(), fu, q)
 end
 
+function flux_loss(x, y; n_data=1, n_batch=1)
+    fx, fu, q = model(x)
+    return -SparseGPs.elbo(fx, y, fu, q; n_data, n_batch)
+end
+
+# Initialise the parameters
 k = [0.3, 10]
 m = zeros(M)
 A = Matrix{Float64}(I, M, M)
 
 model = SVGPLayer(k, m, A, z)
 
-function flux_loss(x, y)
-    fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q)
-end
-
-data = [(x, y)]
+b = 100 # minibatch size
 opt = ADAM(0.01)
-parameters = Flux.params(k, m, A)
+# parameters = Flux.params(k, s, m, A)
+parameters = Flux.params(model)
+data_loader = Flux.Data.DataLoader((x, y), batchsize=b)
 
-println(flux_loss(x, y))
-
-for epoch in 1:300
-    Flux.train!(flux_loss, parameters, data, opt)
-end
-
-println(flux_loss(x, y))
-
-post = posterior(model)
 # %%
+println(flux_loss(x, y))
+
+Flux.train!(
+    (x, y) -> flux_loss(x, y; n_data=N, n_batch=b),
+    parameters,
+    ncycle(data_loader, 100), # Train for 100 epochs
+    opt
+)
+
+println(flux_loss(x, y))
+
+# %%
+post = posterior(model)
+
 scatter(
     x,
     y;
-    xlim=(0, 1),
+    markershape=:xcross,
+    markeralpha=0.1,
+    xlim=(-1, 1),
     xlabel="x",
     ylabel="y",
     title="posterior (VI with sparse grid)",

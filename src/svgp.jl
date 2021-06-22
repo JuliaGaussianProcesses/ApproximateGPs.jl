@@ -44,16 +44,15 @@ function expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_va
     return -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
 end
 
-function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal)
+function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal; n_data=1, n_batch=1)
     kl_term = kl_divergence(q, fu)
     post = approx_posterior(SVGP(), fu, q)
     f_mean = mean(post, fx.x)
     f_var = var(post, fx.x)
-
     Σy = diag(fx.Σy)
 
     variational_exp = expected_loglik(y, f_mean, f_var, Σy)
-    # TODO: rescale for minibatches
-    return sum(variational_exp) - kl_term
+    scale = n_data / n_batch
+    return sum(variational_exp) * scale - kl_term
 end
 
