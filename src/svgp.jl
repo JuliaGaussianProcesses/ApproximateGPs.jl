@@ -41,12 +41,35 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
 end
 
 function kl_divergence(q::MvNormal, p::AbstractMvNormal)
-    (1/2) .* (logdet(cov(p)) - logdet(cov(q)) - length(mean(p)) + tr(cov(p) \ cov(q)) +
-              AbstractGPs.Xt_invA_X(cholesky(cov(q)), (mean(q) - mean(p))))
+    p_μ, p_Σ = mean(p), cov(p)
+    (1/2) .* (logdet(p_Σ) - logdet(q.Σ) - length(p_μ) + tr(p_Σ \ q.Σ) +
+              Xt_invA_X(cholesky(q.Σ), (q.μ - p_μ)))
 end
 
-function expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractVector)
+# The closed form expected loglikelihood for a Gaussian likelihood
+function expected_loglik(
+    y::AbstractVector{<:Real},
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    Σy::AbstractVector
+)
     return -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
+end
+
+function expected_loglik(
+    y::AbstractVector{<:Real},
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    lik::BernoulliLikelihood;
+    n_quad_points=20
+)
+    # Compute the expectation via Gauss-Hermite quadrature
+    # using a reparameterisation by change of variable
+    # (see eg. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
+    v, w = gausshermite(n_quad_points)
+    h = √2 * .√f_var' .* v .+ f_mean'
+    lls = loglikelihood.(lik.(h), y')
+    return ((1/√π) * w'lls)'
 end
 
 function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal; n_data=1, n_batch=1)
@@ -56,6 +79,16 @@ function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal
     Σy = diag(fx.Σy)
 
     variational_exp = expected_loglik(y, f_mean, f_var, Σy)
+    scale = n_data / n_batch
+    return sum(variational_exp) * scale - kl_term
+end
+
+function elbo(fx::LatentFiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal; n_data=1, n_batch=1)
+    kl_term = kl_divergence(q, fu)
+    post = approx_posterior(SVGP(), fu, q)
+    f_mean, f_var = mean_and_var(post, fx.fx.x)
+    
+    variational_exp = expected_loglik(y, f_mean, f_var, fx.lik)
     scale = n_data / n_batch
     return sum(variational_exp) * scale - kl_term
 end
