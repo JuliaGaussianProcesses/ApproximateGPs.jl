@@ -57,19 +57,13 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    y::AbstractVector{<:Real},
+    y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
     lik::BernoulliLikelihood;
-    n_quad_points=20
+    n_points=20
 )
-    # Compute the expectation via Gauss-Hermite quadrature
-    # using a reparameterisation by change of variable
-    # (see eg. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
-    v, w = gausshermite(n_quad_points)
-    h = √2 * .√f_var' .* v .+ f_mean'
-    lls = loglikelihood.(lik.(h), y')
-    return ((1/√π) * w'lls)'
+    return gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points)
 end
 
 function elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fu::FiniteGP, q::MvNormal; n_data=1, n_batch=1)
