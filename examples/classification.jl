@@ -70,17 +70,17 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 # A simple Flux model
 using Flux
 
-struct SVGPLayer
+struct SVGPModel
     k # kernel parameters
     m # variational mean
     A # variational covariance
     z # inducing points
 end
 
-@Flux.functor SVGPLayer (k, m, A,) # Don't train the inducing inputs
+@Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
 
 lik = BernoulliLikelihood()
-function (m::SVGPLayer)(x)
+function (m::SVGPModel)(x)
     kernel = make_kernel(m.k)
     f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
     q = MvNormal(m.m, m.A'm.A)
@@ -103,7 +103,7 @@ m = zeros(M)
 A = Matrix{Float64}(I, M, M)
 z = x[1:M]
 
-model = SVGPLayer(k, m, A, z)
+model = SVGPModel(k, m, A, z)
 
 opt = ADAM(0.1)
 parameters = Flux.params(model)
