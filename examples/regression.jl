@@ -1,4 +1,4 @@
-# An attempted recreation of https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html
+# A recreation of https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html
 
 using AbstractGPs
 using SparseGPs
@@ -14,6 +14,7 @@ using Random
 Random.seed!(1234)
 
 # %%
+# The data generating function
 function g(x)
     return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
 end
@@ -24,31 +25,28 @@ y = g.(x) + 0.3 * randn(N)
 
 scatter(x, y; xlabel="x", ylabel="y", legend=false)
 
-# %%
-M = 50 # number of inducing points
-
-# TODO: incorporate better inducing point selection from
-# https://github.com/JuliaGaussianProcesses/InducingPoints.jl?
-z = x[1:M]
 
 # %%
 # A simple Flux model
 using Flux
 
-struct SVGPLayer
+struct SVGPModel
     k # kernel parameters
     m # variational mean
     A # variational covariance
     z # inducing points
 end
 
-@Flux.functor SVGPLayer
+@Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
 
 function make_kernel(k)
     return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
 end
 
-function (m::SVGPLayer)(x)
+# Create the 'model' from the parameters - i.e. return the FiniteGP at inputs x,
+# the FiniteGP at inducing inputs z and the variational posterior over inducing
+# points - q(u).
+function (m::SVGPModel)(x)
     kernel = make_kernel(m.k)
     f = GP(kernel)
     q = MvNormal(m.m, m.A'm.A)
@@ -57,7 +55,8 @@ function (m::SVGPLayer)(x)
     return fx, fu, q
 end
 
-function posterior(m::SVGPLayer)
+# Create the posterior GP from the model parameters.
+function posterior(m::SVGPModel)
     kernel = make_kernel(m.k)
     f = GP(kernel)
     fu = f(m.z, 0.3)
@@ -65,37 +64,50 @@ function posterior(m::SVGPLayer)
     return SparseGPs.approx_posterior(SVGP(), fu, q)
 end
 
+# Return the loss given data - in this case the negative ELBO.
 function flux_loss(x, y; n_data=1, n_batch=1)
     fx, fu, q = model(x)
     return -SparseGPs.elbo(fx, y, fu, q; n_data, n_batch)
 end
+
+
+# %%
+M = 50 # number of inducing points
+
+# Select the first M inputs as inducing inputs
+z = x[1:M]
 
 # Initialise the parameters
 k = [0.3, 10]
 m = zeros(M)
 A = Matrix{Float64}(I, M, M)
 
-model = SVGPLayer(k, m, A, z)
+model = SVGPModel(k, m, A, z)
 
 b = 100 # minibatch size
 opt = ADAM(0.01)
-# parameters = Flux.params(k, s, m, A)
 parameters = Flux.params(model)
 data_loader = Flux.Data.DataLoader((x, y), batchsize=b)
 
 # %%
-println(flux_loss(x, y))
-
-Flux.train!(
-    (x, y) -> flux_loss(x, y; n_data=N, n_batch=b),
-    parameters,
-    ncycle(data_loader, 100), # Train for 100 epochs
-    opt
-)
-
+# Negative ELBO before training
 println(flux_loss(x, y))
 
 # %%
+# Train the model
+Flux.train!(
+    (x, y) -> flux_loss(x, y; n_data=N, n_batch=b),
+    parameters,
+    ncycle(data_loader, 300), # Train for 400 epochs
+    opt
+)
+
+# %%
+# Negative ELBO after training
+println(flux_loss(x, y))
+
+# %%
+# Plot samples from the optmimised approximate posterior.
 post = posterior(model)
 
 scatter(
@@ -113,9 +125,10 @@ plot!(-1:0.001:1, post; label="Posterior")
 vline!(z; label="Pseudo-points")
 
 
-# %% Find the exact posterior over u (e.g.
-# https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/ equations
-# (11) & (12)) As a sanity check.
+# %% There is a closed form optimal solution for the variational posterior q(u)
+# (e.g. https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/
+# equations (11) & (12)). The SVGP posterior with this optimal q(u) should
+# therefore be equivalent to the 'exact' sparse GP (Titsias) posterior.
 
 function exact_q(fu, fx, y)
     σ² = fx.Σy[1]
@@ -123,8 +136,8 @@ function exact_q(fu, fx, y)
     Kuu = Symmetric(cov(fu))
     Σ = (Symmetric(cov(fu) + (1/σ²) * Kuf * Kuf'))
     m = ((1/σ²)*Kuu* (Σ\Kuf)) * y
-    A = Symmetric(Kuu * (Σ \ Kuu))
-    return MvNormal(m, A)
+    S = Symmetric(Kuu * (Σ \ Kuu))
+    return MvNormal(m, S)
 end
 
 kernel = make_kernel([0.2, 11])
@@ -136,8 +149,8 @@ q_ex = exact_q(fu, fx, y)
 scatter(x, y)
 scatter!(z, q_ex.μ)
 
-# These two should be the same - and they are, the plot below shows almost identical predictions
-ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman 2013 (exact) posterior
+# These two should be the same - and they are, as the plot below shows
+ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
 ap_tits = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
 
 # Should these be the same? (they currently aren't)

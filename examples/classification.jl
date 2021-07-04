@@ -12,7 +12,10 @@ using DelimitedFiles
 using IterTools
 
 using Plots
+default(; legend=:outertopright, size=(700, 400))
 
+using Random
+Random.seed!(1234)
 
 # %%
 # Read in the classification data
@@ -64,6 +67,7 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 
 
 # %%
+# A simple Flux model
 using Flux
 
 struct SVGPLayer
