@@ -1,5 +1,6 @@
 # Recreation of https://gpflow.readthedocs.io/en/master/notebooks/basics/classification.html
 
+# %%
 using SparseGPs
 using AbstractGPs
 using GPLikelihoods
@@ -7,35 +8,147 @@ using StatsFuns
 using FastGaussQuadrature
 using Distributions
 using LinearAlgebra
+using DelimitedFiles
+using IterTools
 
 using Plots
 
-x = [5.668341708542713242, 5.758793969849246075, 5.517587939698492150, 2.954773869346733584, 3.648241206030150785, 2.110552763819095290, 4.613065326633165597, 4.793969849246231263, 4.703517587939698430, 6.030150753768843686, 3.015075376884421843, 3.979899497487437099, 3.226130653266331638, 1.899497487437185939, 1.145728643216080256, 3.316582914572864249, 6.030150753768843686, 2.231155778894472252, 3.256281407035175768, 1.085427135678391997, 1.809045226130653106, 4.492462311557789079, 1.959798994974874198, 0.000000000000000000, 3.346733668341708601, 1.507537688442210921, 1.809045226130653328, 5.517587939698492150, 2.201005025125628123, 5.577889447236180409, 1.809045226130653328, 1.688442211055276365, 4.160804020100502321, 2.170854271356783993, 4.311557788944723413, 3.075376884422110546, 5.125628140703517133, 1.989949748743718549, 5.366834170854271058, 4.100502512562814061, 7.236180904522613311, 2.261306532663316382, 3.467336683417085119, 1.085427135678391997, 5.095477386934673447, 5.185929648241205392, 2.743718592964823788, 2.773869346733668362, 1.417085427135678311, 1.989949748743718549]
-y = [0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1]
 
+# %%
+# Read in the classification data
+data_file = pkgdir(SparseGPs) * "/examples/data/classif_1D.csv"
+x, y = eachcol(readdlm(data_file))
+scatter(x, y)
+
+
+# %%
+# First, create the GP kernel from given parameters k
 function make_kernel(k)
     return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
 end
 
-k = [0.1, 0.1]
+k = [10, 0.1]
 
 kernel = make_kernel(k)
 f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
 fx = f(x)
-z = x[1:10]
+
+
+# %%
+# Then, plot some samples from the prior underlying GP
+x_plot = 0:0.02:6
+prior_f_samples = rand(f.f(x_plot, 1e-6),20)
+
+plt = plot(
+    x_plot,
+    prior_f_samples;
+    seriescolor="red",
+    linealpha=0.2,
+    label=""
+)
+scatter!(plt, x, y; seriescolor="blue", label="Data points")
+
+# %%
+# Plot the same samples, but pushed through a logistic sigmoid to constrain
+# them in (0, 1).
+prior_y_samples = mean.(f.lik.(prior_f_samples))
+
+plt = plot(
+    x_plot,
+    prior_y_samples;
+    seriescolor="red",
+    linealpha=0.2,
+    label=""
+)
+scatter!(plt, x, y; seriescolor="blue", label="Data points")
+
+
+# %%
+using Flux
+
+struct SVGPLayer
+    k # kernel parameters
+    m # variational mean
+    A # variational covariance
+    z # inducing points
+end
+
+@Flux.functor SVGPLayer (k, m, A,) # Don't train the inducing inputs
+
+lik = BernoulliLikelihood()
+function (m::SVGPLayer)(x)
+    kernel = make_kernel(m.k)
+    f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
+    q = MvNormal(m.m, m.A'm.A)
+    fx = f(x)
+    fu = f(m.z).fx
+    return fx, fu, q
+end
+
+function flux_loss(x, y; n_data=1, n_batch=1)
+    fx, fu, q = model(x)
+    return -SparseGPs.elbo(fx, y, fu, q; n_data, n_batch)
+end
+
+# %%
+M = 15 # number of inducing points
+
+# Initialise the parameters
+k = [10, 0.1]
+m = zeros(M)
+A = Matrix{Float64}(I, M, M)
+z = x[1:M]
+
+model = SVGPLayer(k, m, A, z)
+
+opt = ADAM(0.1)
+parameters = Flux.params(model)
+
+# %%
+# Negative ELBO before training
+println(flux_loss(x, y))
+
+# %%
+# Train the model
+Flux.train!(
+    (x, y) -> flux_loss(x, y),
+    parameters,
+    ncycle([(x, y)], 500), # Train for 1000 epochs
+    opt
+)
+
+# %%
+# Negative ELBO after training
+println(flux_loss(x, y))
+
+# %%
+# After optimisation, plot samples from the underlying posterior GP.
+
 fu = f(z).fx # want the underlying FiniteGP
-q = MvNormal(zeros(length(z)), I)
+post = SparseGPs.approx_posterior(SVGP(), fu, MvNormal(m, A'A))
+l_post = LatentGP(post, BernoulliLikelihood(), 0.1)
 
-SparseGPs.kl_divergence(q, fu)
-SparseGPs.elbo(fx, y, fu, q)
+post_f_samples = rand(l_post.f(x_plot, 1e-6),20)
 
-post = SparseGPs.approx_posterior(SVGP(), fu, q)
-f_mean, f_var = mean_and_var(post, fx.fx.x)
+plt = plot(
+    x_plot,
+    post_f_samples;
+    seriescolor="red",
+    linealpha=0.2,
+    legend=false
+)
 
+# %%
+# As above, push these samples through a logistic sigmoid to get posterior predictions.
+post_y_samples = mean.(l_post.lik.(post_f_samples))
 
-# v = inputs to evaluate
-# w = weights
-v, w = gausshermite(20);
-h = √2 * .√f_var' .* v .+ f_mean'
-lls = loglikelihood.(f.lik.(h), y')
-var_exp = (1/√π) * sum(w'lls)
+plt = plot(
+    x_plot,
+    post_y_samples;
+    seriescolor="red",
+    linealpha=0.2,
+    # legend=false,
+    label=""
+)
+scatter!(plt, x, y; seriescolor="blue", label="Data points")
+vline!(z; label="Pseudo-points")
