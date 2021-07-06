@@ -4,7 +4,7 @@ using SparseGPs
 using Flux
 using IterTools
 using AbstractGPs
-using SparseGPs
+using Distributions
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(SparseGPs)))
