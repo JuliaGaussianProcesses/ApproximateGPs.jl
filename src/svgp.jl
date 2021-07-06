@@ -43,7 +43,7 @@ end
 function kl_divergence(q::MvNormal, p::AbstractMvNormal)
     p_μ, p_Σ = mean(p), cov(p)
     (1/2) .* (logdet(p_Σ) - logdet(q.Σ) - length(p_μ) + tr(p_Σ \ cov(q)) +
-              Xt_invA_X(cholesky(q.Σ), (q.μ - p_μ)))
+              Xt_invA_X(cholesky(p_Σ), (q.μ - p_μ)))
 end
 
 # The closed form expected loglikelihood for a Gaussian likelihood

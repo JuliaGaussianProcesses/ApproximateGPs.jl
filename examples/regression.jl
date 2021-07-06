@@ -98,7 +98,7 @@ println(flux_loss(x, y))
 Flux.train!(
     (x, y) -> flux_loss(x, y; n_data=N, n_batch=b),
     parameters,
-    ncycle(data_loader, 300), # Train for 400 epochs
+    ncycle(data_loader, 300), # Train for 300 epochs
     opt
 )
 
