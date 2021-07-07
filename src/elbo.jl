@@ -18,7 +18,7 @@ function elbo(
     n_data=1,
     n_batch=1
 )
-    kl_term, f_mean, f_var = _elbo_intermediates(lfx.fx)
+    kl_term, f_mean, f_var = _elbo_intermediates(fx, fz, q)
 
     Σy = diag(fx.Σy) # n.b. this assumes uncorrelated observation noise
     variational_exp = expected_loglik(y, f_mean, f_var, Σy)
@@ -34,7 +34,7 @@ function elbo(
     n_data=1,
     n_batch=1
 )
-    kl_term, f_mean, f_var = _elbo_intermediates(lfx.fx)
+    kl_term, f_mean, f_var = _elbo_intermediates(lfx.fx, fz, q)
     
     variational_exp = expected_loglik(y, f_mean, f_var, lfx.lik)
     scale = n_data / n_batch
@@ -44,13 +44,12 @@ end
 # Computes the common intermediates needed for the ELBO
 function _elbo_intermediates(
     fx::FiniteGP,
-    y::AbstractVector{<:Real},
     fz::FiniteGP,
     q::MvNormal
 )
     kl_term = kl_divergence(q, fz)
     post = approx_posterior(SVGP(), fz, q)
-    f_mean, f_var = mean_and_var(post, fx.fx.x)
+    f_mean, f_var = mean_and_var(post, fx.x)
     return kl_term, f_mean, f_var
 end
 

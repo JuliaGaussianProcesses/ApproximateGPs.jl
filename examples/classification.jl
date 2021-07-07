@@ -117,7 +117,7 @@ println(flux_loss(x, y))
 Flux.train!(
     (x, y) -> flux_loss(x, y),
     parameters,
-    ncycle([(x, y)], 500), # Train for 1000 epochs
+    ncycle([(x, y)], 1000), # Train for 1000 epochs
     opt
 )
 
@@ -132,7 +132,7 @@ fu = f(z).fx # want the underlying FiniteGP
 post = SparseGPs.approx_posterior(SVGP(), fu, MvNormal(m, A'A))
 l_post = LatentGP(post, BernoulliLikelihood(), 0.1)
 
-post_f_samples = rand(l_post.f(x_plot, 1e-6),20)
+post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
 
 plt = plot(
     x_plot,

@@ -9,7 +9,7 @@ f(z)`. The approximate posterior at test points ``x^*`` where ``f^* = f(x^*)``
 is then given by:
 
 ```math
-q(f^*) = \int p(f | u) q(u) du
+q(f^*) = \\int p(f | u) q(u) du
 ```
 which can be found in closed form.
 
@@ -19,17 +19,11 @@ Statistics. PMLR, 2015.
 """
 
 function approx_posterior(::SVGP, fz::FiniteGP, q::MvNormal)
-    m, A = mean(q), cholesky(cov(q))
+    m, A = q.μ, cholesky(q.Σ)
     Kuu = cholesky(Symmetric(cov(fz)))
     B = Kuu.L \ A.L
     data = (A=A, m=m, Kuu=Kuu, B=B, α=Kuu \ m, u=fz.x)
     return ApproxPosteriorGP(SVGP(), fz.f, data)
-end
-
-function Statistics.var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
-    Cux = cov(f.prior, f.data.u, x)
-    D = f.data.Kuu.L \ Cux
-    return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
 end
 
 function Statistics.mean(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
@@ -41,6 +35,14 @@ function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     D = f.data.Kuu.L \ Cux
     return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D) 
 end
+
+function Statistics.var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
+    Cux = cov(f.prior, f.data.u, x)
+    D = f.data.Kuu.L \ Cux
+    return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
+end
+
+#TODO: cov(x, y)
 
 function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)
