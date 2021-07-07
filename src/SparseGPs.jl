@@ -25,7 +25,7 @@ export elbo,
     approx_posterior,
     SVGP
 
-include("quadrature.jl")
+include("elbo.jl")
 include("svgp.jl")
 
 end
