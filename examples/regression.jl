@@ -65,9 +65,9 @@ function posterior(m::SVGPModel)
 end
 
 # Return the loss given data - in this case the negative ELBO.
-function flux_loss(x, y; n_data=1, n_batch=1)
+function flux_loss(x, y; n_data=length(y))
     fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q; n_data, n_batch)
+    return -SparseGPs.elbo(fx, y, fu, q; n_data)
 end
 
 
@@ -96,7 +96,7 @@ println(flux_loss(x, y))
 # %%
 # Train the model
 Flux.train!(
-    (x, y) -> flux_loss(x, y; n_data=N, n_batch=b),
+    (x, y) -> flux_loss(x, y; n_data=N),
     parameters,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt

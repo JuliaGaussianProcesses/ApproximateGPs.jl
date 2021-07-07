@@ -1,5 +1,5 @@
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::MvNormal; n_data=1, n_batch=1)
+    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::MvNormal; n_data=1)
 
 Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
 observations of `fx`, pseudo-inputs are given by `z = fz.z` and `q(u)` is a
@@ -9,15 +9,14 @@ variational distribution over inducing points `u = f(z)`.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-
 function elbo(
     fx::FiniteGP,
     y::AbstractVector{<:Real},
     fz::FiniteGP,
     q::MvNormal;
-    n_data=1,
-    n_batch=1
+    n_data=length(y)
 )
+    n_batch = length(y)
     kl_term, f_mean, f_var = _elbo_intermediates(fx, fz, q)
 
     Σy = diag(fx.Σy) # n.b. this assumes uncorrelated observation noise
@@ -31,9 +30,9 @@ function elbo(
     y::AbstractVector,
     fz::FiniteGP,
     q::MvNormal;
-    n_data=1,
-    n_batch=1
+    n_data=length(y)
 )
+    n_batch = length(y)
     kl_term, f_mean, f_var = _elbo_intermediates(lfx.fx, fz, q)
     
     variational_exp = expected_loglik(y, f_mean, f_var, lfx.lik)

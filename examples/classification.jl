@@ -89,9 +89,9 @@ function (m::SVGPModel)(x)
     return fx, fu, q
 end
 
-function flux_loss(x, y; n_data=1, n_batch=1)
+function flux_loss(x, y; n_data=length(y))
     fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q; n_data, n_batch)
+    return -SparseGPs.elbo(fx, y, fu, q; n_data)
 end
 
 # %%
