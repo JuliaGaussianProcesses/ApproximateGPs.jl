@@ -28,7 +28,7 @@ end
 
 function elbo(
     lfx::LatentFiniteGP,
-    y::AbstractVector{<:Real},
+    y::AbstractVector,
     fz::FiniteGP,
     q::MvNormal;
     n_data=1,
