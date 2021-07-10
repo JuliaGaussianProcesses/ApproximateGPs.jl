@@ -10,6 +10,8 @@ using StatsBase
 using FastGaussQuadrature
 using GPLikelihoods
 using ChainRulesCore
+using PDMats
+using Functors
 
 using AbstractGPs:
     FiniteGP,
@@ -23,9 +25,12 @@ using AbstractGPs:
 
 export elbo,
     approx_posterior,
-    SVGP
+    SVGP,
+    SVGPModel
 
+include("utils.jl")
 include("elbo.jl")
 include("svgp.jl")
+include("models.jl")
 
 end
