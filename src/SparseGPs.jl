@@ -2,8 +2,6 @@ module SparseGPs
 
 using AbstractGPs
 using Distributions
-using Optim
-using StatsFuns
 using LinearAlgebra
 using Statistics
 using StatsBase
