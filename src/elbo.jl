@@ -1,5 +1,5 @@
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::MvNormal; n_data=1)
+    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::MvNormal; n_data=length(y))
 
 Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
 observations of `fx`, pseudo-inputs are given by `z = fz.z` and `q(u)` is a
@@ -25,6 +25,12 @@ function elbo(
     return sum(variational_exp) * scale - kl_term
 end
 
+
+"""
+    elbo(fx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::MvNormal; n_data=length(y))
+
+Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
+"""
 function elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector,
@@ -52,6 +58,42 @@ function _elbo_intermediates(
     return kl_term, f_mean, f_var
 end
 
+"Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
+ScalarLikelihood = Union{BernoulliLikelihood, CategoricalLikelihood, PoissonLikelihood}
+
+"""
+    expected_loglik(y, f_mean, f_var, [Σy | lik])
+
+This function computes the expected log likelihood:
+
+```math
+    ∫ q(f) log p(y | f) df
+```
+where `p(y | f)` is the process likelihood.
+
+`q(f)` is an approximation to the latent function values `f` given by:
+```math
+    q(f) = ∫ p(f | u) q(u) du
+```
+where `q(u)` is the variational distribution over inducing points (see
+[`elbo`](@ref)).
+
+Where possible, this expectation is calculated in closed form. Otherwise, it is
+approximated using Gauss-Hermite quadrature by default.
+
+# Extended help
+
+`q(f)` is assumed to be an `MvNormal` distribution and `p(y | f)` is assumed to
+have independent marginals such that only the marginals of `q(f)` are required.
+"""
+
+function expected_loglik end
+
+"""
+    expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractVector)
+
+The expected log likelihood for a Gaussian likelihood, computed in closed form.
+"""
 # The closed form expected loglikelihood for a Gaussian likelihood
 function expected_loglik(
     y::AbstractVector{<:Real},
@@ -62,11 +104,18 @@ function expected_loglik(
     return -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
 end
 
+"""
+    expected_loglik(y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood; n_points=20)
+
+The expected log likelihood for a `ScalarLikelihood`, approximated via
+Gauss-Hermite quadrature with `n_points` quadrature points.
+"""
+
 function expected_loglik(
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    lik::BernoulliLikelihood;
+    lik::ScalarLikelihood;
     n_points=20
 )
     return gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points)
