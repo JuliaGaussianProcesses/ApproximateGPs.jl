@@ -30,6 +30,9 @@ scatter(x, y; xlabel="x", ylabel="y", legend=false)
 # A simple Flux model
 using Flux
 
+lik_noise = 0.3
+jitter = 1e-5
+
 struct SVGPModel
     k # kernel parameters
     m # variational mean
@@ -50,8 +53,8 @@ function (m::SVGPModel)(x)
     kernel = make_kernel(m.k)
     f = GP(kernel)
     q = MvNormal(m.m, m.A'm.A)
-    fx = f(x, 0.3)
-    fu = f(m.z, 0.3)
+    fx = f(x, lik_noise)
+    fu = f(m.z, jitter)
     return fx, fu, q
 end
 
@@ -59,7 +62,7 @@ end
 function posterior(m::SVGPModel)
     kernel = make_kernel(m.k)
     f = GP(kernel)
-    fu = f(m.z, 0.3)
+    fu = f(m.z, jitter)
     q = MvNormal(m.m, m.A'm.A)
     return SparseGPs.approx_posterior(SVGP(), fu, q)
 end
@@ -85,7 +88,7 @@ A = Matrix{Float64}(I, M, M)
 model = SVGPModel(k, m, A, z)
 
 b = 100 # minibatch size
-opt = ADAM(0.01)
+opt = ADAM(0.001)
 parameters = Flux.params(model)
 data_loader = Flux.Data.DataLoader((x, y), batchsize=b)
 
@@ -140,10 +143,10 @@ function exact_q(fu, fx, y)
     return MvNormal(m, S)
 end
 
-kernel = make_kernel([0.2, 11])
+kernel = make_kernel([0.3, 10])
 f = GP(kernel)
-fx = f(x, 0.1)
-fu = f(z, 0.1)
+fx = f(x, lik_noise)
+fu = f(z, jitter)
 q_ex = exact_q(fu, fx, y)
 
 scatter(x, y)
@@ -153,7 +156,7 @@ scatter!(z, q_ex.μ)
 ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
 ap_tits = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
 
-# Should these be the same? (they currently aren't)
+# These are also approximately equal
 SparseGPs.elbo(fx, y, fu, q_ex)
 AbstractGPs.elbo(fx, y, fu)
 
@@ -161,7 +164,9 @@ AbstractGPs.elbo(fx, y, fu)
 scatter(
     x,
     y;
-    xlim=(0, 1),
+    markershape=:xcross,
+    markeralpha=0.1,
+    xlim=(-1, 1),
     xlabel="x",
     ylabel="y",
     title="posterior (VI with sparse grid)",
