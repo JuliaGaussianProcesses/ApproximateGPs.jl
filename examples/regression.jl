@@ -6,6 +6,7 @@ using Distributions
 using LinearAlgebra
 using Optim
 using IterTools
+using GPLikelihoods
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
