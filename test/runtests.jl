@@ -5,6 +5,7 @@ using Flux
 using IterTools
 using AbstractGPs
 using Distributions
+using LinearAlgebra
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(SparseGPs)))
