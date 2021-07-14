@@ -18,8 +18,8 @@ function SVGPModel(
     kernel_func,
     kernel_params,
     inducing_inputs;
-    q_μ::Union{AbstractVector, Nothing}=nothing,
-    q_Σ_sqrt::Union{AbstractMatrix, Nothing}=nothing,
+    q_μ::Union{AbstractVector,Nothing}=nothing,
+    q_Σ_sqrt::Union{AbstractMatrix,Nothing}=nothing,
     jitter=default_jitter,
     likelihood=GaussianLikelihood(jitter)
 )
@@ -85,15 +85,9 @@ function elbo(m::SVGPModel, x, y; n_data=length(y))
     return SparseGPs.elbo(fx, y, fu, q; n_data)
 end
 
-function _init_variational_params(n)
-    m = zeros(n)
-    A = Matrix{Float64}(I, n, n)
-    return m, A
-end
-
 function _init_variational_params(
-    q_μ::Union{AbstractVector, Nothing},
-    q_Σ_sqrt::Union{AbstractMatrix, Nothing},
+    q_μ::Union{AbstractVector,Nothing},
+    q_Σ_sqrt::Union{AbstractMatrix,Nothing},
     z::AbstractVector
 )
     n = length(z)
