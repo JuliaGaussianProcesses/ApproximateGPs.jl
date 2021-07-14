@@ -26,7 +26,11 @@ using AbstractGPs:
 export elbo,
     approx_posterior,
     SVGP,
-    SVGPModel
+    SVGPModel,
+    prior,
+    posterior,
+    loss,
+    elbo
 
 include("utils.jl")
 include("elbo.jl")
