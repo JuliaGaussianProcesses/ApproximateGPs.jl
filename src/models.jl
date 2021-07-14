@@ -20,10 +20,11 @@ function SVGPModel(
     inducing_inputs;
     q_μ::Union{AbstractVector,Nothing}=nothing,
     q_Σ_sqrt::Union{AbstractMatrix,Nothing}=nothing,
+    q_eltype=Float64,
     jitter=default_jitter,
     likelihood=GaussianLikelihood(jitter)
 )
-    m, A = _init_variational_params(q_μ, q_Σ_sqrt, inducing_inputs)
+    m, A = _init_variational_params(q_μ, q_Σ_sqrt, inducing_inputs, q_eltype)
     return SVGPModel(
         kernel_func,
         likelihood,
@@ -88,14 +89,15 @@ end
 function _init_variational_params(
     q_μ::Union{AbstractVector,Nothing},
     q_Σ_sqrt::Union{AbstractMatrix,Nothing},
-    z::AbstractVector
+    z::AbstractVector,
+    q_eltype
 )
     n = length(z)
     if q_μ === nothing
-        q_μ = zeros(n)
+        q_μ = zeros(q_eltype, n)
     end
     if q_Σ_sqrt === nothing
-        q_Σ_sqrt = Matrix{Float64}(I, n, n)
+        q_Σ_sqrt = Matrix{q_eltype}(I, n, n)
     end
     return q_μ, q_Σ_sqrt
 end
