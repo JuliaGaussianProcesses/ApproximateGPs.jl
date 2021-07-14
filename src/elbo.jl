@@ -13,7 +13,7 @@ function elbo(
     fx::FiniteGP,
     y::AbstractVector{<:Real},
     fz::FiniteGP,
-    q::MvNormal;
+    q::AbstractMvNormal;
     n_data=length(y)
 )
     n_batch = length(y)
@@ -35,7 +35,7 @@ function elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector,
     fz::FiniteGP,
-    q::MvNormal;
+    q::AbstractMvNormal;
     n_data=length(y)
 )
     n_batch = length(y)
@@ -43,14 +43,14 @@ function elbo(
     
     variational_exp = expected_loglik(y, f_mean, f_var, lfx.lik)
     scale = n_data / n_batch
-    return sum(variational_exp) * scale - kl_term
+    return variational_exp * scale - kl_term
 end
 
 # Computes the common intermediates needed for the ELBO
 function _elbo_intermediates(
     fx::FiniteGP,
     fz::FiniteGP,
-    q::MvNormal
+    q::AbstractMvNormal
 )
     kl_term = kl_divergence(q, fz)
     post = approx_posterior(SVGP(), fz, q)
@@ -59,7 +59,7 @@ function _elbo_intermediates(
 end
 
 "Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
-ScalarLikelihood = Union{BernoulliLikelihood, CategoricalLikelihood, PoissonLikelihood}
+ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood}
 
 """
     expected_loglik(y, f_mean, f_var, [Σy | lik])
@@ -101,7 +101,7 @@ function expected_loglik(
     f_var::AbstractVector,
     Σy::AbstractVector
 )
-    return -0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy)
+    return sum(-0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy))
 end
 
 """
@@ -118,13 +118,14 @@ function expected_loglik(
     lik::ScalarLikelihood;
     n_points=20
 )
-    return gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points)
+    return sum(gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points))
 end
 
-function kl_divergence(q::MvNormal, p::AbstractMvNormal)
+function kl_divergence(q::AbstractMvNormal, p::AbstractMvNormal)
     p_μ, p_Σ = mean(p), cov(p)
-    (1/2) .* (logdet(p_Σ) - logdet(q.Σ) - length(p_μ) + tr(p_Σ \ cov(q)) +
-              Xt_invA_X(cholesky(p_Σ), (q.μ - p_μ)))
+    q_μ, q_Σ = mean(q), cov(q)
+    (1/2) .* (logdet(p_Σ) - logdet(q_Σ) - length(p_μ) + tr(p_Σ \ q_Σ) +
+              Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
 end
 
 function gauss_hermite_quadrature(

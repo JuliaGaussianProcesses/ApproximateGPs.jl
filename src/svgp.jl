@@ -18,8 +18,8 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 
-function approx_posterior(::SVGP, fz::FiniteGP, q::MvNormal)
-    m, A = q.μ, cholesky(q.Σ)
+function approx_posterior(::SVGP, fz::FiniteGP, q::AbstractMvNormal)
+    m, A = mean(q), cholesky(cov(q))
     Kuu = cholesky(Symmetric(cov(fz)))
     B = Kuu.L \ A.L
     data = (A=A, m=m, Kuu=Kuu, B=B, α=Kuu \ m, u=fz.x)
