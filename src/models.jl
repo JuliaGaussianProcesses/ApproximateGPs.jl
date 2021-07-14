@@ -35,7 +35,7 @@ function SVGPModel(
     )
 end
 
-function (m::SVGPModel{GaussianLikelihood})(x)
+function (m::SVGPModel{<:GaussianLikelihood})(x)
     f = prior(m)
     fx = f(x, m.lik.σ²)
     fu = f(m.z, m.jitter)
@@ -51,7 +51,7 @@ function (m::SVGPModel)(x)
     return fx, fu, q
 end
 
-function posterior(m::SVGPModel{GaussianLikelihood})
+function posterior(m::SVGPModel{<:GaussianLikelihood})
     f = prior(m)
     fu = f(m.z, m.jitter)
     q = _construct_q(m)
@@ -66,7 +66,7 @@ function posterior(m::SVGPModel)
     return LatentGP(post, m.lik, m.jitter) # TODO: should this return `post` instead?
 end
 
-function prior(m::SVGPModel{GaussianLikelihood})
+function prior(m::SVGPModel{<:GaussianLikelihood})
     kernel = m.kernel_func(m.k)
     return GP(kernel)
 end
