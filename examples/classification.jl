@@ -69,13 +69,12 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 
 
 # %%
-# A simple Flux model
+# Optimise the model using Flux
 using Flux
 
 opt = ADAM(0.1)
 parameters = Flux.params(model)
 delete!(parameters, model.z)    # Don't train the inducing inputs
-# delete!(parameters, model.k)    # Don't train the kernel parameters
 
 # %%
 # Negative ELBO before training
