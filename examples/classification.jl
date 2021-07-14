@@ -27,20 +27,22 @@ scatter(x, y)
 # %%
 # First, create the GP kernel from given parameters k
 function make_kernel(k)
-    return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
+    return softplus(k[1]) * (Matern52Kernel() ∘ ScaleTransform(softplus(k[2])))
 end
 
-k = [10, 0.1]
+k = [20.0, 0.5]
+M = 15 # number of inducing points
+z = x[1:M]
 
-kernel = make_kernel(k)
-f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
+model = SVGPModel(make_kernel, k, z; jitter=1e-3, likelihood=BernoulliLikelihood())
+
+f = prior(model)
 fx = f(x)
-
 
 # %%
 # Then, plot some samples from the prior underlying GP
 x_plot = 0:0.02:6
-prior_f_samples = rand(f.f(x_plot, 1e-6),20)
+prior_f_samples = rand(f.f(x_plot), 20)
 
 plt = plot(
     x_plot,
@@ -70,52 +72,19 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 # A simple Flux model
 using Flux
 
-struct SVGPModel
-    k # kernel parameters
-    m # variational mean
-    A # variational covariance
-    z # inducing points
-end
-
-@Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
-
-lik = BernoulliLikelihood()
-function (m::SVGPModel)(x)
-    kernel = make_kernel(m.k)
-    f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
-    q = MvNormal(m.m, m.A'm.A)
-    fx = f(x)
-    fu = f(m.z).fx
-    return fx, fu, q
-end
-
-function flux_loss(x, y; n_data=length(y))
-    fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q; n_data)
-end
-
-# %%
-M = 15 # number of inducing points
-
-# Initialise the parameters
-k = [10, 0.1]
-m = zeros(M)
-A = Matrix{Float64}(I, M, M)
-z = x[1:M]
-
-model = SVGPModel(k, m, A, z)
-
 opt = ADAM(0.1)
 parameters = Flux.params(model)
+delete!(parameters, model.z)    # Don't train the inducing inputs
+# delete!(parameters, model.k)    # Don't train the kernel parameters
 
 # %%
 # Negative ELBO before training
-println(flux_loss(x, y))
+println(loss(model, x, y))
 
 # %%
 # Train the model
 Flux.train!(
-    (x, y) -> flux_loss(x, y),
+    (x, y) -> loss(model, x, y),
     parameters,
     ncycle([(x, y)], 1000), # Train for 1000 epochs
     opt
@@ -123,16 +92,13 @@ Flux.train!(
 
 # %%
 # Negative ELBO after training
-println(flux_loss(x, y))
+println(loss(model, x, y))
 
 # %%
 # After optimisation, plot samples from the underlying posterior GP.
+post = SparseGPs.posterior(model)
 
-fu = f(z).fx # want the underlying FiniteGP
-post = SparseGPs.approx_posterior(SVGP(), fu, MvNormal(m, A'A))
-l_post = LatentGP(post, BernoulliLikelihood(), 0.1)
-
-post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
+post_f_samples = rand(post.f(x_plot), 20)
 
 plt = plot(
     x_plot,
@@ -144,7 +110,7 @@ plt = plot(
 
 # %%
 # As above, push these samples through a logistic sigmoid to get posterior predictions.
-post_y_samples = mean.(l_post.lik.(post_f_samples))
+post_y_samples = mean.(post.lik.(post_f_samples))
 
 plt = plot(
     x_plot,
