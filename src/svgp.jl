@@ -42,7 +42,14 @@ function Statistics.var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
 end
 
-#TODO: cov(x, y)
+function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector, y::AbstractVector)
+    B = f.data.B
+    Cxu = cov(f.prior, x, f.data.u)
+    Cuy = cov(f.prior, f.data.u, y)
+    D = f.data.Kuu.L \ Cuy
+    E = Cxu / f.data.Kuu.L'
+    return cov(f.prior, x, y) - (E * D) + (E * B * B' * D)
+end
 
 function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)

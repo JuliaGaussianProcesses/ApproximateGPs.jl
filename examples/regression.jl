@@ -102,11 +102,11 @@ function exact_q(fu, fx, y)
     return MvNormal(m, S)
 end
 
-# kernel = make_kernel([0.2, 11])
-kernel = make_kernel([-0.4141063920508822, 12.05716680522881])
+kernel = kernel = make_kernel([0.3, 10])
 f = GP(kernel)
 fx = f(x, 0.1)
 fu = f(z, 1e-6)
+
 q_ex = exact_q(fu, fx, y)
 
 scatter(x, y)
