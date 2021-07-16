@@ -1,8 +1,8 @@
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::MvNormal; n_data=length(y))
+    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y))
 
 Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
-observations of `fx`, pseudo-inputs are given by `z = fz.z` and `q(u)` is a
+observations of `fx`, pseudo-inputs are given by `z = fz.x` and `q(u)` is a
 variational distribution over inducing points `u = f(z)`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
@@ -27,7 +27,7 @@ end
 
 
 """
-    elbo(fx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::MvNormal; n_data=length(y))
+    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y))
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
@@ -86,7 +86,6 @@ approximated using Gauss-Hermite quadrature by default.
 `q(f)` is assumed to be an `MvNormal` distribution and `p(y | f)` is assumed to
 have independent marginals such that only the marginals of `q(f)` are required.
 """
-
 function expected_loglik end
 
 """
@@ -94,7 +93,6 @@ function expected_loglik end
 
 The expected log likelihood for a Gaussian likelihood, computed in closed form.
 """
-# The closed form expected loglikelihood for a Gaussian likelihood
 function expected_loglik(
     y::AbstractVector{<:Real},
     f_mean::AbstractVector,
@@ -110,7 +108,6 @@ end
 The expected log likelihood for a `ScalarLikelihood`, approximated via
 Gauss-Hermite quadrature with `n_points` quadrature points.
 """
-
 function expected_loglik(
     y::AbstractVector,
     f_mean::AbstractVector,

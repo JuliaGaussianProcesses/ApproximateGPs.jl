@@ -1,6 +1,6 @@
 struct SVGP end
 
-"""
+raw"""
     approx_posterior(::SVGP, fz::FiniteGP, q::MvNormal)
 
 Compute the approximate posterior [1] over the process `f = fz.f`, given inducing
@@ -9,7 +9,7 @@ f(z)`. The approximate posterior at test points ``x^*`` where ``f^* = f(x^*)``
 is then given by:
 
 ```math
-q(f^*) = \\int p(f | u) q(u) du
+q(f^*) = \int p(f | u) q(u) du
 ```
 which can be found in closed form.
 
