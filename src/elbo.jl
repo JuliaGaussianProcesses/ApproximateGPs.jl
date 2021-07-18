@@ -52,7 +52,7 @@ function _elbo_intermediates(
     fz::FiniteGP,
     q::AbstractMvNormal
 )
-    kl_term = kl_divergence(q, fz)
+    kl_term = StatsBase.kldivergence(q, fz)
     post = approx_posterior(SVGP(), fz, q)
     f_mean, f_var = mean_and_var(post, fx.x)
     return kl_term, f_mean, f_var
@@ -118,7 +118,7 @@ function expected_loglik(
     return sum(gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points))
 end
 
-function kl_divergence(q::AbstractMvNormal, p::AbstractMvNormal)
+function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
     p_μ, p_Σ = mean(p), cov(p)
     q_μ, q_Σ = mean(q), cov(q)
     (1/2) .* (logdet(p_Σ) - logdet(q_Σ) - length(p_μ) + tr(p_Σ \ q_Σ) +
