@@ -17,21 +17,11 @@
         # should therefore be equivalent to the sparse GP (Titsias) posterior
         # and exact GP regression (when z == x).
 
-        function exact_q(fu, fx, y)
-            σ² = fx.Σy[1]
-            Kuf = cov(fu, fx)
-            Kuu = Symmetric(cov(fu))
-            Σ = (Symmetric(cov(fu) + (1/σ²) * Kuf * Kuf'))
-            m = ((1/σ²)*Kuu* (Σ\Kuf)) * y
-            S = Symmetric(Kuu * (Σ \ Kuu))
-            return MvNormal(m, S)
-        end
-
         kernel = make_kernel(k_init)
         f = GP(kernel)
         fx = f(x, lik_noise)
         fu = f(z)
-        q_ex = exact_q(fu, fx, y)
+        q_ex = exact_variational_posterior(fu, fx, y)
 
         gpr_post = AbstractGPs.posterior(fx, y) # Exact GP regression
         vfe_post = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
