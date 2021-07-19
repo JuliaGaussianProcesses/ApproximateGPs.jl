@@ -22,12 +22,13 @@ function approx_posterior(::SVGP, fz::FiniteGP, q::AbstractMvNormal)
     m, A = mean(q), cholesky(cov(q))
     Kuu = cholesky(Symmetric(cov(fz)))
     B = Kuu.L \ A.L
-    data = (A=A, m=m, Kuu=Kuu, B=B, α=Kuu \ m, u=fz.x)
+    α=Kuu \ (m - mean(fz))
+    data = (A=A, m=m, Kuu=Kuu, B=B, α=α, u=fz.x)
     return ApproxPosteriorGP(SVGP(), fz.f, data)
 end
 
 function Statistics.mean(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
-    return cov(f.prior, x, f.data.u) * f.data.α
+    return mean(f.prior, x) + cov(f.prior, x, f.data.u) * f.data.α
 end
 
 function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
