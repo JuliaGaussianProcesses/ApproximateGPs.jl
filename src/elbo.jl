@@ -186,7 +186,10 @@ function expected_loglik(
     f_var::AbstractVector,
     lik
 )
-    return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
+    return error(
+        "No analytic solution exists for ", lik,
+        ". Use `Default()`, `GaussHermite()` or `MonteCarlo()` instead."
+    )
 end
 
 function expected_loglik(
