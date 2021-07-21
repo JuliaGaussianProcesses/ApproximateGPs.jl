@@ -7,6 +7,7 @@ using Statistics
 using StatsBase
 using FastGaussQuadrature
 using GPLikelihoods
+using SpecialFunctions
 using ChainRulesCore
 
 using AbstractGPs:

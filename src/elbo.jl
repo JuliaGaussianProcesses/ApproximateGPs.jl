@@ -1,3 +1,6 @@
+"Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
+ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood,GaussianLikelihood}
+
 """
     elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y))
 
@@ -14,15 +17,11 @@ function elbo(
     y::AbstractVector{<:Real},
     fz::FiniteGP,
     q::AbstractMvNormal;
-    n_data=length(y)
+    n_data=length(y),
+    method=:default,
+    kwargs...
 )
-    n_batch = length(y)
-    kl_term, f_mean, f_var = _elbo_intermediates(fx, fz, q)
-
-    Σy = diag(fx.Σy) # n.b. this assumes uncorrelated observation noise
-    variational_exp = expected_loglik(y, f_mean, f_var, Σy)
-    scale = n_data / n_batch
-    return sum(variational_exp) * scale - kl_term
+    return _elbo(fx, y, fz, q, fx.Σy, n_data, method; kwargs...)
 end
 
 
@@ -36,30 +35,34 @@ function elbo(
     y::AbstractVector,
     fz::FiniteGP,
     q::AbstractMvNormal;
-    n_data=length(y)
+    n_data=length(y),
+    method=:default,
+    kwargs...
 )
-    n_batch = length(y)
-    kl_term, f_mean, f_var = _elbo_intermediates(lfx.fx, fz, q)
-    
-    variational_exp = expected_loglik(y, f_mean, f_var, lfx.lik)
-    scale = n_data / n_batch
-    return variational_exp * scale - kl_term
+    return _elbo(lfx.fx, y, fz, q, lfx.lik, n_data, method; kwargs...)
 end
 
-# Computes the common intermediates needed for the ELBO
-function _elbo_intermediates(
+
+function _elbo(
     fx::FiniteGP,
+    y::AbstractVector,
     fz::FiniteGP,
-    q::AbstractMvNormal
+    q::AbstractMvNormal,
+    lik::Union{AbstractVecOrMat,ScalarLikelihood},
+    n_data::Integer,
+    method::Symbol;
+    kwargs...
 )
-    kl_term = StatsBase.kldivergence(q, fz)
     post = approx_posterior(SVGP(), fz, q)
     f_mean, f_var = mean_and_var(post, fx.x)
-    return kl_term, f_mean, f_var
-end
+    variational_exp = expected_loglik(y, f_mean, f_var, lik; method, kwargs...)
 
-"Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
-ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood}
+    kl_term = StatsBase.kldivergence(q, fz)
+
+    n_batch = length(y)
+    scale = n_data / n_batch
+    return sum(variational_exp) * scale - kl_term
+end
 
 """
     expected_loglik(y, f_mean, f_var, [Σy | lik])
@@ -89,17 +92,23 @@ have independent marginals such that only the marginals of `q(f)` are required.
 function expected_loglik end
 
 """
-    expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractVector)
+    expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractMatrix)
 
-The expected log likelihood for a Gaussian likelihood, computed in closed form.
+The expected log likelihood for a Gaussian likelihood, computed in closed form by default.
 """
 function expected_loglik(
     y::AbstractVector{<:Real},
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    Σy::AbstractVector
+    Σy::AbstractMatrix;
+    method=:default,
+    kwargs...
 )
-    return sum(-0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy))
+    if method === :default
+        return closed_form_expectation(y, f_mean, f_var, diag(Σy))
+    else
+        return expected_loglik(y, f_mean, f_var, GaussianLikelihood(Σy[1]); method, kwargs...)
+    end
 end
 
 """
@@ -113,16 +122,48 @@ function expected_loglik(
     f_mean::AbstractVector,
     f_var::AbstractVector,
     lik::ScalarLikelihood;
-    n_points=20
+    method=:default,
+    n_points=20,
+    n_samples=20
 )
-    return sum(gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points=n_points))
+    if method === :default && has_closed_form_expectation(lik)
+        return closed_form_expectation(y, f_mean, f_var, lik)
+    elseif method === :default || method === :gausshermite
+        return gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points)
+    elseif method === :montecarlo
+        return monte_carlo_expectation(y, f_mean, f_var, lik; n_samples)
+    end
 end
 
-function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
-    p_μ, p_Σ = mean(p), cov(p)
-    q_μ, q_Σ = mean(q), cov(q)
-    (1/2) .* (logdet(p_Σ) - logdet(q_Σ) - length(p_μ) + tr(p_Σ \ q_Σ) +
-              Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
+function closed_form_expectation(
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    Σy::AbstractVector
+    )
+    return sum(-0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy))
+end
+
+function closed_form_expectation(
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    ::PoissonLikelihood
+    )
+    return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
+end
+
+function monte_carlo_expectation(
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    lik::ScalarLikelihood;
+    n_samples=20
+)
+    # take 'n_samples' reparameterised samples with μ=f_mean and σ²=f_var
+    fs = f_mean .+ .√f_var .* randn(eltype(f_mean), length(f_mean), n_samples)
+    lls = loglikelihood.(lik.(fs), y)
+    return sum(lls) / n_samples
 end
 
 function gauss_hermite_quadrature(
@@ -139,7 +180,17 @@ function gauss_hermite_quadrature(
     # size(fs): (length(y), n_points)
     fs = √2 * .√f_var .* transpose(xs) .+ f_mean
     lls = loglikelihood.(lik.(fs), y)
-    return (1/√π) * lls * ws
+    return sum((1/√π) * lls * ws)
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
+
+function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
+    p_μ, p_Σ = mean(p), cov(p)
+    q_μ, q_Σ = mean(q), cov(q)
+    (1/2) .* (logdet(p_Σ) - logdet(q_Σ) - length(p_μ) + tr(p_Σ \ q_Σ) +
+              Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
+end
+
+has_closed_form_expectation(lik::Union{PoissonLikelihood,GaussianLikelihood}) = true
+has_closed_form_expectation(lik) = false
