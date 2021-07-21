@@ -7,12 +7,12 @@ struct Default <: ExpectationMethod end
 struct Analytic <: ExpectationMethod end
 
 struct GaussHermite <: ExpectationMethod
-    n_points
+    n_points::Int
 end
 GaussHermite() = GaussHermite(20)
 
 struct MonteCarlo <: ExpectationMethod
-    n_samples
+    n_samples::Int
 end
 MonteCarlo() = MonteCarlo(20)
 
