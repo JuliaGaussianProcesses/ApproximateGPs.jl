@@ -2,11 +2,17 @@
 ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood,GaussianLikelihood}
 
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y))
+    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=:default)
 
 Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
 observations of `fx`, pseudo-inputs are given by `z = fz.x` and `q(u)` is a
 variational distribution over inducing points `u = f(z)`.
+
+`method` selects which method is used to calculate the expected loglikelihood in
+the ELBO. The options are: `:default`, `:gausshermite` and `:montecarlo`. For
+likelihoods with a closed form solution, `:default` uses this exact solution. If
+there is no such solution, `:default` is instead synonymous with
+`:gausshermite`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -26,7 +32,7 @@ end
 
 
 """
-    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y))
+    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=:default)
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
@@ -42,7 +48,7 @@ function elbo(
     return _elbo(lfx.fx, y, fz, q, lfx.lik, n_data, method; kwargs...)
 end
 
-
+# Compute the common elements of the ELBO
 function _elbo(
     fx::FiniteGP,
     y::AbstractVector,
@@ -94,7 +100,10 @@ function expected_loglik end
 """
     expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractMatrix)
 
-The expected log likelihood for a Gaussian likelihood, computed in closed form by default.
+The expected log likelihood for a Gaussian likelihood, computed in closed form
+by default. If using the closed form solution, the noise Σy is assumed to be
+uncorrelated (i.e. only diag(Σy) is used). If using `:gausshermite` or `:montecarlo`,
+the noise is assumed to be homoscedastic as well (i.e. only Σy[1] is used).
 """
 function expected_loglik(
     y::AbstractVector{<:Real},
@@ -112,10 +121,11 @@ function expected_loglik(
 end
 
 """
-    expected_loglik(y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood; n_points=20)
+    expected_loglik(y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood; method=:default, n_points=20, n_samples=20)
 
-The expected log likelihood for a `ScalarLikelihood`, approximated via
-Gauss-Hermite quadrature with `n_points` quadrature points.
+The expected log likelihood for a `ScalarLikelihood`, computed via `method`.
+Defaults to a closed form solution if it exists, otherwise defaults to
+Gauss-Hermite quadrature.
 """
 function expected_loglik(
     y::AbstractVector,
@@ -135,6 +145,7 @@ function expected_loglik(
     end
 end
 
+# The closed form solution for independent Gaussian noise
 function closed_form_expectation(
     y::AbstractVector,
     f_mean::AbstractVector,
@@ -144,6 +155,7 @@ function closed_form_expectation(
     return sum(-0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy))
 end
 
+# The closed form solution for a Poisson likelihood
 function closed_form_expectation(
     y::AbstractVector,
     f_mean::AbstractVector,
