@@ -17,6 +17,10 @@ include("test_utils.jl")
     println(" ")
     @info "Ran svgp tests"
 
+    include("elbo.jl")
+    println(" ")
+    @info "Ran elbo tests"
+
     include("equivalences.jl")
     println(" ")
     @info "Ran equivalences tests"
