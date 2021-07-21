@@ -17,17 +17,17 @@ end
 MonteCarlo() = MonteCarlo(20)
 
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=:default)
+    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=Default())
 
 Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
 observations of `fx`, pseudo-inputs are given by `z = fz.x` and `q(u)` is a
 variational distribution over inducing points `u = f(z)`.
 
 `method` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `:default`, `:gausshermite` and `:montecarlo`. For
-likelihoods with a closed form solution, `:default` uses this exact solution. If
-there is no such solution, `:default` is instead synonymous with
-`:gausshermite`.
+the ELBO. The options are: `Default()`, `Analytic()`, `GaussHermite()` and
+`MonteCarlo()`. For likelihoods with an analytic solution, `Default()` uses this
+exact solution. If there is no such solution, `Default()` either uses
+`GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -46,7 +46,7 @@ end
 
 
 """
-    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=:default)
+    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=Default())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
@@ -83,7 +83,7 @@ function _elbo(
 end
 
 """
-    expected_loglik(y, f_mean, f_var, [Σy | lik])
+    expected_loglik(method, y, f_mean, f_var, [Σy | lik])
 
 This function computes the expected log likelihood:
 
@@ -100,7 +100,7 @@ where `q(u)` is the variational distribution over inducing points (see
 [`elbo`](@ref)).
 
 Where possible, this expectation is calculated in closed form. Otherwise, it is
-approximated using Gauss-Hermite quadrature by default.
+approximated using either Gauss-Hermite quadrature or Monte Carlo.
 
 # Extended help
 
@@ -114,7 +114,7 @@ function expected_loglik end
 
 The expected log likelihood for a Gaussian likelihood, computed in closed form
 by default. If using the closed form solution, the noise Σy is assumed to be
-uncorrelated (i.e. only diag(Σy) is used). If using `:gausshermite` or `:montecarlo`,
+uncorrelated (i.e. only diag(Σy) is used). If using `GaussHermite()` or `MonteCarlo()`,
 the noise is assumed to be homoscedastic as well (i.e. only Σy[1] is used).
 """
 function expected_loglik(
@@ -151,7 +151,7 @@ function expected_loglik(
 end
 
 """
-    expected_loglik(y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood; method=:default, n_points=20, n_samples=20)
+    expected_loglik(method::ExpectationMethod, y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood)
 
 The expected log likelihood for a `ScalarLikelihood`, computed via `method`.
 Defaults to a closed form solution if it exists, otherwise defaults to
@@ -175,6 +175,16 @@ function expected_loglik(
     f_mean::AbstractVector,
     f_var::AbstractVector,
     ::PoissonLikelihood
+)
+    return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
+end
+
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    lik
 )
     return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
 end
