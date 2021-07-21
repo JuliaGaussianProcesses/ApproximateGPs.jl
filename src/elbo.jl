@@ -29,6 +29,9 @@ the ELBO. The options are: `Default()`, `Analytic()`, `Quadrature()` and
 exact solution. If there is no such solution, `Default()` either uses
 `Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
+N.B. the observation noise `fx.Σy` is assumed to be homoscedastic and
+uncorrelated - i.e. only `fx.Σy[1]` is used.
+
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
@@ -41,7 +44,7 @@ function elbo(
     n_data=length(y),
     method=Default()
 )
-    return _elbo(method, fx, y, fz, q, fx.Σy, n_data)
+    return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
 end
 
 
@@ -68,7 +71,7 @@ function _elbo(
     y::AbstractVector,
     fz::FiniteGP,
     q::AbstractMvNormal,
-    lik::Union{AbstractVecOrMat,ScalarLikelihood},
+    lik::ScalarLikelihood,
     n_data::Integer
 )
     post = approx_posterior(SVGP(), fz, q)
@@ -83,7 +86,7 @@ function _elbo(
 end
 
 """
-    expected_loglik(method, y, f_mean, f_var, [Σy | lik])
+    expected_loglik(method, y, f_mean, f_var, lik)
 
 This function computes the expected log likelihood:
 
@@ -97,7 +100,8 @@ where `p(y | f)` is the process likelihood.
     q(f) = ∫ p(f | u) q(u) du
 ```
 where `q(u)` is the variational distribution over inducing points (see
-[`elbo`](@ref)).
+[`elbo`](@ref)). The marginal means and variances of `q(f)` are given by
+`f_mean` and `f_var` respectively.
 
 Where possible, this expectation is calculated in closed form. Otherwise, it is
 approximated using either Gauss-Hermite quadrature or Monte Carlo.
@@ -108,47 +112,6 @@ approximated using either Gauss-Hermite quadrature or Monte Carlo.
 have independent marginals such that only the marginals of `q(f)` are required.
 """
 function expected_loglik end
-
-"""
-    expected_loglik(y::AbstractVector{<:Real}, f_mean::AbstractVector, f_var::AbstractVector, Σy::AbstractMatrix)
-
-The expected log likelihood for a Gaussian likelihood, computed in closed form
-by default. If using the closed form solution, the noise Σy is assumed to be
-uncorrelated (i.e. only diag(Σy) is used). If using `Quadrature()` or `MonteCarlo()`,
-the noise is assumed to be homoscedastic as well (i.e. only Σy[1] is used).
-"""
-function expected_loglik(
-    ::Default,
-    y::AbstractVector{<:Real},
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
-    Σy::AbstractMatrix
-)
-    method = _default_method(GaussianLikelihood())
-    expected_loglik(method, y, f_mean, f_var, Σy)
-end
-
-# The closed form solution for independent Gaussian noise
-function expected_loglik(
-    ::Analytic,
-    y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
-    Σy::AbstractMatrix
-)
-    Σy_diag = diag(Σy)
-    return sum(-0.5 * (log(2π) .+ log.(Σy_diag) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy_diag))
-end
-
-function expected_loglik(
-    method::Union{Quadrature,MonteCarlo},
-    y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
-    Σy::AbstractMatrix
-)
-    return expected_loglik(method, y, f_mean, f_var, GaussianLikelihood(Σy[1]))
-end
 
 """
     expected_loglik(method::ExpectationMethod, y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood)
@@ -168,6 +131,17 @@ function expected_loglik(
     expected_loglik(method, y, f_mean, f_var, lik)
 end
 
+# The closed form solution for independent Gaussian noise
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    lik::GaussianLikelihood
+)
+    return sum(-0.5 * (log(2π) .+ log(lik.σ²) .+ ((y .- f_mean).^2 .+ f_var) / lik.σ²))
+end
+
 # The closed form solution for a Poisson likelihood
 function expected_loglik(
     ::Analytic,
@@ -176,7 +150,7 @@ function expected_loglik(
     f_var::AbstractVector,
     ::PoissonLikelihood
 )
-    return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
+    return sum((y .* f_mean) - exp.(f_mean .+ (f_var / 2)) - loggamma.(y .+ 1))
 end
 
 function expected_loglik(

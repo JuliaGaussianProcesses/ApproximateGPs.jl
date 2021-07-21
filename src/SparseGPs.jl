@@ -25,7 +25,7 @@ export elbo,
     SVGP,
     Default,
     Analytic,
-    GaussHermite,
+    Quadrature,
     MonteCarlo
 
 
