@@ -22,7 +22,12 @@ using AbstractGPs:
 
 export elbo,
     approx_posterior,
-    SVGP
+    SVGP,
+    Default,
+    Analytic,
+    GaussHermite,
+    MonteCarlo
+
 
 include("elbo.jl")
 include("svgp.jl")

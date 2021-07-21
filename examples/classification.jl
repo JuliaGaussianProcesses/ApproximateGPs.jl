@@ -91,7 +91,7 @@ end
 
 function flux_loss(x, y; n_data=length(y))
     fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q; n_data, method=:montecarlo)
+    return -SparseGPs.elbo(fx, y, fu, q; n_data, method=MonteCarlo())
 end
 
 # %%

@@ -1,6 +1,21 @@
 "Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
 ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood,GaussianLikelihood}
 
+
+abstract type ExpectationMethod end
+struct Default <: ExpectationMethod end
+struct Analytic <: ExpectationMethod end
+
+struct GaussHermite <: ExpectationMethod
+    n_points
+end
+GaussHermite() = GaussHermite(20)
+
+struct MonteCarlo <: ExpectationMethod
+    n_samples
+end
+MonteCarlo() = MonteCarlo(20)
+
 """
     elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=:default)
 
@@ -24,10 +39,9 @@ function elbo(
     fz::FiniteGP,
     q::AbstractMvNormal;
     n_data=length(y),
-    method=:default,
-    kwargs...
+    method=Default()
 )
-    return _elbo(fx, y, fz, q, fx.Σy, n_data, method; kwargs...)
+    return _elbo(method, fx, y, fz, q, fx.Σy, n_data)
 end
 
 
@@ -42,26 +56,24 @@ function elbo(
     fz::FiniteGP,
     q::AbstractMvNormal;
     n_data=length(y),
-    method=:default,
-    kwargs...
+    method=Default()
 )
-    return _elbo(lfx.fx, y, fz, q, lfx.lik, n_data, method; kwargs...)
+    return _elbo(method, lfx.fx, y, fz, q, lfx.lik, n_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
+    method::ExpectationMethod,
     fx::FiniteGP,
     y::AbstractVector,
     fz::FiniteGP,
     q::AbstractMvNormal,
     lik::Union{AbstractVecOrMat,ScalarLikelihood},
-    n_data::Integer,
-    method::Symbol;
-    kwargs...
+    n_data::Integer
 )
     post = approx_posterior(SVGP(), fz, q)
     f_mean, f_var = mean_and_var(post, fx.x)
-    variational_exp = expected_loglik(y, f_mean, f_var, lik; method, kwargs...)
+    variational_exp = expected_loglik(method, y, f_mean, f_var, lik)
 
     kl_term = StatsBase.kldivergence(q, fz)
 
@@ -106,18 +118,36 @@ uncorrelated (i.e. only diag(Σy) is used). If using `:gausshermite` or `:montec
 the noise is assumed to be homoscedastic as well (i.e. only Σy[1] is used).
 """
 function expected_loglik(
+    ::Default,
     y::AbstractVector{<:Real},
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    Σy::AbstractMatrix;
-    method=:default,
-    kwargs...
+    Σy::AbstractMatrix
 )
-    if method === :default
-        return closed_form_expectation(y, f_mean, f_var, diag(Σy))
-    else
-        return expected_loglik(y, f_mean, f_var, GaussianLikelihood(Σy[1]); method, kwargs...)
-    end
+    method = _default_method(GaussianLikelihood())
+    expected_loglik(method, y, f_mean, f_var, Σy)
+end
+
+# The closed form solution for independent Gaussian noise
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    Σy::AbstractMatrix
+)
+    Σy_diag = diag(Σy)
+    return sum(-0.5 * (log(2π) .+ log.(Σy_diag) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy_diag))
+end
+
+function expected_loglik(
+    method::Union{GaussHermite,MonteCarlo},
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    Σy::AbstractMatrix
+)
+    return expected_loglik(method, y, f_mean, f_var, GaussianLikelihood(Σy[1]))
 end
 
 """
@@ -128,67 +158,51 @@ Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
 function expected_loglik(
+    ::Default,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    lik::ScalarLikelihood;
-    method=:default,
-    n_points=20,
-    n_samples=20
+    lik::ScalarLikelihood
 )
-    if method === :default && has_closed_form_expectation(lik)
-        return closed_form_expectation(y, f_mean, f_var, lik)
-    elseif method === :default || method === :gausshermite
-        return gauss_hermite_quadrature(y, f_mean, f_var, lik; n_points)
-    elseif method === :montecarlo
-        return monte_carlo_expectation(y, f_mean, f_var, lik; n_samples)
-    end
-end
-
-# The closed form solution for independent Gaussian noise
-function closed_form_expectation(
-    y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
-    Σy::AbstractVector
-    )
-    return sum(-0.5 * (log(2π) .+ log.(Σy) .+ ((y .- f_mean).^2 .+ f_var) ./ Σy))
+    method = _default_method(lik)
+    expected_loglik(method, y, f_mean, f_var, lik)
 end
 
 # The closed form solution for a Poisson likelihood
-function closed_form_expectation(
+function expected_loglik(
+    ::Analytic,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
     ::PoissonLikelihood
-    )
+)
     return sum(y .* f_mean - exp(f_mean .+ (f_var / 2) - loggamma.(y)))
 end
 
-function monte_carlo_expectation(
+function expected_loglik(
+    mc::MonteCarlo,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    lik::ScalarLikelihood;
-    n_samples=20
+    lik::ScalarLikelihood
 )
     # take 'n_samples' reparameterised samples with μ=f_mean and σ²=f_var
-    fs = f_mean .+ .√f_var .* randn(eltype(f_mean), length(f_mean), n_samples)
+    fs = f_mean .+ .√f_var .* randn(eltype(f_mean), length(f_mean), mc.n_samples)
     lls = loglikelihood.(lik.(fs), y)
-    return sum(lls) / n_samples
+    return sum(lls) / mc.n_samples
 end
 
-function gauss_hermite_quadrature(
+function expected_loglik(
+    gh::GaussHermite,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    lik;
-    n_points=20
+    lik::ScalarLikelihood
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
     # (see eg. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
-    xs, ws = gausshermite(n_points)
+    xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
     fs = √2 * .√f_var .* transpose(xs) .+ f_mean
     lls = loglikelihood.(lik.(fs), y)
@@ -204,5 +218,5 @@ function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
               Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
 end
 
-has_closed_form_expectation(lik::Union{PoissonLikelihood,GaussianLikelihood}) = true
-has_closed_form_expectation(lik) = false
+_default_method(::Union{PoissonLikelihood,GaussianLikelihood}) = Analytic()
+_default_method(_) = GaussHermite()
