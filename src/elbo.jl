@@ -6,10 +6,10 @@ abstract type ExpectationMethod end
 struct Default <: ExpectationMethod end
 struct Analytic <: ExpectationMethod end
 
-struct GaussHermite <: ExpectationMethod
+struct Quadrature <: ExpectationMethod
     n_points::Int
 end
-GaussHermite() = GaussHermite(20)
+Quadrature() = Quadrature(20)
 
 struct MonteCarlo <: ExpectationMethod
     n_samples::Int
@@ -24,10 +24,10 @@ observations of `fx`, pseudo-inputs are given by `z = fz.x` and `q(u)` is a
 variational distribution over inducing points `u = f(z)`.
 
 `method` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `Default()`, `Analytic()`, `GaussHermite()` and
+the ELBO. The options are: `Default()`, `Analytic()`, `Quadrature()` and
 `MonteCarlo()`. For likelihoods with an analytic solution, `Default()` uses this
 exact solution. If there is no such solution, `Default()` either uses
-`GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
+`Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -114,7 +114,7 @@ function expected_loglik end
 
 The expected log likelihood for a Gaussian likelihood, computed in closed form
 by default. If using the closed form solution, the noise Σy is assumed to be
-uncorrelated (i.e. only diag(Σy) is used). If using `GaussHermite()` or `MonteCarlo()`,
+uncorrelated (i.e. only diag(Σy) is used). If using `Quadrature()` or `MonteCarlo()`,
 the noise is assumed to be homoscedastic as well (i.e. only Σy[1] is used).
 """
 function expected_loglik(
@@ -141,7 +141,7 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    method::Union{GaussHermite,MonteCarlo},
+    method::Union{Quadrature,MonteCarlo},
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
@@ -188,7 +188,7 @@ function expected_loglik(
 )
     return error(
         "No analytic solution exists for ", lik,
-        ". Use `Default()`, `GaussHermite()` or `MonteCarlo()` instead."
+        ". Use `Default()`, `Quadrature()` or `MonteCarlo()` instead."
     )
 end
 
@@ -206,7 +206,7 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    gh::GaussHermite,
+    gh::Quadrature,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
@@ -232,4 +232,4 @@ function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
 end
 
 _default_method(::Union{PoissonLikelihood,GaussianLikelihood}) = Analytic()
-_default_method(_) = GaussHermite()
+_default_method(_) = Quadrature()
