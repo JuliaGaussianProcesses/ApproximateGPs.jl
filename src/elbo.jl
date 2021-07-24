@@ -139,16 +139,16 @@ function expected_loglik(
     f_var::AbstractVector,
     lik::GaussianLikelihood
 )
-    return sum(-0.5 * (log(2π) .+ log(lik.σ²) .+ ((y .- f_mean).^2 .+ f_var) / lik.σ²))
+    return sum(-0.5 * (log(2π) .+ log.(lik.σ²) .+ ((y .- f_mean).^2 .+ f_var) / lik.σ²))
 end
 
-# The closed form solution for a Poisson likelihood
+# The closed form solution for a Poisson likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
     y::AbstractVector,
     f_mean::AbstractVector,
     f_var::AbstractVector,
-    ::PoissonLikelihood
+    ::PoissonLikelihood{ExpLink}
 )
     return sum((y .* f_mean) - exp.(f_mean .+ (f_var / 2)) - loggamma.(y .+ 1))
 end
