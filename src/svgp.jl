@@ -17,7 +17,6 @@ which can be found in closed form.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-
 function approx_posterior(::SVGP, fz::FiniteGP, q::AbstractMvNormal)
     m, A = mean(q), cholesky(cov(q))
     Kuu = cholesky(Symmetric(cov(fz)))
