@@ -161,7 +161,7 @@ function expected_loglik(
     lik
 )
     return error(
-        "No analytic solution exists for ", lik,
+        "No analytic solution exists for ", typeof(lik),
         ". Use `Default()`, `Quadrature()` or `MonteCarlo()` instead."
     )
 end
