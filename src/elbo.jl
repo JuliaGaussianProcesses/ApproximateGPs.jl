@@ -109,8 +109,8 @@ where `q(u)` is the variational distribution over inducing points (see
 [`elbo`](@ref)). The marginal means and variances of `q(f)` are given by
 `f_mean` and `f_var` respectively.
 
-Where possible, this expectation is calculated in closed form. Otherwise, it is
-approximated using either Gauss-Hermite quadrature or Monte Carlo.
+`method` determines which method is used to calculate the expected log
+likelihood - see [`elbo`](@ref) for more details.
 
 # Extended help
 
