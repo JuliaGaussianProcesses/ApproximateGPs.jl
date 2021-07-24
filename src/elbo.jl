@@ -1,5 +1,11 @@
 "Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
-ScalarLikelihood = Union{BernoulliLikelihood,PoissonLikelihood,GaussianLikelihood}
+ScalarLikelihood = Union{
+    BernoulliLikelihood,
+    PoissonLikelihood,
+    GaussianLikelihood,
+    ExponentialLikelihood,
+    GammaLikelihood
+}
 
 
 abstract type ExpectationMethod end
@@ -153,6 +159,29 @@ function expected_loglik(
     return sum((y .* f_mean) - exp.(f_mean .+ (f_var / 2)) - loggamma.(y .+ 1))
 end
 
+# The closed form solution for an Exponential likelihood with an exponential inverse link function
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    ::ExponentialLikelihood{ExpLink}
+)
+    return sum(-f_mean - y .* exp.((f_var / 2) .- f_mean))
+end
+
+# The closed form solution for a Gamma likelihood with an exponential inverse link function
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    f_mean::AbstractVector,
+    f_var::AbstractVector,
+    lik::GammaLikelihood{<:Any, ExpLink}
+)
+    return sum((lik.α - 1) * log.(y) .- y .* exp.((f_var / 2) .- f_mean)
+               .- lik.α * f_mean .- loggamma(lik.α))
+end
+
 function expected_loglik(
     ::Analytic,
     y::AbstractVector,
@@ -205,5 +234,11 @@ function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
               Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
 end
 
-_default_method(::Union{PoissonLikelihood,GaussianLikelihood}) = Analytic()
+AnalyticLikelihood = Union{
+    PoissonLikelihood,
+    GaussianLikelihood,
+    ExponentialLikelihood,
+    GammaLikelihood
+}
+_default_method(::AnalyticLikelihood) = Analytic()
 _default_method(_) = Quadrature()
