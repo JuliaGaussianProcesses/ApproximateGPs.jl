@@ -140,7 +140,7 @@ end
 # The closed form solution for independent Gaussian noise
 function expected_loglik(
     ::Analytic,
-    y::AbstractVector,
+    y::AbstractVector{<:Real},
     f_mean::AbstractVector,
     f_var::AbstractVector,
     lik::GaussianLikelihood
@@ -162,7 +162,7 @@ end
 # The closed form solution for an Exponential likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
-    y::AbstractVector,
+    y::AbstractVector{<:Real},
     f_mean::AbstractVector,
     f_var::AbstractVector,
     ::ExponentialLikelihood{ExpLink}
@@ -173,7 +173,7 @@ end
 # The closed form solution for a Gamma likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
-    y::AbstractVector,
+    y::AbstractVector{<:Real},
     f_mean::AbstractVector,
     f_var::AbstractVector,
     lik::GammaLikelihood{<:Any, ExpLink}
