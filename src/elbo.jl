@@ -1,4 +1,4 @@
-"Likelihoods which take a scalar (or vector of scalars) as input and return a single scalar."
+"Likelihoods which take a scalar as input and return a scalar."
 ScalarLikelihood = Union{
     BernoulliLikelihood,
     PoissonLikelihood,
