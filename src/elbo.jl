@@ -42,7 +42,7 @@ uncorrelated - i.e. only `fx.Σy[1]` is used.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-function elbo(
+function AbstractGPs.elbo(
     fx::FiniteGP,
     y::AbstractVector{<:Real},
     fz::FiniteGP,
@@ -59,7 +59,7 @@ end
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
-function elbo(
+function AbstractGPs.elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector,
     fz::FiniteGP,

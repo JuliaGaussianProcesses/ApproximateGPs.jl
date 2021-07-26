@@ -20,9 +20,7 @@ using AbstractGPs:
     diag_At_A,
     Xt_invA_X
 
-export elbo,
-    approx_posterior,
-    SVGP,
+export SVGP,
     Default,
     Analytic,
     Quadrature,

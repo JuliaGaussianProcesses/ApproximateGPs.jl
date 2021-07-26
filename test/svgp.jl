@@ -12,7 +12,7 @@
     y = rand(rng, fx)
 
     q = exact_variational_posterior(fx, fx, y)
-    f_approx_post = SparseGPs.approx_posterior(SVGP(), fx, q)
+    f_approx_post = approx_posterior(SVGP(), fx, q)
 
     a = collect(range(-1.0, 1.0; length=N_a))
     b = randn(rng, N_b)

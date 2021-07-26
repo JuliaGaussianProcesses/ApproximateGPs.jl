@@ -23,9 +23,9 @@
         fu = f(z)
         q_ex = exact_variational_posterior(fu, fx, y)
 
-        gpr_post = AbstractGPs.posterior(fx, y) # Exact GP regression
-        vfe_post = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
-        svgp_post = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
+        gpr_post = posterior(fx, y) # Exact GP regression
+        vfe_post = approx_posterior(VFE(), fx, y, fu) # Titsias posterior
+        svgp_post = approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
 
         @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol=1e-10
         @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol=1e-10
@@ -78,7 +78,7 @@
         svgp = SVGPModel(copy(k_init), copy(z), m, A)
         function SVGP_loss(x, y)
             fx, fz, q = svgp(x)
-            return -SparseGPs.elbo(fx, y, fz, q)
+            return -elbo(fx, y, fz, q)
         end
 
         ## THIRD - train the models
@@ -102,7 +102,7 @@
             f = GP(make_kernel(m.k))
             fz = f(m.z, jitter)
             q = MvNormal(m.m, m.A'm.A)
-            return SparseGPs.approx_posterior(SVGP(), fz, q)
+            return approx_posterior(SVGP(), fz, q)
         end
         
         gpr_post = posterior(gpr, x, y)
