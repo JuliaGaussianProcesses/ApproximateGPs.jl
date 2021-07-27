@@ -7,13 +7,13 @@
     kernel = make_kernel([0.2, 0.6])
     f = GP(sin, kernel)
     fx = f(x, 0.1)
-    fx_bad = f(x, fill(0.1, N))
     fz = f(z)
     q_ex = exact_variational_posterior(fz, fx, y)
 
     @test elbo(fx, y, fz, q_ex) isa Real
     @test elbo(fx, y, fz, q_ex) ≤ logpdf(fx, y)
 
+    fx_bad = f(x, fill(0.1, N))
     @test_throws ErrorException elbo(fx_bad, y, fz, q_ex)
 
     # Test that the various methods of computing expectations return the same

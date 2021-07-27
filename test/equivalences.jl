@@ -36,7 +36,9 @@
 
     @testset "optimised posterior" begin
         jitter = 1e-5
-        
+
+        make_gp(kernel) = GP(kernel)
+
         ## FIRST - define the models
         # GPR - Exact GP regression
         struct GPRModel
@@ -45,7 +47,7 @@
         @Flux.functor GPRModel
 
         function (m::GPRModel)(x)
-            f = GP(make_kernel(m.k))
+            f = make_gp(make_kernel(m.k))
             fx = f(x, lik_noise)
             return fx
         end
@@ -60,7 +62,7 @@
         @Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
 
         function (m::SVGPModel)(x)
-            f = GP(make_kernel(m.k))
+            f = make_gp(make_kernel(m.k))
             q = MvNormal(m.m, m.A'm.A)
             fx = f(x, lik_noise)
             fz = f(m.z, jitter)
@@ -93,18 +95,18 @@
 
         ## FOURTH - construct the posteriors
         function posterior(m::GPRModel, x, y)
-            f = GP(make_kernel(m.k))
+            f = make_gp(make_kernel(m.k))
             fx = f(x, lik_noise)
             return AbstractGPs.posterior(fx, y)
         end
 
         function posterior(m::SVGPModel)
-            f = GP(make_kernel(m.k))
+            f = make_gp(make_kernel(m.k))
             fz = f(m.z, jitter)
             q = MvNormal(m.m, m.A'm.A)
             return approx_posterior(SVGP(), fz, q)
         end
-        
+
         gpr_post = posterior(gpr, x, y)
         svgp_post = posterior(svgp)
 
