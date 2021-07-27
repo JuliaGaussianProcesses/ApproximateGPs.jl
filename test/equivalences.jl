@@ -5,8 +5,6 @@
 
     z = copy(x) # Set inducing inputs == training inputs
     
-    make_kernel(k) = softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
-
     k_init = [0.2, 0.6] # initial kernel parameters
     lik_noise = 0.1 # The (fixed) Gaussian likelihood noise
 
@@ -20,18 +18,20 @@
         kernel = make_kernel(k_init)
         f = GP(kernel)
         fx = f(x, lik_noise)
-        fu = f(z)
-        q_ex = exact_variational_posterior(fu, fx, y)
+        fz = f(z)
+        q_ex = exact_variational_posterior(fz, fx, y)
 
         gpr_post = posterior(fx, y) # Exact GP regression
-        vfe_post = approx_posterior(VFE(), fx, y, fu) # Titsias posterior
-        svgp_post = approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
+        vfe_post = approx_posterior(VFE(), fx, y, fz) # Titsias posterior
+        svgp_post = approx_posterior(SVGP(), fz, q_ex) # Hensman (2013) exact posterior
 
         @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol=1e-10
         @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol=1e-10
 
         @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol=1e-10
         @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol=1e-10
+
+        @test elbo(fx, y, fz, q_ex) ≈ logpdf(fx, y)
     end
 
     @testset "optimised posterior" begin
