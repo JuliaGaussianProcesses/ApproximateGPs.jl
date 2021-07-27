@@ -53,7 +53,6 @@ function AbstractGPs.elbo(
     return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
 end
 
-
 """
     elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=Default())
 
@@ -117,7 +116,7 @@ likelihood - see [`elbo`](@ref) for more details.
 `q(f)` is assumed to be an `MvNormal` distribution and `p(y | f)` is assumed to
 have independent marginals such that only the marginals of `q(f)` are required.
 """
-function expected_loglik end
+expected_loglik(method, y, f_mean, f_var, lik)
 
 """
     expected_loglik(method::ExpectationMethod, y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood)
