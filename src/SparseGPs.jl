@@ -9,8 +9,10 @@ using FastGaussQuadrature
 using GPLikelihoods
 using SpecialFunctions
 using ChainRulesCore
+using FillArrays
 
 using AbstractGPs:
+    AbstractGP,
     FiniteGP,
     LatentFiniteGP,
     ApproxPosteriorGP,

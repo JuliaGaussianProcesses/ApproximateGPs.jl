@@ -43,7 +43,7 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    fx::FiniteGP,
+    fx::FiniteGP{<:AbstractGP, <:AbstractVector, <:Diagonal{<:Real, <:Fill}},
     y::AbstractVector{<:Real},
     fz::FiniteGP,
     q::AbstractMvNormal;
@@ -51,6 +51,10 @@ function AbstractGPs.elbo(
     method=Default()
 )
     return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
+end
+
+function AbstractGPs.elbo(::FiniteGP, ::AbstractVector, ::FiniteGP, ::AbstractMvNormal; kwargs...) where T<:FiniteGP
+    return error("The observation noise fx.Σy may not be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)")
 end
 
 """
