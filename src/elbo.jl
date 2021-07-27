@@ -53,8 +53,8 @@ function AbstractGPs.elbo(
     return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
 end
 
-function AbstractGPs.elbo(::FiniteGP, ::AbstractVector, ::FiniteGP, ::AbstractMvNormal; kwargs...) where T<:FiniteGP
-    return error("The observation noise fx.Σy may not be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)")
+function AbstractGPs.elbo(::FiniteGP, ::AbstractVector, ::FiniteGP, ::AbstractMvNormal; kwargs...)
+    return error("The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)")
 end
 
 """
