@@ -87,7 +87,7 @@ function _elbo(
     f_mean, f_var = mean_and_var(post, fx.x)
     variational_exp = expected_loglik(method, y, f_mean, f_var, lik)
 
-    kl_term = StatsBase.kldivergence(q, fz)
+    kl_term = kldivergence(q, fz)
 
     n_batch = length(y)
     scale = n_data / n_batch
