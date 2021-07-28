@@ -51,6 +51,7 @@ plt = plot(
 )
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
 
+
 # %%
 # Plot the same samples, but pushed through a logistic sigmoid to constrain
 # them in (0, 1).
@@ -80,9 +81,11 @@ end
 @Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
 
 lik = BernoulliLikelihood()
+jitter = 1e-4
+
 function (m::SVGPModel)(x)
     kernel = make_kernel(m.k)
-    f = LatentGP(GP(kernel), BernoulliLikelihood(), 0.1)
+    f = LatentGP(GP(kernel), lik, jitter)
     q = MvNormal(m.m, m.A'm.A)
     fx = f(x)
     fu = f(m.z).fx
@@ -117,7 +120,7 @@ println(flux_loss(x, y))
 Flux.train!(
     (x, y) -> flux_loss(x, y),
     parameters,
-    ncycle([(x, y)], 1000), # Train for 1000 epochs
+    ncycle([(x, y)], 2000), # Train for 1000 epochs
     opt
 )
 
@@ -127,10 +130,9 @@ println(flux_loss(x, y))
 
 # %%
 # After optimisation, plot samples from the underlying posterior GP.
-
 fu = f(z).fx # want the underlying FiniteGP
 post = SparseGPs.approx_posterior(SVGP(), fu, MvNormal(m, A'A))
-l_post = LatentGP(post, BernoulliLikelihood(), 0.1)
+l_post = LatentGP(post, BernoulliLikelihood(), jitter)
 
 post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
 
