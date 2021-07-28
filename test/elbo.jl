@@ -5,7 +5,7 @@
     z = x[begin:5]
 
     kernel = make_kernel([0.2, 0.6])
-    f = GP(sin, kernel)
+    f = GP(kernel)
     fx = f(x, 0.1)
     fz = f(z)
     q_ex = exact_variational_posterior(fz, fx, y)
