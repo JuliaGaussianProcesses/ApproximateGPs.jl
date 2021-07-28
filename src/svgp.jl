@@ -18,8 +18,8 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.approx_posterior(::SVGP, fz::FiniteGP, q::AbstractMvNormal)
-    m, A = mean(q), cholesky(cov(q))
-    Kuu = cholesky(Symmetric(cov(fz)))
+    m, A = mean(q), _chol_cov(q)
+    Kuu = _chol_cov(fz)
     B = Kuu.L \ A.L
     α=Kuu \ (m - mean(fz))
     data = (A=A, m=m, Kuu=Kuu, B=B, α=α, u=fz.x)
@@ -66,3 +66,6 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Σ_diag = var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
     return μ, Σ_diag
 end
+
+_chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
+_chol_cov(q::MvNormal) = cholesky(q.Σ)

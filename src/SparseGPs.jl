@@ -26,7 +26,6 @@ export SVGP,
     Quadrature,
     MonteCarlo
 
-
 include("elbo.jl")
 include("svgp.jl")
 
