@@ -16,8 +16,6 @@ using AbstractGPs:
     FiniteGP,
     LatentFiniteGP,
     ApproxPosteriorGP,
-    _cholesky,
-    _symmetric,
     At_A,
     diag_At_A,
     Xt_invA_X
