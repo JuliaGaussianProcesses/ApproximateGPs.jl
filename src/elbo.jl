@@ -230,13 +230,6 @@ end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
 
-function StatsBase.kldivergence(q::AbstractMvNormal, p::AbstractMvNormal)
-    p_μ, p_Σ = mean(p), cov(p)
-    q_μ, q_Σ = mean(q), cov(q)
-    (1/2) .* (logdet(p_Σ) - logdet(q_Σ) - length(p_μ) + tr(p_Σ \ q_Σ) +
-              Xt_invA_X(cholesky(p_Σ), (q_μ - p_μ)))
-end
-
 AnalyticLikelihood = Union{
     PoissonLikelihood,
     GaussianLikelihood,

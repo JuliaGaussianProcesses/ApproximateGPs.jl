@@ -10,6 +10,7 @@ using GPLikelihoods
 using SpecialFunctions
 using ChainRulesCore
 using FillArrays
+using KLDivergences
 
 using AbstractGPs:
     AbstractGP,
