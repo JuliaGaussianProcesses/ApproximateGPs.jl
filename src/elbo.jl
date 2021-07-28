@@ -35,8 +35,8 @@ the ELBO. The options are: `Default()`, `Analytic()`, `Quadrature()` and
 exact solution. If there is no such solution, `Default()` either uses
 `Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
-N.B. the observation noise `fx.Σy` is assumed to be homoscedastic and
-uncorrelated - i.e. only `fx.Σy[1]` is used.
+N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
+Further, `fx.Σy` must be homoscedastic and uncorrelated - i.e. `fx.Σy = α * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -84,8 +84,8 @@ function _elbo(
     n_data::Integer
 )
     post = approx_posterior(SVGP(), fz, q)
-    f_mean, f_var = mean_and_var(post, fx.x)
-    variational_exp = expected_loglik(method, y, f_mean, f_var, lik)
+    q_f = marginals(post(fx.x))
+    variational_exp = expected_loglik(method, y, q_f, lik)
 
     kl_term = kldivergence(q, fz)
 
@@ -95,7 +95,7 @@ function _elbo(
 end
 
 """
-    expected_loglik(method, y, f_mean, f_var, lik)
+    expected_loglik(method::ExpectationMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
 
 This function computes the expected log likelihood:
 
@@ -109,8 +109,7 @@ where `p(y | f)` is the process likelihood.
     q(f) = ∫ p(f | u) q(u) du
 ```
 where `q(u)` is the variational distribution over inducing points (see
-[`elbo`](@ref)). The marginal means and variances of `q(f)` are given by
-`f_mean` and `f_var` respectively.
+[`elbo`](@ref)). The marginal distributions of `q(f)` are given by `q_f`.
 
 `method` determines which method is used to calculate the expected log
 likelihood - see [`elbo`](@ref) for more details.
@@ -120,10 +119,10 @@ likelihood - see [`elbo`](@ref) for more details.
 `q(f)` is assumed to be an `MvNormal` distribution and `p(y | f)` is assumed to
 have independent marginals such that only the marginals of `q(f)` are required.
 """
-expected_loglik(method, y, f_mean, f_var, lik)
+expected_loglik(method, y, q_f, lik)
 
 """
-    expected_loglik(method::ExpectationMethod, y::AbstractVector, f_mean::AbstractVector, f_var::AbstractVector, lik::ScalarLikelihood)
+    expected_loglik(method::ExpectationMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood)
 
 The expected log likelihood for a `ScalarLikelihood`, computed via `method`.
 Defaults to a closed form solution if it exists, otherwise defaults to
@@ -132,64 +131,61 @@ Gauss-Hermite quadrature.
 function expected_loglik(
     ::Default,
     y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik::ScalarLikelihood
 )
     method = _default_method(lik)
-    expected_loglik(method, y, f_mean, f_var, lik)
+    expected_loglik(method, y, q_f, lik)
 end
 
 # The closed form solution for independent Gaussian noise
 function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik::GaussianLikelihood
 )
-    return sum(-0.5 * (log(2π) .+ log.(lik.σ²) .+ ((y .- f_mean).^2 .+ f_var) / lik.σ²))
+    return sum(-0.5 * (log(2π) .+ log.(lik.σ²) .+ ((y .- mean.(q_f)).^2 .+ var.(q_f)) / lik.σ²))
 end
 
 # The closed form solution for a Poisson likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
     y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     ::PoissonLikelihood{ExpLink}
-)
-    return sum((y .* f_mean) - exp.(f_mean .+ (f_var / 2)) - loggamma.(y .+ 1))
+    )
+    f_μ = mean.(q_f)
+    return sum((y .* f_μ) - exp.(f_μ .+ (var.(q_f) / 2)) - loggamma.(y .+ 1))
 end
 
 # The closed form solution for an Exponential likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     ::ExponentialLikelihood{ExpLink}
-)
-    return sum(-f_mean - y .* exp.((f_var / 2) .- f_mean))
+    )
+    f_μ = mean.(q_f)
+    return sum(-f_μ - y .* exp.((var.(q_f) / 2) .- f_μ))
 end
 
 # The closed form solution for a Gamma likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik::GammaLikelihood{<:Any, ExpLink}
-)
-    return sum((lik.α - 1) * log.(y) .- y .* exp.((f_var / 2) .- f_mean)
-               .- lik.α * f_mean .- loggamma(lik.α))
+    )
+    f_μ = mean.(q_f)
+    return sum((lik.α - 1) * log.(y) .- y .* exp.((var.(q_f) / 2) .- f_μ)
+               .- lik.α * f_μ .- loggamma(lik.α))
 end
 
 function expected_loglik(
     ::Analytic,
     y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik
 )
     return error(
@@ -201,12 +197,12 @@ end
 function expected_loglik(
     mc::MonteCarlo,
     y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik::ScalarLikelihood
 )
-    # take 'n_samples' reparameterised samples with μ=f_mean and σ²=f_var
-    fs = f_mean .+ .√f_var .* randn(eltype(f_mean), length(f_mean), mc.n_samples)
+    # take 'n_samples' reparameterised samples
+    f_μ = mean.(q_f)
+    fs = f_μ .+ std.(q_f) .* randn(eltype(f_μ), length(q_f), mc.n_samples)
     lls = loglikelihood.(lik.(fs), y)
     return sum(lls) / mc.n_samples
 end
@@ -214,8 +210,7 @@ end
 function expected_loglik(
     gh::Quadrature,
     y::AbstractVector,
-    f_mean::AbstractVector,
-    f_var::AbstractVector,
+    q_f::AbstractVector{<:Normal},
     lik::ScalarLikelihood
 )
     # Compute the expectation via Gauss-Hermite quadrature
@@ -223,7 +218,7 @@ function expected_loglik(
     # (see eg. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
-    fs = √2 * .√f_var .* transpose(xs) .+ f_mean
+    fs = √2 * std.(q_f) .* transpose(xs) .+ mean.(q_f)
     lls = loglikelihood.(lik.(fs), y)
     return sum((1/√π) * lls * ws)
 end
