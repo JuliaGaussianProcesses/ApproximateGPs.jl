@@ -4,7 +4,7 @@ ScalarLikelihood = Union{
     PoissonLikelihood,
     GaussianLikelihood,
     ExponentialLikelihood,
-    GammaLikelihood,
+    GammaLikelihood
 }
 
 
@@ -43,26 +43,18 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
+    fx::FiniteGP{<:AbstractGP, <:AbstractVector, <:Diagonal{<:Real, <:Fill}},
     y::AbstractVector{<:Real},
     fz::FiniteGP,
     q::AbstractMvNormal;
-    n_data = length(y),
-    method = Default(),
+    n_data=length(y),
+    method=Default()
 )
     return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
 end
 
-function AbstractGPs.elbo(
-    ::FiniteGP,
-    ::AbstractVector,
-    ::FiniteGP,
-    ::AbstractMvNormal;
-    kwargs...,
-)
-    return error(
-        "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
-    )
+function AbstractGPs.elbo(::FiniteGP, ::AbstractVector, ::FiniteGP, ::AbstractMvNormal; kwargs...)
+    return error("The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)")
 end
 
 """
@@ -75,8 +67,8 @@ function AbstractGPs.elbo(
     y::AbstractVector,
     fz::FiniteGP,
     q::AbstractMvNormal;
-    n_data = length(y),
-    method = Default(),
+    n_data=length(y),
+    method=Default()
 )
     return _elbo(method, lfx.fx, y, fz, q, lfx.lik, n_data)
 end
@@ -89,7 +81,7 @@ function _elbo(
     fz::FiniteGP,
     q::AbstractMvNormal,
     lik::ScalarLikelihood,
-    n_data::Integer,
+    n_data::Integer
 )
     post = approx_posterior(SVGP(), fz, q)
     q_f = marginals(post(fx.x))
@@ -140,7 +132,7 @@ function expected_loglik(
     ::Default,
     y::AbstractVector,
     q_f::AbstractVector{<:Normal},
-    lik::ScalarLikelihood,
+    lik::ScalarLikelihood
 )
     method = _default_method(lik)
     expected_loglik(method, y, q_f, lik)
@@ -151,11 +143,9 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
-    lik::GaussianLikelihood,
+    lik::GaussianLikelihood
 )
-    return sum(
-        -0.5 * (log(2π) .+ log.(lik.σ²) .+ ((y .- mean.(q_f)) .^ 2 .+ var.(q_f)) / lik.σ²),
-    )
+    return sum(-0.5 * (log(2π) .+ log.(lik.σ²) .+ ((y .- mean.(q_f)).^2 .+ var.(q_f)) / lik.σ²))
 end
 
 # The closed form solution for a Poisson likelihood with an exponential inverse link function
@@ -163,8 +153,8 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector,
     q_f::AbstractVector{<:Normal},
-    ::PoissonLikelihood{ExpLink},
-)
+    ::PoissonLikelihood{ExpLink}
+    )
     f_μ = mean.(q_f)
     return sum((y .* f_μ) - exp.(f_μ .+ (var.(q_f) / 2)) - loggamma.(y .+ 1))
 end
@@ -174,8 +164,8 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
-    ::ExponentialLikelihood{ExpLink},
-)
+    ::ExponentialLikelihood{ExpLink}
+    )
     f_μ = mean.(q_f)
     return sum(-f_μ - y .* exp.((var.(q_f) / 2) .- f_μ))
 end
@@ -185,20 +175,22 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
-    lik::GammaLikelihood{<:Any,ExpLink},
-)
-    f_μ = mean.(q_f)
-    return sum(
-        (lik.α - 1) * log.(y) .- y .* exp.((var.(q_f) / 2) .- f_μ) .- lik.α * f_μ .-
-        loggamma(lik.α),
+    lik::GammaLikelihood{<:Any, ExpLink}
     )
+    f_μ = mean.(q_f)
+    return sum((lik.α - 1) * log.(y) .- y .* exp.((var.(q_f) / 2) .- f_μ)
+               .- lik.α * f_μ .- loggamma(lik.α))
 end
 
-function expected_loglik(::Analytic, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
+function expected_loglik(
+    ::Analytic,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik
+)
     return error(
-        "No analytic solution exists for ",
-        typeof(lik),
-        ". Use `Default()`, `Quadrature()` or `MonteCarlo()` instead.",
+        "No analytic solution exists for ", typeof(lik),
+        ". Use `Default()`, `Quadrature()` or `MonteCarlo()` instead."
     )
 end
 
@@ -206,7 +198,7 @@ function expected_loglik(
     mc::MonteCarlo,
     y::AbstractVector,
     q_f::AbstractVector{<:Normal},
-    lik::ScalarLikelihood,
+    lik::ScalarLikelihood
 )
     # take 'n_samples' reparameterised samples
     f_μ = mean.(q_f)
@@ -219,7 +211,7 @@ function expected_loglik(
     gh::Quadrature,
     y::AbstractVector,
     q_f::AbstractVector{<:Normal},
-    lik::ScalarLikelihood,
+    lik::ScalarLikelihood
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
@@ -228,12 +220,16 @@ function expected_loglik(
     # size(fs): (length(y), n_points)
     fs = √2 * std.(q_f) .* transpose(xs) .+ mean.(q_f)
     lls = loglikelihood.(lik.(fs), y)
-    return sum((1 / √π) * lls * ws)
+    return sum((1/√π) * lls * ws)
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
 
-AnalyticLikelihood =
-    Union{PoissonLikelihood,GaussianLikelihood,ExponentialLikelihood,GammaLikelihood}
+AnalyticLikelihood = Union{
+    PoissonLikelihood,
+    GaussianLikelihood,
+    ExponentialLikelihood,
+    GammaLikelihood
+}
 _default_method(::AnalyticLikelihood) = Analytic()
 _default_method(_) = Quadrature()
