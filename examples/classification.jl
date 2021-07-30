@@ -12,7 +12,7 @@ using DelimitedFiles
 using IterTools
 
 using Plots
-default(; legend=:outertopright, size=(700, 400))
+default(; legend = :outertopright, size = (700, 400))
 
 using Random
 Random.seed!(1234)
@@ -40,16 +40,10 @@ fx = f(x)
 # %%
 # Then, plot some samples from the prior underlying GP
 x_plot = 0:0.02:6
-prior_f_samples = rand(f.f(x_plot, 1e-6),20)
+prior_f_samples = rand(f.f(x_plot, 1e-6), 20)
 
-plt = plot(
-    x_plot,
-    prior_f_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    label=""
-)
-scatter!(plt, x, y; seriescolor="blue", label="Data points")
+plt = plot(x_plot, prior_f_samples; seriescolor = "red", linealpha = 0.2, label = "")
+scatter!(plt, x, y; seriescolor = "blue", label = "Data points")
 
 
 # %%
@@ -57,14 +51,8 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 # them in (0, 1).
 prior_y_samples = mean.(f.lik.(prior_f_samples))
 
-plt = plot(
-    x_plot,
-    prior_y_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    label=""
-)
-scatter!(plt, x, y; seriescolor="blue", label="Data points")
+plt = plot(x_plot, prior_y_samples; seriescolor = "red", linealpha = 0.2, label = "")
+scatter!(plt, x, y; seriescolor = "blue", label = "Data points")
 
 
 # %%
@@ -72,13 +60,13 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 using Flux
 
 struct SVGPModel
-    k # kernel parameters
-    m # variational mean
-    A # variational covariance
-    z # inducing points
+    k::Any # kernel parameters
+    m::Any # variational mean
+    A::Any # variational covariance
+    z::Any # inducing points
 end
 
-@Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
+Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
 
 lik = BernoulliLikelihood()
 jitter = 1e-4
@@ -92,9 +80,9 @@ function (m::SVGPModel)(x)
     return fx, fu, q
 end
 
-function flux_loss(x, y; n_data=length(y))
+function flux_loss(x, y; n_data = length(y))
     fx, fu, q = model(x)
-    return -SparseGPs.elbo(fx, y, fu, q; n_data, method=MonteCarlo())
+    return -SparseGPs.elbo(fx, y, fu, q; n_data, method = MonteCarlo())
 end
 
 # %%
@@ -121,7 +109,7 @@ Flux.train!(
     (x, y) -> flux_loss(x, y),
     parameters,
     ncycle([(x, y)], 2000), # Train for 1000 epochs
-    opt
+    opt,
 )
 
 # %%
@@ -136,13 +124,7 @@ l_post = LatentGP(post, BernoulliLikelihood(), jitter)
 
 post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
 
-plt = plot(
-    x_plot,
-    post_f_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    legend=false
-)
+plt = plot(x_plot, post_f_samples; seriescolor = "red", linealpha = 0.2, legend = false)
 
 # %%
 # As above, push these samples through a logistic sigmoid to get posterior predictions.
@@ -151,10 +133,10 @@ post_y_samples = mean.(l_post.lik.(post_f_samples))
 plt = plot(
     x_plot,
     post_y_samples;
-    seriescolor="red",
-    linealpha=0.2,
+    seriescolor = "red",
+    linealpha = 0.2,
     # legend=false,
-    label=""
+    label = "",
 )
-scatter!(plt, x, y; seriescolor="blue", label="Data points")
-vline!(z; label="Pseudo-points")
+scatter!(plt, x, y; seriescolor = "blue", label = "Data points")
+vline!(z; label = "Pseudo-points")

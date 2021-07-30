@@ -21,8 +21,8 @@ function AbstractGPs.approx_posterior(::SVGP, fz::FiniteGP, q::AbstractMvNormal)
     m, A = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
     B = Kuu.L \ A.L
-    α=Kuu \ (m - mean(fz))
-    data = (A=A, m=m, Kuu=Kuu, B=B, α=α, u=fz.x)
+    α = Kuu \ (m - mean(fz))
+    data = (A = A, m = m, Kuu = Kuu, B = B, α = α, u = fz.x)
     return ApproxPosteriorGP(SVGP(), fz.f, data)
 end
 
@@ -33,13 +33,13 @@ end
 function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)
     D = f.data.Kuu.L \ Cux
-    return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D) 
+    return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
 end
 
 function Statistics.var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)
     D = f.data.Kuu.L \ Cux
-    return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
+    return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
 end
 
 function Statistics.cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector, y::AbstractVector)
@@ -55,7 +55,7 @@ function StatsBase.mean_and_cov(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α
-    Σ = cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D) 
+    Σ = cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
     return μ, Σ
 end
 
@@ -63,7 +63,7 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{SVGP}, x::AbstractVector)
     Cux = cov(f.prior, f.data.u, x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α
-    Σ_diag = var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D) 
+    Σ_diag = var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
     return μ, Σ_diag
 end
 
