@@ -25,7 +25,6 @@ y = g.(x) + 0.3 * randn(N)
 
 scatter(x, y; xlabel="x", ylabel="y", legend=false)
 
-
 # %%
 # A simple Flux model
 using Flux
@@ -40,7 +39,7 @@ struct SVGPModel
     z # inducing points
 end
 
-@Flux.functor SVGPModel (k, m, A,) # Don't train the inducing inputs
+Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
 
 function make_kernel(k)
     return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
@@ -73,7 +72,6 @@ function flux_loss(x, y; n_data=length(y))
     return -SparseGPs.elbo(fx, y, fu, q; n_data)
 end
 
-
 # %%
 M = 50 # number of inducing points
 
@@ -90,7 +88,7 @@ model = SVGPModel(k, m, A, z)
 b = 100 # minibatch size
 opt = ADAM(0.001)
 parameters = Flux.params(model)
-data_loader = Flux.Data.DataLoader((x, y), batchsize=b)
+data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
 
 # %%
 # Negative ELBO before training
@@ -102,7 +100,7 @@ Flux.train!(
     (x, y) -> flux_loss(x, y; n_data=N),
     parameters,
     ncycle(data_loader, 300), # Train for 300 epochs
-    opt
+    opt,
 )
 
 # %%
@@ -127,7 +125,6 @@ scatter(
 plot!(-1:0.001:1, post; label="Posterior")
 vline!(z; label="Pseudo-points")
 
-
 # %% There is a closed form optimal solution for the variational posterior q(u)
 # (e.g. https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/
 # equations (11) & (12)). The SVGP posterior with this optimal q(u) should
@@ -137,8 +134,8 @@ function exact_q(fu, fx, y)
     σ² = fx.Σy[1]
     Kuf = cov(fu, fx)
     Kuu = Symmetric(cov(fu))
-    Σ = (Symmetric(cov(fu) + (1/σ²) * Kuf * Kuf'))
-    m = ((1/σ²)*Kuu* (Σ\Kuf)) * y
+    Σ = (Symmetric(cov(fu) + (1 / σ²) * Kuf * Kuf'))
+    m = ((1 / σ²) * Kuu * (Σ \ Kuf)) * y
     S = Symmetric(Kuu * (Σ \ Kuu))
     return MvNormal(m, S)
 end
@@ -175,4 +172,3 @@ scatter(
 plot!(-1:0.001:1, ap_ex; label="SVGP posterior")
 plot!(-1:0.001:1, ap_tits; label="Titsias posterior")
 vline!(z; label="Pseudo-points")
-
