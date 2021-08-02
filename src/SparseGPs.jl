@@ -7,28 +7,18 @@ using Statistics
 using StatsBase
 using FastGaussQuadrature
 using GPLikelihoods
+using SpecialFunctions
 using ChainRulesCore
 using PDMats
 using Functors
+using FillArrays
+using KLDivergences
+
 
 using AbstractGPs:
-    FiniteGP,
-    LatentFiniteGP,
-    ApproxPosteriorGP,
-    _cholesky,
-    _symmetric,
-    At_A,
-    diag_At_A,
-    Xt_invA_X
+    AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 
-export elbo,
-    approx_posterior,
-    SVGP,
-    SVGPModel,
-    prior,
-    posterior,
-    loss,
-    elbo
+export SVGP, SVGPModel, Default, Analytic, Quadrature, MonteCarlo, prior, loss
 
 include("utils.jl")
 include("elbo.jl")

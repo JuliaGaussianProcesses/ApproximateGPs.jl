@@ -23,7 +23,6 @@ data_file = pkgdir(SparseGPs) * "/examples/data/classif_1D.csv"
 x, y = eachcol(readdlm(data_file))
 scatter(x, y)
 
-
 # %%
 # First, create the GP kernel from given parameters k
 function make_kernel(k)
@@ -42,15 +41,9 @@ fx = f(x)
 # %%
 # Then, plot some samples from the prior underlying GP
 x_plot = 0:0.02:6
-prior_f_samples = rand(f.f(x_plot), 20)
+prior_f_samples = rand(f.f(x_plot), 20) # TODO: add jitter?
 
-plt = plot(
-    x_plot,
-    prior_f_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    label=""
-)
+plt = plot(x_plot, prior_f_samples; seriescolor="red", linealpha=0.2, label="")
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
 
 # %%
@@ -58,15 +51,8 @@ scatter!(plt, x, y; seriescolor="blue", label="Data points")
 # them in (0, 1).
 prior_y_samples = mean.(f.lik.(prior_f_samples))
 
-plt = plot(
-    x_plot,
-    prior_y_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    label=""
-)
+plt = plot(x_plot, prior_y_samples; seriescolor="red", linealpha=0.2, label="")
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
-
 
 # %%
 # Optimise the model using Flux
@@ -85,8 +71,8 @@ println(loss(model, x, y))
 Flux.train!(
     (x, y) -> loss(model, x, y),
     parameters,
-    ncycle([(x, y)], 1000), # Train for 1000 epochs
-    opt
+    ncycle([(x, y)], 2000), # Train for 1000 epochs
+    opt,
 )
 
 # %%
@@ -95,17 +81,11 @@ println(loss(model, x, y))
 
 # %%
 # After optimisation, plot samples from the underlying posterior GP.
-post = SparseGPs.posterior(model)
+post = posterior(model)
 
-post_f_samples = rand(post.f(x_plot), 20)
+post_f_samples = rand(post.f(x_plot), 20) # TODO: add jitter?
 
-plt = plot(
-    x_plot,
-    post_f_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    legend=false
-)
+plt = plot(x_plot, post_f_samples; seriescolor="red", linealpha=0.2, legend=false)
 
 # %%
 # As above, push these samples through a logistic sigmoid to get posterior predictions.
@@ -117,7 +97,7 @@ plt = plot(
     seriescolor="red",
     linealpha=0.2,
     # legend=false,
-    label=""
+    label="",
 )
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
 vline!(z; label="Pseudo-points")

@@ -52,18 +52,18 @@ function (m::SVGPModel)(x)
     return fx, fu, q
 end
 
-function posterior(m::SVGPModel{<:GaussianLikelihood})
+function AbstractGPs.posterior(m::SVGPModel{<:GaussianLikelihood})
     f = prior(m)
     fu = f(m.z, m.jitter)
     q = _construct_q(m)
-    return SparseGPs.approx_posterior(SVGP(), fu, q)
+    return approx_posterior(SVGP(), fu, q)
 end
 
-function posterior(m::SVGPModel)
+function AbstractGPs.posterior(m::SVGPModel)
     f = prior(m)
     fu = f(m.z).fx
     q = _construct_q(m)
-    post = SparseGPs.approx_posterior(SVGP(), fu, q)
+    post = approx_posterior(SVGP(), fu, q)
     return LatentGP(post, m.lik, m.jitter) # TODO: should this return `post` instead?
 end
 
@@ -81,9 +81,9 @@ function loss(m::SVGPModel, x, y; n_data=length(y))
     return -elbo(m, x, y; n_data)
 end
 
-function elbo(m::SVGPModel, x, y; n_data=length(y))
+function AbstractGPs.elbo(m::SVGPModel, x, y; n_data=length(y))
     fx, fu, q = m(x)
-    return SparseGPs.elbo(fx, y, fu, q; n_data)
+    return elbo(fx, y, fu, q; n_data)
 end
 
 function _init_variational_params(
