@@ -37,31 +37,9 @@
     @testset "optimised posterior" begin
         jitter = 1e-5
 
-        make_gp(kernel) = GP(kernel)
-
-        ## FIRST - define the models
-        # GPR - Exact GP regression
-        struct GPRModel
-            k # kernel parameters
-        end
-        Flux.@functor GPRModel
-
-        function (m::GPRModel)(x)
-            f = make_gp(make_kernel(m.k))
-            fx = f(x, lik_noise)
-            return fx
-        end
-
-        ## SECOND - create the models and associated training losses
-        gpr = GPRModel(copy(k_init))
-        function SparseGPs.loss(gpr::GPRModel, x, y)
-            fx = gpr(x)
-            return -logpdf(fx, y)
-        end
-
+        ## Construct and train the SVGP model
         svgp = SVGPModel(make_kernel, copy(k_init), copy(z); jitter=jitter, likelihood=GaussianLikelihood(lik_noise))
 
-        ## THIRD - train the models
         data = [(x, y)]
         opt = ADAM(0.001)
 
@@ -72,17 +50,12 @@
         # Optimise q(u)
         Flux.train!((x, y) -> loss(svgp, x, y), svgp_ps, ncycle(data, 20000), opt)
 
-        ## FOURTH - construct the posteriors
-        function AbstractGPs.posterior(m::GPRModel, x, y)
-            f = make_gp(make_kernel(m.k))
-            fx = f(x, lik_noise)
-            return AbstractGPs.posterior(fx, y)
-        end
-
-        gpr_post = posterior(gpr, x, y)
+        ## Construct the posteriors for SVGP and exact GP regression
+        gpr = GP(make_kernel(k_init))
+        gpr_post = posterior(gpr(x, lik_noise), y)
         svgp_post = posterior(svgp)
 
-        ## FIFTH - test equivalences
+        ## Test equivalence of methods
         @test all(isapprox.(mean(gpr_post, x), mean(svgp_post, x), atol=1e-4))
         @test all(isapprox.(cov(gpr_post, x), cov(svgp_post, x), atol=1e-4))
     end
