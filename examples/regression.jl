@@ -70,7 +70,7 @@ println(loss(model, x, y))
 
 # %%
 # Plot samples from the optimised approximate posterior.
-post = SparseGPs.posterior(model)
+post = posterior(model)
 
 scatter(
     x,
@@ -83,7 +83,7 @@ scatter(
     title="posterior (VI with sparse grid)",
     label="Train Data",
 )
-plot!(-1:0.001:1, post; label="Posterior")
+plot!(-1:0.001:1, post.f; label="Posterior")
 vline!(z; label="Pseudo-points")
 
 # %% There is a closed form optimal solution for the variational posterior q(u)
@@ -112,12 +112,12 @@ scatter(x, y)
 scatter!(z, q_ex.μ)
 
 # These two should be the same - and they are, as the plot below shows
-ap_ex = SparseGPs.approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
-ap_tits = AbstractGPs.approx_posterior(VFE(), fx, y, fu) # Titsias posterior
+ap_ex = approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
+ap_tits = approx_posterior(VFE(), fx, y, fu) # Titsias posterior
 
 # These are also approximately equal
-SparseGPs.elbo(fx, y, fu, q_ex)
-AbstractGPs.elbo(fx, y, fu)
+elbo(fx, y, fu, q_ex)
+elbo(fx, y, fu)
 
 # %%
 scatter(
