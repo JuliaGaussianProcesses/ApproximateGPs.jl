@@ -6,6 +6,7 @@ using IterTools
 using AbstractGPs
 using Distributions
 using LinearAlgebra
+using GPLikelihoods
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(SparseGPs)))

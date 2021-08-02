@@ -52,36 +52,14 @@
             return fx
         end
 
-        # SVGP - Sparse variational GP regression (Hensman 2014)
-        struct SVGPModel
-            k # kernel parameters
-            z # inducing points
-            m # variational mean
-            A # variational covariance sqrt (Σ = A'A)
-        end
-        Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
-
-        function (m::SVGPModel)(x)
-            f = make_gp(make_kernel(m.k))
-            q = MvNormal(m.m, m.A'm.A)
-            fx = f(x, lik_noise)
-            fz = f(m.z, jitter)
-            return fx, fz, q
-        end
-
         ## SECOND - create the models and associated training losses
         gpr = GPRModel(copy(k_init))
-        function GPR_loss(x, y)
+        function SparseGPs.loss(gpr::GPRModel, x, y)
             fx = gpr(x)
             return -logpdf(fx, y)
         end
 
-        m, A = zeros(N), Matrix{Float64}(I, N, N) # initialise the variational parameters
-        svgp = SVGPModel(copy(k_init), copy(z), m, A)
-        function SVGP_loss(x, y)
-            fx, fz, q = svgp(x)
-            return -elbo(fx, y, fz, q)
-        end
+        svgp = SVGPModel(make_kernel, copy(k_init), copy(z); jitter=jitter, likelihood=GaussianLikelihood(lik_noise))
 
         ## THIRD - train the models
         data = [(x, y)]
@@ -89,22 +67,16 @@
 
         svgp_ps = Flux.params(svgp)
         delete!(svgp_ps, svgp.k) # Don't train the kernel parameters
+        delete!(svgp_ps, svgp.z) # Don't train the inducing points
 
         # Optimise q(u)
-        Flux.train!((x, y) -> SVGP_loss(x, y), svgp_ps, ncycle(data, 20000), opt)
+        Flux.train!((x, y) -> loss(svgp, x, y), svgp_ps, ncycle(data, 20000), opt)
 
         ## FOURTH - construct the posteriors
-        function posterior(m::GPRModel, x, y)
+        function AbstractGPs.posterior(m::GPRModel, x, y)
             f = make_gp(make_kernel(m.k))
             fx = f(x, lik_noise)
             return AbstractGPs.posterior(fx, y)
-        end
-
-        function posterior(m::SVGPModel)
-            f = make_gp(make_kernel(m.k))
-            fz = f(m.z, jitter)
-            q = MvNormal(m.m, m.A'm.A)
-            return approx_posterior(SVGP(), fz, q)
         end
 
         gpr_post = posterior(gpr, x, y)

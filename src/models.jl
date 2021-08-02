@@ -44,6 +44,14 @@ function (m::SVGPModel)(x)
     return fx, fu, q
 end
 
+function (m::SVGPModel{<:GaussianLikelihood})(x)
+    f = prior(m)
+    fx = f(x, m.lik.σ²[1]) # σ² is a one element vector
+    fu = f(m.z, m.jitter)
+    q = _construct_q(m)
+    return fx, fu, q
+end
+
 function AbstractGPs.posterior(m::SVGPModel)
     f = prior(m)
     fu = f(m.z).fx
@@ -52,19 +60,31 @@ function AbstractGPs.posterior(m::SVGPModel)
     return LatentGP(post, m.lik, m.jitter)
 end
 
+function AbstractGPs.posterior(m::SVGPModel{<:GaussianLikelihood})
+    f = prior(m)
+    fu = f(m.z, m.jitter)
+    q = _construct_q(m)
+    return approx_posterior(SVGP(), fu, q)
+end
+
 function prior(m::SVGPModel)
     kernel = m.kernel_func(m.k)
     return LatentGP(GP(kernel), m.lik, m.jitter)
 end
 
-function loss(m::SVGPModel, x, y; n_data=length(y))
-    return -elbo(m, x, y; n_data)
+function prior(m::SVGPModel{<:GaussianLikelihood})
+    kernel = m.kernel_func(m.k)
+    return GP(kernel)
 end
 
 function AbstractGPs.elbo(m::SVGPModel, x, y; n_data=length(y))
     fx, fu, q = m(x)
     return elbo(fx, y, fu, q; n_data)
 end
+
+# The Variational Free Energy
+vfe(m::SVGPModel, x, y; n_data=length(y)) = -elbo(m, x, y; n_data)
+const loss = vfe
 
 function _init_variational_params(
     q_μ::Union{AbstractVector,Nothing},
