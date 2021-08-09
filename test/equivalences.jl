@@ -31,7 +31,7 @@
         @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol = 1e-10
 
-        @test elbo(fx, y, fz, q_ex) ≈ logpdf(fx, y)
+        @test elbo(fx, y, fz, q_ex) ≈ logpdf(fx, y) atol = 1e-6
     end
 
     @testset "optimised posterior" begin
