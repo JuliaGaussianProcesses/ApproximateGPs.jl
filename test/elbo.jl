@@ -2,7 +2,7 @@
     rng, N = MersenneTwister(654321), 20
     x = rand(rng, N) * 10
     y = sin.(x) + 0.9 * cos.(x * 1.6) + 0.4 * rand(rng, N)
-    z = x[begin:5]
+    z = x[1:5]
 
     kernel = make_kernel([0.2, 0.6])
     f = GP(kernel)
