@@ -94,5 +94,5 @@ scatter(
     title="posterior (VI with sparse grid)",
     label="Train Data",
 )
-plot!(-1:0.001:1, post.f; label="Posterior")
+plot!(-1:0.001:1, post; label="Posterior")
 vline!(z; label="Pseudo-points")
