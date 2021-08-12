@@ -38,7 +38,13 @@
         jitter = 1e-5
 
         ## Construct and train the SVGP model
-        svgp = SVGPModel(make_kernel, copy(k_init), copy(z); jitter=jitter, likelihood=GaussianLikelihood(lik_noise))
+        svgp = SVGPModel(
+            make_kernel,
+            copy(k_init),
+            copy(z);
+            jitter=jitter,
+            likelihood=GaussianLikelihood(lik_noise),
+        )
 
         data = [(x, y)]
         opt = ADAM(0.001)

@@ -64,7 +64,7 @@ model = SVGPModel(
     rand(2),        # The initial kernel parameters
     z;              # The inducing inputs
     jitter=1e-4,
-    likelihood=BernoulliLikelihood()
+    likelihood=BernoulliLikelihood(),
 )
 #md nothing #hide
 
@@ -120,13 +120,7 @@ plot(x_plot, post_f_samples; seriescolor="red", linealpha=0.2, legend=false)
 
 post_y_samples = mean.(post.lik.(post_f_samples))
 
-plot(
-    x_plot,
-    post_y_samples;
-    seriescolor="green",
-    linealpha=0.2,
-    label="",
-)
+plot(x_plot, post_y_samples; seriescolor="green", linealpha=0.2, label="")
 scatter!(x, y; seriescolor="blue", label="Data points")
 vline!(z; label="Pseudo-points")
 plot!(x_true, mean.(f.lik.(f_true)); seriescolor="red", linewidth=3, label="True function")

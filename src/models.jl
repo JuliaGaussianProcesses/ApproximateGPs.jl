@@ -4,7 +4,7 @@ struct SVGPModel{Tlik}
     kernel_func # function to construct the kernel from `k`
     lik::Tlik   # the likelihood function
     jitter      # the jitter added to covariance matrices
-    
+
     ## Trainable parameters
     k::AbstractVector           # kernel parameters
     m::AbstractVector           # variational mean
@@ -12,7 +12,7 @@ struct SVGPModel{Tlik}
     z::AbstractVector           # inducing points
 end
 
-@functor SVGPModel (k, m, A, z,)
+@functor SVGPModel (k, m, A, z)
 
 function SVGPModel(
     kernel_func,
@@ -22,18 +22,10 @@ function SVGPModel(
     q_Σ_sqrt::Union{AbstractMatrix,Nothing}=nothing,
     q_eltype=Float64,
     jitter=default_jitter,
-    likelihood=GaussianLikelihood(jitter)
+    likelihood=GaussianLikelihood(jitter),
 )
     m, A = _init_variational_params(q_μ, q_Σ_sqrt, inducing_inputs; q_eltype)
-    return SVGPModel(
-        kernel_func,
-        likelihood,
-        jitter,
-        kernel_params,
-        m,
-        A,
-        inducing_inputs
-    )
+    return SVGPModel(kernel_func, likelihood, jitter, kernel_params, m, A, inducing_inputs)
 end
 
 function (m::SVGPModel)(x)
@@ -90,7 +82,7 @@ function _init_variational_params(
     q_μ::Union{AbstractVector,Nothing},
     q_Σ_sqrt::Union{AbstractMatrix,Nothing},
     z::AbstractVector;
-    q_eltype=Float64
+    q_eltype=Float64,
 )
     n = length(z)
     if q_μ === nothing

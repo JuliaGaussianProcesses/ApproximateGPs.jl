@@ -1,5 +1,9 @@
 # A recreation of https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html
 
+# # One-Dimensional Stochastic Variational Regression
+#
+# ## Setup
+
 using AbstractGPs
 using SparseGPs
 using Distributions
@@ -14,7 +18,8 @@ default(; legend=:outertopright, size=(700, 400))
 using Random
 Random.seed!(1234)
 
-# %%
+# ## Generate some training data
+#
 # The data generating function
 function g(x)
     return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
@@ -49,7 +54,7 @@ b = 100 # minibatch size
 opt = ADAM(0.001)
 parameters = Flux.params(model)
 delete!(parameters, model.z)    # Don't train the inducing inputs
-data_loader = Flux.Data.DataLoader((x, y), batchsize=b)
+data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
 
 # %%
 # Negative ELBO before training
@@ -58,7 +63,7 @@ println(loss(model, x, y))
 # %%
 # Train the model
 Flux.train!(
-    (x, y) -> loss(model, x, y, n_data=N),
+    (x, y) -> loss(model, x, y; n_data=N),
     parameters,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
