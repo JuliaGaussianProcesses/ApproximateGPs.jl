@@ -9,3 +9,5 @@ tmp/
 *.cov
 *.info
 Manifest.toml
+*.ipynb
+*.ipynb_checkpoints
