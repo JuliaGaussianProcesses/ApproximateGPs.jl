@@ -11,6 +11,7 @@ using LinearAlgebra
 using Optim
 using IterTools
 using GPLikelihoods
+using Flux
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
@@ -21,6 +22,7 @@ Random.seed!(1234)
 # ## Generate some training data
 #
 # The data generating function
+
 function g(x)
     return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
 end
@@ -31,52 +33,56 @@ y = g.(x) + 0.3 * randn(N)
 
 scatter(x, y; xlabel="x", ylabel="y", legend=false)
 
-# %%
-# A simple Flux model
-using Flux
+# ## Set up the SVGP model
+#
+# First, a helper function to create the GP kernel
 
 function make_kernel(k)
     return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
 end
 
-# %%
-M = 50 # number of inducing points
+# Select the first M inputs as inducing inputs and initialise the kernel parameters
 
-# Select the first M inputs as inducing inputs
+M = 50
 z = x[1:M]
+k_init = [0.3, 10]
 
-# Initialise the kernel parameters
-k = [0.3, 10]
+# Create the model and optimiser
 
-model = SVGPModel(make_kernel, k, z; likelihood=GaussianLikelihood(0.1))
+model = SVGPModel(make_kernel, k_init, z; likelihood=GaussianLikelihood(0.1))
 
-b = 100 # minibatch size
 opt = ADAM(0.001)
 parameters = Flux.params(model)
 delete!(parameters, model.z)    # Don't train the inducing inputs
-data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
+#md nothing #hide
 
-# %%
+# To speed up training, we can estimate the loss function by using minibatching
+
+b = 100 # minibatch size
+data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
+#md nothing #hide
+
 # Negative ELBO before training
+
 println(loss(model, x, y))
 
-# %%
-# Train the model
+# The main training loop
+
 Flux.train!(
     (x, y) -> loss(model, x, y; n_data=N),
     parameters,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
 )
+#md nothing #hide
 
-# %%
 # Negative ELBO after training
+
 println(loss(model, x, y))
 
-# %%
 # Plot samples from the optimised approximate posterior.
-post = posterior(model)
 
+post = posterior(model)
 scatter(
     x,
     y;
@@ -89,53 +95,4 @@ scatter(
     label="Train Data",
 )
 plot!(-1:0.001:1, post.f; label="Posterior")
-vline!(z; label="Pseudo-points")
-
-# %% There is a closed form optimal solution for the variational posterior q(u)
-# (e.g. https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/
-# equations (11) & (12)). The SVGP posterior with this optimal q(u) should
-# therefore be equivalent to the 'exact' sparse GP (Titsias) posterior.
-
-function exact_q(fu, fx, y)
-    σ² = fx.Σy[1]
-    Kuf = cov(fu, fx)
-    Kuu = Symmetric(cov(fu))
-    Σ = (Symmetric(cov(fu) + (1 / σ²) * Kuf * Kuf'))
-    m = ((1 / σ²) * Kuu * (Σ \ Kuf)) * y
-    S = Symmetric(Kuu * (Σ \ Kuu))
-    return MvNormal(m, S)
-end
-
-kernel = kernel = make_kernel([0.3, 10])
-f = GP(kernel)
-fx = f(x, 0.1)
-fu = f(z, 1e-6)
-
-q_ex = exact_q(fu, fx, y)
-
-scatter(x, y)
-scatter!(z, q_ex.μ)
-
-# These two should be the same - and they are, as the plot below shows
-ap_ex = approx_posterior(SVGP(), fu, q_ex) # Hensman (2013) exact posterior
-ap_tits = approx_posterior(VFE(), fx, y, fu) # Titsias posterior
-
-# These are also approximately equal
-elbo(fx, y, fu, q_ex)
-elbo(fx, y, fu)
-
-# %%
-scatter(
-    x,
-    y;
-    markershape=:xcross,
-    markeralpha=0.1,
-    xlim=(-1, 1),
-    xlabel="x",
-    ylabel="y",
-    title="posterior (VI with sparse grid)",
-    label="Train Data",
-)
-plot!(-1:0.001:1, ap_ex; label="SVGP posterior")
-plot!(-1:0.001:1, ap_tits; label="Titsias posterior")
 vline!(z; label="Pseudo-points")

@@ -23,7 +23,7 @@ Random.seed!(1234)
 # In this example, we shall see whether the sparse variational Gaussian process
 # (SVGP) can recover the true GP from which binary classification data are
 # sampled.
-
+#
 # First, a helper function to create the GP kernel
 
 function make_kernel(k)
