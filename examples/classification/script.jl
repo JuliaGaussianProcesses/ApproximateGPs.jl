@@ -57,16 +57,16 @@ plot!(x_true, mean.(f.lik.(f_true)); seriescolor="red", label="True function")
 # ## Setting up a Flux model for the SVGP
 
 struct SVGPModel
-    k # kernel parameters
-    m # variational mean
-    A # variational covariance
-    z # inducing points
+    k  # kernel parameters
+    m  # variational mean
+    A  # variational covariance
+    z  # inducing points
 end
 
-Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
+Flux.@functor SVGPModel (k, m, A)  # Don't train the inducing inputs
 
 lik = BernoulliLikelihood()
-jitter = 1e-4
+jitter = 1e-3
 
 function (m::SVGPModel)(x)
     kernel = make_kernel(m.k)
@@ -79,17 +79,17 @@ end
 
 function loss(x, y; n_data=length(y))
     fx, fu, q = model(x)
-    return -elbo(fx, y, fu, q; n_data)
+    return -elbo(fx, y, fu, q; n_data, method=MonteCarlo())
 end
 #md nothing #hide
 
 # Initialise the model parameters
 
 M = 15  # number of inducing points
-k = [10, 0.1]
+k = rand(2)
 m = zeros(M)
 A = Matrix{Float64}(I, M, M)
-z = sample(x, M; replace=false)
+z = range(0, stop=6, length=M)
 
 model = SVGPModel(k, m, A, z)
 
@@ -106,7 +106,7 @@ println(loss(x, y))
 Flux.train!(
     (x, y) -> loss(x, y),
     parameters,
-    ncycle([(x, y)], 2000), # Train for 1000 epochs
+    ncycle([(x, y)], 6000), # Train for 6000 epochs
     opt,
 )
 
@@ -117,8 +117,10 @@ println(loss(x, y))
 # After optimisation, plot samples from the underlying posterior GP.
 
 fu = f(z).fx # want the underlying FiniteGP
-post = SparseGPs.approx_posterior(SVGP(), fu, MvNormal(m, A'A))
+post = approx_posterior(SVGP(), fu, MvNormal(m, A'A))
 l_post = LatentGP(post, BernoulliLikelihood(), jitter)
+
+x_plot = 0:0.02:6
 
 post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
 
@@ -133,8 +135,8 @@ plt = plot(
     post_y_samples;
     seriescolor="red",
     linealpha=0.2,
-    # legend=false,
     label="",
 )
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
 vline!(z; label="Pseudo-points")
+plot!(x_true, mean.(f.lik.(f_true)); seriescolor="green", linewidth=3, label="True function")
