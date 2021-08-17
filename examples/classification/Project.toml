@@ -1,0 +1,10 @@
+[deps]
+AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+GPLikelihoods = "6031954c-0455-49d7-b3b9-3e1c99afaf40"
+IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+SparseGPs = "298c2ebc-0411-48ad-af38-99e88101b606"

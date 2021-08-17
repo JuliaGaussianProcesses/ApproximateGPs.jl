@@ -4,7 +4,6 @@ using AbstractGPs
 using SparseGPs
 using Distributions
 using LinearAlgebra
-using Optim
 using IterTools
 
 using Plots
