@@ -78,6 +78,4 @@ makedocs(;
     ],
 )
 
-deploydocs(;
-    repo="github.com/rossviljoen/SparseGPs.jl.git", push_preview=true
-)
+deploydocs(; repo="github.com/rossviljoen/SparseGPs.jl.git", push_preview=true)

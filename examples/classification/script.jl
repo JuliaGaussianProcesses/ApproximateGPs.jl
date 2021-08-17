@@ -89,7 +89,7 @@ M = 15  # number of inducing points
 k = rand(2)
 m = zeros(M)
 A = Matrix{Float64}(I, M, M)
-z = range(0, stop=6, length=M)
+z = range(0; stop=6, length=M)
 
 model = SVGPModel(k, m, A, z)
 
@@ -130,13 +130,9 @@ plt = plot(x_plot, post_f_samples; seriescolor="red", linealpha=0.2, legend=fals
 
 post_y_samples = mean.(l_post.lik.(post_f_samples))
 
-plt = plot(
-    x_plot,
-    post_y_samples;
-    seriescolor="red",
-    linealpha=0.2,
-    label="",
-)
+plt = plot(x_plot, post_y_samples; seriescolor="red", linealpha=0.2, label="")
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
 vline!(z; label="Pseudo-points")
-plot!(x_true, mean.(f.lik.(f_true)); seriescolor="green", linewidth=3, label="True function")
+plot!(
+    x_true, mean.(f.lik.(f_true)); seriescolor="green", linewidth=3, label="True function"
+)
