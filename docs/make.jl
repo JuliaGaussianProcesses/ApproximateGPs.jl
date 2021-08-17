@@ -46,7 +46,7 @@ DocMeta.setdocmeta!(
     SparseGPs,
     :DocTestSetup,
     quote
-        using KernelFunctions
+        using SparseGPs
     end;  # we have to load all packages used (implicitly) within jldoctest blocks in the API docstrings
     recursive=true,
 )
@@ -54,7 +54,7 @@ DocMeta.setdocmeta!(
 makedocs(;
     sitename="SparseGPs.jl",
     format=Documenter.HTML(),
-    modules=[KernelFunctions],
+    modules=[SparseGPs],
     pages=[
         "Home" => "index.md",
         # "userguide.md",
