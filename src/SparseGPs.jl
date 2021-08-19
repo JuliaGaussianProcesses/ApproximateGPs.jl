@@ -1,6 +1,7 @@
 module SparseGPs
 
-using AbstractGPs
+using Reexport
+@reexport using AbstractGPs
 using Distributions
 using LinearAlgebra
 using Statistics

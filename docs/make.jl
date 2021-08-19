@@ -62,7 +62,7 @@ makedocs(;
         # "transform.md",
         # "metrics.md",
         # "create_kernel.md",
-        # "API" => "api.md",
+        "API" => "api.md",
         # "Design" => "design.md",
         "Examples" =>
             map(filter!(filename -> endswith(filename, ".md"), readdir(EXAMPLES_OUT))) do x
