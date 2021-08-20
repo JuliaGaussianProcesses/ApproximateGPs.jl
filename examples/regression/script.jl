@@ -140,7 +140,7 @@ end
 
 # Finally, create the model with initial parameters
 
-model = SVGPModel(k_init,  z_init, m_init, A_init)
+model = SVGPModel(k_init, z_init, m_init, A_init)
 #md nothing #hide
 
 # ## Training the model
