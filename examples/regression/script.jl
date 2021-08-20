@@ -1,6 +1,11 @@
-# A recreation of https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html
+# A recreation of <https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html>
 
-# # One-Dimensional Stochastic Variational Regression
+# # Stochastic Variational Regression
+#
+# In this example, we show how to construct and train the stochastic variational
+# Gaussian process (SVGP) model for efficient inference in large scale datasets.
+# For a basic introduction to the functionality of this library, please refer to
+# the [User Guide](@ref).
 #
 # ## Setup
 
@@ -15,6 +20,7 @@ default(; legend=:outertopright, size=(700, 400))
 
 using Random
 Random.seed!(1234)
+#md nothing #hide
 
 # ## Generate some training data
 #
@@ -28,17 +34,46 @@ N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
-scatter(x, y; xlabel="x", ylabel="y", legend=false)
+scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false)
 
-# ## Set up a Flux SVGP model
+# ## Set up a Flux model
 #
-# First, a helper function to create the GP kernel
+# We shall use the excellent framework provided by [Flux.jl](https://fluxml.ai/)
+# to perform stochastic optimisation. The SVGP approximation has three sets of
+# parameters to optimise - the inducing input locations, the mean and covariance
+# of the variational distribution `q` and the parameters of the
+# kernel.
+#
+# First, we define a helper function to construct the kernel from its parameters
+# (often called kernel hyperparameters), and pick some initial values `k_init`.
 
 using Flux
 
 function make_kernel(k)
     return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
 end
+
+k_init = [0.3, 10]
+#md nothing #hide
+
+# Then, we select some inducing input locations `z_init`. In this case, we simply choose
+# the first `M` data inputs.
+
+M = 50 # number of inducing points
+z_init = x[1:M]
+#md nothing #hide
+
+# Finally, we initialise the parameters of the variational distribution `q(u)`
+# where `u ~ f(z)`. We parameterise the covariance matrix of `q` as `C = AᵀA`
+# since this guarantees that `C` is positive definite.
+
+m_init = zeros(M)
+A_init = Matrix{Float64}(I, M, M)
+q_init = MvNormal(m_init, A_init'A_init)
+#md nothing #hide
+
+# Given a set of parameters, we now define a Flux 'layer' which forms the basis
+# of our model.
 
 struct SVGPModel
     k  # kernel parameters
@@ -47,7 +82,8 @@ struct SVGPModel
     z  # inducing points
 end
 
-Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
+Flux.@functor SVGPModel (k, m, A, z)
+#md nothing #hide
 
 # Create the 'model' from the parameters - i.e. return the FiniteGP at inputs x,
 # the FiniteGP at inducing inputs z and the variational posterior over inducing
@@ -64,6 +100,7 @@ function (m::SVGPModel)(x)
     fu = f(m.z, jitter)
     return fx, fu, q
 end
+#md nothing #hide
 
 # Create the posterior GP from the model parameters.
 function posterior(m::SVGPModel)
@@ -73,6 +110,7 @@ function posterior(m::SVGPModel)
     q = MvNormal(m.m, m.A'm.A)
     return approx_posterior(SVGP(), fu, q)
 end
+#md nothing #hide
 
 # Return the loss given data - in this case the negative ELBO.
 function loss(x, y; n_data=length(y))
@@ -81,21 +119,11 @@ function loss(x, y; n_data=length(y))
 end
 #md nothing #hide
 
-# Select the first M inputs as inducing inputs
-
-M = 50 # number of inducing points
-z = x[1:M]
-
-# Initialise the model parameters
-
-k = [0.3, 10]
-m = zeros(M)
-A = Matrix{Float64}(I, M, M)
-
-model = SVGPModel(k, m, A, z)
+model = SVGPModel(k_init, m, A, z_init)
 
 opt = ADAM(0.001)
 parameters = Flux.params(model)
+#md nothing #hide
 
 # TODO: batching explanation
 
@@ -114,6 +142,7 @@ Flux.train!(
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
 )
+#md nothing #hide
 
 # Negative ELBO after training
 
@@ -136,4 +165,4 @@ scatter(
 )
 plot!(-1:0.001:1, post; label="Posterior")
 plot!(-1:0.001:1, g; label="True Function")
-vline!(z; label="Pseudo-points")
+vline!(z_init; label="Pseudo-points")

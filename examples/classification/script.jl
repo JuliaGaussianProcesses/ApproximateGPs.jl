@@ -1,6 +1,6 @@
 # (Roughly) a recreation of https://gpflow.readthedocs.io/en/master/notebooks/basics/classification.html
 
-# # One-Dimensional Stochastic Variational Classification
+# # Stochastic Variational Classification
 #
 # ## Setup
 
