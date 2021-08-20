@@ -1,4 +1,4 @@
-struct SVGP{Tfz<:FiniteGP, Tq<:AbstractMvNormal}
+struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
 end

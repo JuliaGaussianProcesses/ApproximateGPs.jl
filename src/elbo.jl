@@ -48,7 +48,7 @@ function AbstractGPs.elbo(
     y::AbstractVector{<:Real},
     n_data=length(y),
     method=Default(),
-    )
+)
     @assert svgp.fz.f === fx.f
     return _elbo(method, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), n_data)
 end
@@ -65,12 +65,8 @@ end
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP,
-    lfx::LatentFiniteGP,
-    y::AbstractVector,
-    n_data=length(y),
-    method=Default(),
-    )
+    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector, n_data=length(y), method=Default()
+)
     @assert svgp.fz.f === lfx.fx.f
     return _elbo(method, svgp, lfx.fx, y, lfx.lik, n_data)
 end
@@ -83,7 +79,7 @@ function _elbo(
     y::AbstractVector,
     lik::ScalarLikelihood,
     n_data::Integer,
-    )
+)
     @assert svgp.fz.f === fx.f
     post = posterior(svgp)
     q_f = marginals(post(fx.x))
