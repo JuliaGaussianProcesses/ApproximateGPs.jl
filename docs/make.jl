@@ -40,6 +40,10 @@ isempty(processes) || success(processes) || error("some examples were not run su
 using Documenter
 
 using SparseGPs
+using AbstractGPs: FiniteGP, AbstractGP, LatentFiniteGP
+using LinearAlgebra
+using Distributions
+using FillArrays
 
 # Doctest setup
 DocMeta.setdocmeta!(
@@ -57,13 +61,8 @@ makedocs(;
     modules=[SparseGPs],
     pages=[
         "Home" => "index.md",
-        # "userguide.md",
-        # "kernels.md",
-        # "transform.md",
-        # "metrics.md",
-        # "create_kernel.md",
+        "userguide.md",
         "API" => "api.md",
-        # "Design" => "design.md",
         "Examples" =>
             map(filter!(filename -> endswith(filename, ".md"), readdir(EXAMPLES_OUT))) do x
                 return joinpath("examples", x)

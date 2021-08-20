@@ -2,12 +2,12 @@ module SparseGPs
 
 using Reexport
 @reexport using AbstractGPs
+@reexport using GPLikelihoods
 using Distributions
 using LinearAlgebra
 using Statistics
 using StatsBase
 using FastGaussQuadrature
-using GPLikelihoods
 using SpecialFunctions
 using ChainRulesCore
 using FillArrays
