@@ -17,7 +17,7 @@ using AbstractGPs:
 
 export SVGP, Default, Analytic, Quadrature, MonteCarlo
 
-include("elbo.jl")
 include("svgp.jl")
+include("elbo.jl")
 
 end
