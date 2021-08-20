@@ -23,7 +23,7 @@
 
         gpr_post = posterior(fx, y) # Exact GP regression
         vfe_post = approx_posterior(VFE(), fx, y, fz) # Titsias posterior
-        svgp_post = approx_posterior(SVGP(), fz, q_ex) # Hensman (2013) exact posterior
+        svgp_post = posterior(SVGP(fz, q_ex)) # Hensman (2013) exact posterior
 
         @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol = 1e-10
@@ -31,7 +31,7 @@
         @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol = 1e-10
 
-        @test elbo(fx, y, fz, q_ex) ≈ logpdf(fx, y) atol = 1e-6
+        @test elbo(SVGP(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol = 1e-6
     end
 
     @testset "optimised posterior" begin
@@ -39,76 +39,50 @@
 
         make_gp(kernel) = GP(kernel)
 
-        ## FIRST - define the models
-        # GPR - Exact GP regression
-        struct GPRModel
-            k # kernel parameters
-        end
-        Flux.@functor GPRModel
-
-        function (m::GPRModel)(x)
-            f = make_gp(make_kernel(m.k))
-            fx = f(x, lik_noise)
-            return fx
-        end
-
-        # SVGP - Sparse variational GP regression (Hensman 2014)
+        # SVGP model
         struct SVGPModel
             k # kernel parameters
             z # inducing points
             m # variational mean
             A # variational covariance sqrt (Σ = A'A)
         end
-        Flux.@functor SVGPModel (k, m, A) # Don't train the inducing inputs
+        Flux.@functor SVGPModel (m, A) # Only train the variational parameters
 
-        function (m::SVGPModel)(x)
+        function construct_parts(m::SVGPModel, x)
             f = make_gp(make_kernel(m.k))
             q = MvNormal(m.m, m.A'm.A)
             fx = f(x, lik_noise)
             fz = f(m.z, jitter)
-            return fx, fz, q
-        end
-
-        ## SECOND - create the models and associated training losses
-        gpr = GPRModel(copy(k_init))
-        function GPR_loss(x, y)
-            fx = gpr(x)
-            return -logpdf(fx, y)
+            return SVGP(fz, q), fx
         end
 
         m, A = zeros(N), Matrix{Float64}(I, N, N) # initialise the variational parameters
-        svgp = SVGPModel(copy(k_init), copy(z), m, A)
-        function SVGP_loss(x, y)
-            fx, fz, q = svgp(x)
-            return -elbo(fx, y, fz, q)
+        svgp_model = SVGPModel(copy(k_init), copy(z), m, A)
+        function svgp_loss(x, y)
+            approx, fx = construct_parts(svgp_model, x)
+            return -elbo(approx, fx, y)
         end
 
-        ## THIRD - train the models
+        # Train the SVGP model
         data = [(x, y)]
         opt = ADAM(0.001)
 
-        svgp_ps = Flux.params(svgp)
-        delete!(svgp_ps, svgp.k) # Don't train the kernel parameters
+        svgp_ps = Flux.params(svgp_model)
 
         # Optimise q(u)
-        Flux.train!((x, y) -> SVGP_loss(x, y), svgp_ps, ncycle(data, 20000), opt)
+        Flux.train!((x, y) -> svgp_loss(x, y), svgp_ps, ncycle(data, 20000), opt)
 
-        ## FOURTH - construct the posteriors
-        function posterior(m::GPRModel, x, y)
-            f = make_gp(make_kernel(m.k))
-            fx = f(x, lik_noise)
-            return AbstractGPs.posterior(fx, y)
-        end
-
-        function posterior(m::SVGPModel)
+        ## construct the posteriors
+        function svgp_posterior(m::SVGPModel)
             f = make_gp(make_kernel(m.k))
             fz = f(m.z, jitter)
             q = MvNormal(m.m, m.A'm.A)
-            return approx_posterior(SVGP(), fz, q)
+            return posterior(construct_parts)
         end
 
-        gpr_post = posterior(gpr, x, y)
-        svgp_post = posterior(svgp)
+        f_gpr = make_gp(make_kernel(k_init))
+        gpr_post = posterior(f_gpr(x, lik_noise), y)
+        svgp_post = posterior(first(construct_parts(svgp_model, x)))
 
         ## FIFTH - test equivalences
         @test all(isapprox.(mean(gpr_post, x), mean(svgp_post, x), atol=1e-4))
