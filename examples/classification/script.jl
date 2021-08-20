@@ -58,9 +58,9 @@ plot!(x_true, mean.(f.lik.(f_true)); seriescolor="red", label="True function")
 
 struct SVGPModel
     k  # kernel parameters
+    z  # inducing points
     m  # variational mean
     A  # variational covariance
-    z  # inducing points
 end
 
 Flux.@functor SVGPModel (k, m, A)  # Don't train the inducing inputs

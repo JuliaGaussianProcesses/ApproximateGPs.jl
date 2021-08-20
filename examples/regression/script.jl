@@ -77,12 +77,12 @@ q_init = MvNormal(m_init, A_init'A_init)
 
 struct SVGPModel
     k  # kernel parameters
+    z  # inducing points
     m  # variational mean
     A  # variational covariance
-    z  # inducing points
 end
 
-Flux.@functor SVGPModel (k, m, A, z)
+Flux.@functor SVGPModel (k, z, m, A)
 #md nothing #hide
 
 # Create the 'model' from the parameters - i.e. return the FiniteGP at inputs x,
@@ -92,37 +92,38 @@ Flux.@functor SVGPModel (k, m, A, z)
 lik_noise = 0.3
 jitter = 1e-5
 
-function (m::SVGPModel)(x)
+function prior(m::SVGPModel)
     kernel = make_kernel(m.k)
-    f = GP(kernel)
+    return GP(kernel)
+end
+
+function make_approx(m::SVGPModel)
+    f = prior(m)
     q = MvNormal(m.m, m.A'm.A)
-    fx = f(x, lik_noise)
-    fu = f(m.z, jitter)
-    return fx, fu, q
+    fz = f(m.z, jitter)
+    return SVGP(fz, q)
 end
 #md nothing #hide
 
 # Create the posterior GP from the model parameters.
 function posterior(m::SVGPModel)
-    kernel = make_kernel(m.k)
-    f = GP(kernel)
-    fu = f(m.z, jitter)
-    q = MvNormal(m.m, m.A'm.A)
-    return approx_posterior(SVGP(), fu, q)
+    svgp = make_approx(m)
+    return posterior(svgp)
 end
 #md nothing #hide
 
 # Return the loss given data - in this case the negative ELBO.
 function loss(x, y; n_data=length(y))
-    fx, fu, q = model(x)
-    return -elbo(fx, y, fu, q; n_data)
+    fx = prior(model)(x, lik_noise)
+    svgp = make_approx(model)
+    return -elbo(svgp, fx, y; n_data)
 end
 #md nothing #hide
 
 model = SVGPModel(k_init, m, A, z_init)
 
 opt = ADAM(0.001)
-parameters = Flux.params(model)
+params = Flux.params(model)
 #md nothing #hide
 
 # TODO: batching explanation
@@ -138,7 +139,7 @@ println(loss(x, y))
 
 Flux.train!(
     (x, y) -> loss(x, y; n_data=N),
-    parameters,
+    params,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
 )
