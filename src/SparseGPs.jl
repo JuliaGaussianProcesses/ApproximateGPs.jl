@@ -12,8 +12,7 @@ using ChainRulesCore
 using FillArrays
 using KLDivergences
 
-using AbstractGPs:
-    AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 
 export SVGP, Default, Analytic, Quadrature, MonteCarlo
 
