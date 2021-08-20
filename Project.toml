@@ -18,7 +18,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 AbstractGPs = "0.3"
-ChainRulesCore = "0.10, 1"
+ChainRulesCore = "0.10"
 Distributions = "0.25"
 FastGaussQuadrature = "0.4"
 FillArrays = "0.12"
