@@ -160,7 +160,7 @@ data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
 
 # The loss (negative ELBO) before training
 
-println(loss(x, y))
+println(loss(model, x, y))
 
 # Train the model
 
@@ -174,7 +174,7 @@ Flux.train!(
 
 # Negative ELBO after training
 
-println(loss(x, y))
+println(loss(model, x, y))
 
 # Finally, we plot samples from the optimised approximate posterior to see the
 # results.
