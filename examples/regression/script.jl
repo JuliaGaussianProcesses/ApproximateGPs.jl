@@ -64,8 +64,8 @@ z_init = x[1:M]
 #md nothing #hide
 
 # Finally, we initialise the parameters of the variational distribution `q(u)`
-# where `u ~ f(z)`. We parameterise the covariance matrix of `q` as `C = AᵀA`
-# since this guarantees that `C` is positive definite.
+# where `u ~ f(z)` are the pseudo-points. We parameterise the covariance matrix
+# of `q` as `C = AᵀA` since this guarantees that `C` is positive definite.
 
 m_init = zeros(M)
 A_init = Matrix{Float64}(I, M, M)
@@ -92,6 +92,10 @@ Flux.@functor SVGPModel (k, z, m, A)
 lik_noise = 0.3
 jitter = 1e-5
 
+# Next, we define some useful functions on the model - creating the prior GP
+# under the model, as well as the `SVGP` struct needed to create the posterior
+# approximation and to compute the ELBO.
+
 function prior(m::SVGPModel)
     kernel = make_kernel(m.k)
     return GP(kernel)
@@ -105,28 +109,51 @@ function make_approx(m::SVGPModel)
 end
 #md nothing #hide
 
-# Create the posterior GP from the model parameters.
+# Create the approximate posterior GP under the model.
+
 function posterior(m::SVGPModel)
     svgp = make_approx(m)
     return posterior(svgp)
 end
 #md nothing #hide
 
-# Return the loss given data - in this case the negative ELBO.
-function loss(x, y; n_data=length(y))
-    fx = prior(model)(x, lik_noise)
-    svgp = make_approx(model)
+# Define a predictive function for the model - in this case the prediction is
+# the joint distribution of the approximate posterior GP at some test inputs `x`
+# (defined by an `AbstractGPs.FiniteGP`).
+
+function (m::SVGPModel)(x)
+    post = posterior(m)
+    return post(x)
+end
+#md nothing #hide
+
+# Return the loss given data - for the SVGP, the loss used is the negative ELBO
+# (also known as the Variational Free Energy). `n_data` is required for
+# minibatching used below.
+
+function loss(m::SVGPModel, x, y; n_data=length(y))
+    fx = prior(m)(x, lik_noise)
+    svgp = make_approx(m)
     return -elbo(svgp, fx, y; n_data)
 end
 #md nothing #hide
 
-model = SVGPModel(k_init, m, A, z_init)
+# Finally, create the model with initial parameters
 
-opt = ADAM(0.001)
-params = Flux.params(model)
+model = SVGPModel(k_init,  z_init, m_init, A_init)
 #md nothing #hide
 
-# TODO: batching explanation
+# ## Training the model
+#
+# Training the model now simply proceeds with the usual `Flux.jl` training loop.
+
+opt = ADAM(0.001)  # Define the optimiser
+params = Flux.params(model)  # Extract the model parameters
+#md nothing #hide
+
+# One of the major advantages of the SVGP model is that it allows stochastic
+# estimation of the ELBO by using minibatching of the training data. This is
+# very straightforward to achieve with `Flux.jl`'s utilities:
 
 b = 100 # minibatch size
 data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
@@ -138,7 +165,7 @@ println(loss(x, y))
 # Train the model
 
 Flux.train!(
-    (x, y) -> loss(x, y; n_data=N),
+    (x, y) -> loss(model, x, y; n_data=N),
     params,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
@@ -149,7 +176,8 @@ Flux.train!(
 
 println(loss(x, y))
 
-# Plot samples from the optmimised approximate posterior.
+# Finally, we plot samples from the optimised approximate posterior to see the
+# results.
 
 post = posterior(model)
 
