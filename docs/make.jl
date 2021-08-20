@@ -40,10 +40,6 @@ isempty(processes) || success(processes) || error("some examples were not run su
 using Documenter
 
 using SparseGPs
-using AbstractGPs: FiniteGP, AbstractGP, LatentFiniteGP
-using LinearAlgebra
-using Distributions
-using FillArrays
 
 # Doctest setup
 DocMeta.setdocmeta!(
