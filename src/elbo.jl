@@ -45,7 +45,7 @@ Statistics. PMLR, 2015.
 function AbstractGPs.elbo(
     svgp::SVGP,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
-    y::AbstractVector{<:Real},
+    y::AbstractVector{<:Real};
     n_data=length(y),
     method=Default(),
 )
@@ -65,7 +65,7 @@ end
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector, n_data=length(y), method=Default()
+    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; n_data=length(y), method=Default()
 )
     @assert svgp.fz.f === lfx.fx.f
     return _elbo(method, svgp, lfx.fx, y, lfx.lik, n_data)
