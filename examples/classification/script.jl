@@ -20,7 +20,7 @@ default(; legend=:outertopright, size=(700, 400))
 using Random
 Random.seed!(1234)
 
-include("utils.jl")
+include(joinpath(@__DIR__, "utils.jl"))
 #md nothing #hide
 
 # ## Generate some training data
