@@ -159,8 +159,8 @@ opt = optimize(
     LBFGS(;
         alphaguess=Optim.LineSearches.InitialStatic(; scaled=true),
         linesearch=Optim.LineSearches.BackTracking(),
-          );
-    Optim.Options(iterations=4_000),
+    );
+    Optim.Options(; iterations=4_000),
     inplace=false,
 )
 
