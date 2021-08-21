@@ -9,7 +9,6 @@
 #
 # ## Setup
 
-using AbstractGPs
 using SparseGPs
 using Distributions
 using LinearAlgebra
@@ -24,7 +23,7 @@ Random.seed!(1234)
 
 # ## Generate some training data
 #
-# The data generating function
+# The data generating function `g`
 
 function g(x)
     return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)

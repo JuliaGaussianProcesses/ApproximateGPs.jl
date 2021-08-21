@@ -1,16 +1,18 @@
-# (Roughly) a recreation of https://gpflow.readthedocs.io/en/master/notebooks/basics/classification.html
-
 # # Stochastic Variational Classification
+#
+# This example demonstrates how to carry out non-conjugate Gaussian process
+# inference using the stochastic variational Gaussian process (SVGP) model. For
+# a basic introduction to the functionality of this library, please refer to the
+# [User Guide](@ref).
 #
 # ## Setup
 
 using SparseGPs
-using AbstractGPs
-using GPLikelihoods
+using ParameterHandling
+using Zygote
 using Distributions
 using LinearAlgebra
-using IterTools
-using Flux
+using Optim
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
@@ -18,121 +20,141 @@ default(; legend=:outertopright, size=(700, 400))
 using Random
 Random.seed!(1234)
 
-# ## Sampling some data
-#
-# In this example, we shall see whether the sparse variational Gaussian process
-# (SVGP) can recover the true GP from which binary classification data are
-# sampled.
-#
-# First, a helper function to create the GP kernel
-
-function make_kernel(k)
-    return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
-end
-kernel_params = [10.0, 0.5] # The true kernel parameters
-k = make_kernel(kernel_params)
+include("utils.jl")
 #md nothing #hide
 
-# Create the 'ground truth GP' and sample a function
+# ## Generate some training data
+#
+# For our binary classification model, we will use the standard approach of a
+# latent GP with a Bernoulli likelihood. This results in a generative model that
+# we can use to produce some training data.
+#
+# First, we define the underlying latent GP
+# ```math
+# f \sim \mathcal{GP}(0, k(\cdot, \cdot'))
+# ```
+# and sample a function `f`.
 
-f = LatentGP(GP(k), BernoulliLikelihood(), 1e-6)
+k_true = [30.0, 0.5]
+kernel_true = k_true[1] * (SqExponentialKernel() ∘ ScaleTransform(k_true[2]))
+
+lgp = LatentGP(GP(kernel_true), BernoulliLikelihood(), 1e-12)
 x_true = 0:0.02:6
-f_true, y_true = rand(f(x_true))
-#md nothing #hide
+f_true, y_true = rand(lgp(x_true))
 
-# Plot the sampled function
-plot(x_true, f_true; seriescolor="red", label="")
+plot(x_true, f_true; seriescolor="red", label="")  # Plot the sampled function
 
-# Plot the function pushed through a logistic sigmoid, restricting it to `[0, 1]`
-plot(x_true, mean.(f.lik.(f_true)); seriescolor="red", label="")
+# Then, the output of this sampled function is pushed through a logistic sigmoid
+# `μ = σ(f)` to constrain the output to `[0, 1]`.
 
-# Subsample input locations to obtain training data
+μ = mean.(lgp.lik.(f_true))
+plot(x_true, μ; seriescolor="red", label="")
 
-N_train = 30
-mask = sample(1:length(x_true), N_train; replace=false, ordered=true)
+# Finally, the outputs `y` of the process are sampled from a Bernoulli
+# distribution with mean `μ`. We're only interested in the outputs at a subset
+# of inputs `x`, so we first pick some random input locations and then find the
+# corresponding values for `y`.
+
+N = 30  # The number of training points
+mask = sample(1:length(x_true), N; replace=false, ordered=true)  # Subsample some input locations
 x, y = x_true[mask], y_true[mask]
-scatter(x, y; label="Sampled data")
-plot!(x_true, mean.(f.lik.(f_true)); seriescolor="red", label="True function")
 
-# ## Setting up a Flux model for the SVGP
+scatter(x, y; label="Sampled outputs")
+plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True function")
 
-struct SVGPModel
-    k  # kernel parameters
-    z  # inducing points
-    m  # variational mean
-    A  # variational covariance
-end
-
-Flux.@functor SVGPModel (k, m, A)  # Don't train the inducing inputs
-
-lik = BernoulliLikelihood()
-jitter = 1e-3
-
-function (m::SVGPModel)(x)
-    kernel = make_kernel(m.k)
-    f = LatentGP(GP(kernel), lik, jitter)
-    q = MvNormal(m.m, m.A'm.A)
-    fx = f(x)
-    fu = f(m.z).fx
-    return fx, fu, q
-end
-
-function loss(x, y; n_data=length(y))
-    fx, fu, q = model(x)
-    return -elbo(fx, y, fu, q; n_data, method=MonteCarlo())
-end
-#md nothing #hide
-
-# Initialise the model parameters
+# ## Creating an SVGP
+#
+# Now that we have some data sampled from a generative model, we can try to recover the
+# true generative function with an SVGP classification model.
+#
+# For this, we shall use a mixture of
+# [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl) to
+# deal with our constrained parameters and
+# [Optim.jl](https://julianlsolvers.github.io/Optim.jl/stable/) to perform
+# optimimisation.
+#
+# The required parameters for the SVGP are - the kernel hyperparameters `k`, the
+# inducing inputs `z` and the mean and covariance of the variational
+# distribution `q`; given by `m` and `A` respectively. ParameterHandling
+# provides an elegant way to deal with the constraints on these parameters,
+# since `k` must be positive and `A` must be positive definite. For more
+# details, see the
+# [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl)
+# readme.
 
 M = 15  # number of inducing points
-k = rand(2)
-m = zeros(M)
-A = Matrix{Float64}(I, M, M)
-z = range(0; stop=6, length=M)
-
-model = SVGPModel(k, m, A, z)
-
-opt = ADAM(0.1)
-parameters = Flux.params(model)
+raw_initial_params = (
+    k = (
+        var = positive(rand()),
+        precision = positive(rand()),
+    ),
+    z = bounded.(range(0.1; stop=5.9, length=M), 0.0, 6.0),  # constrain z to simplify optimisation
+    m = zeros(M),
+    A = pdmatrix(4 * Matrix{Float64}(I, M, M))  # pdmatrix is defined in utils.jl
+)
 #md nothing #hide
 
-# The loss (negative ELBO) before training
+# `flatten` takes the `NamedTuple` of parameters and returns a flat vector of
+# `Float64` - along with a function `unflatten` to reconstruct the `NamedTuple`
+# from a flat vector. `value` takes each parameter in the `NamedTuple` and
+# applies the necessary transformation to return the constrained value which can
+# then be used to construct the SVGP model. `unpack` therefore takes a flat,
+# unconstrained `Vector{Float64}` and returns a `NamedTuple` of constrained
+# parameter values.
 
-println(loss(x, y))
+flat_init_params, unflatten = ParameterHandling.flatten(raw_initial_params)
+unpack = ParameterHandling.value ∘ unflatten
+#md nothing #hide
 
-# Train the model
+# Now, we define a function to build the SVGP model from the constrained
+# parameters as well as a loss function - in this case the negative ELBO.
 
-Flux.train!(
-    (x, y) -> loss(x, y),
-    parameters,
-    ncycle([(x, y)], 6000), # Train for 6000 epochs
-    opt,
+lik = BernoulliLikelihood()
+jitter = 1e-3  # added to aid numerical stability
+
+function build_SVGP(params::NamedTuple)
+    kernel = params.k.var * (SqExponentialKernel() ∘ ScaleTransform(params.k.precision))
+    f = LatentGP(GP(kernel), lik, jitter)
+    q = MvNormal(params.m, params.A)
+    fz = f(params.z).fx
+    return SVGP(fz, q), f
+end
+
+function loss(params::NamedTuple)
+    svgp, f = build_SVGP(params)
+    fx = f(x)
+    return -elbo(svgp, fx, y)
+end
+#md nothing #hide
+
+# Optimise the parameters using LBFGS.
+
+opt = optimize(
+    loss ∘ unpack,
+    θ -> only(Zygote.gradient(loss ∘ unpack, θ)),
+    flat_init_params,
+    LBFGS(
+        alphaguess = Optim.LineSearches.InitialStatic(scaled=true),
+        linesearch = Optim.LineSearches.BackTracking()
+    ),
+    inplace=false,
 )
 
-# The loss after training
+# Finally, build the optimised SVGP model, and sample some functions to see if
+# they are close to the true function.
 
-println(loss(x, y))
+final_params = unpack(opt.minimizer)
 
-# After optimisation, plot samples from the underlying posterior GP.
+svgp_opt, f_opt = build_SVGP(final_params)
+post_opt = posterior(svgp_opt)
+l_post_opt = LatentGP(post_opt, BernoulliLikelihood(), jitter)
 
-fu = f(z).fx # want the underlying FiniteGP
-post = approx_posterior(SVGP(), fu, MvNormal(m, A'A))
-l_post = LatentGP(post, BernoulliLikelihood(), jitter)
+post_f_samples = rand(l_post_opt.f(x_true, 1e-6), 20)
+post_μ_samples = mean.(l_post_opt.lik.(post_f_samples))
 
-x_plot = 0:0.02:6
-
-post_f_samples = rand(l_post.f(x_plot, 1e-6), 20)
-
-plt = plot(x_plot, post_f_samples; seriescolor="red", linealpha=0.2, legend=false)
-
-# As above, push these samples through a logistic sigmoid to get posterior predictions.
-
-post_y_samples = mean.(l_post.lik.(post_f_samples))
-
-plt = plot(x_plot, post_y_samples; seriescolor="red", linealpha=0.2, label="")
+plt = plot(x_true, post_μ_samples; seriescolor="red", linealpha=0.2, label="")
 scatter!(plt, x, y; seriescolor="blue", label="Data points")
-vline!(z; label="Pseudo-points")
+vline!(final_params.z; label="Pseudo-points")
 plot!(
-    x_true, mean.(f.lik.(f_true)); seriescolor="green", linewidth=3, label="True function"
+    x_true, mean.(lgp.lik.(f_true)); seriescolor="green", linewidth=3, label="True function"
 )
