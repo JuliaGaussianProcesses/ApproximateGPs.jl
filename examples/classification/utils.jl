@@ -13,7 +13,7 @@ function ParameterHandling.value(P::PDMatrix)
     return A'A
 end
 
-function ParameterHandling.flatten(::Type{T}, P::PDMatrix) where T
+function ParameterHandling.flatten(::Type{T}, P::PDMatrix) where {T}
     v, unflatten_to_Array = flatten(T, P.A)
     function unflatten_PDmatrix(v_new::Vector{T})
         A = unflatten_to_Array(v_new)

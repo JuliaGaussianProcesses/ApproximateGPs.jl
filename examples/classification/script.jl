@@ -84,13 +84,10 @@ plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True function")
 
 M = 15  # number of inducing points
 raw_initial_params = (
-    k = (
-        var = positive(rand()),
-        precision = positive(rand()),
-    ),
-    z = bounded.(range(0.1; stop=5.9, length=M), 0.0, 6.0),  # constrain z to simplify optimisation
-    m = zeros(M),
-    A = pdmatrix(4 * Matrix{Float64}(I, M, M))  # pdmatrix is defined in utils.jl
+    k=(var=positive(rand()), precision=positive(rand())),
+    z=bounded.(range(0.1; stop=5.9, length=M), 0.0, 6.0),  # constrain z to simplify optimisation
+    m=zeros(M),
+    A=pdmatrix(4 * Matrix{Float64}(I, M, M)),  # pdmatrix is defined in utils.jl
 )
 #md nothing #hide
 
@@ -133,10 +130,10 @@ opt = optimize(
     loss ∘ unpack,
     θ -> only(Zygote.gradient(loss ∘ unpack, θ)),
     flat_init_params,
-    LBFGS(
-        alphaguess = Optim.LineSearches.InitialStatic(scaled=true),
-        linesearch = Optim.LineSearches.BackTracking()
-    ),
+    LBFGS(;
+        alphaguess=Optim.LineSearches.InitialStatic(; scaled=true),
+        linesearch=Optim.LineSearches.BackTracking(),
+    );
     inplace=false,
 )
 
