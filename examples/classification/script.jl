@@ -19,8 +19,6 @@ default(; legend=:outertopright, size=(700, 400))
 
 using Random
 Random.seed!(1234)
-
-include(joinpath(@__DIR__, "utils.jl"))
 #md nothing #hide
 
 # ## Generate some training data
@@ -81,6 +79,34 @@ plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True function")
 # details, see the
 # [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl)
 # readme.
+
+# First, we need to define a quick and dirty positive definite matrix type for
+# ParameterHandling.jl - this code can safely be ignored.
+
+struct PDMatrix{TA}
+    A::TA
+end
+
+function pdmatrix(A::AbstractMatrix)
+    return PDMatrix(A)
+end
+
+function ParameterHandling.value(P::PDMatrix)
+    A = copy(P.A)
+    return A'A
+end
+
+function ParameterHandling.flatten(::Type{T}, P::PDMatrix) where {T}
+    v, unflatten_to_Array = flatten(T, P.A)
+    function unflatten_PDmatrix(v_new::Vector{T})
+        A = unflatten_to_Array(v_new)
+        return PDMatrix(A)
+    end
+    return v, unflatten_PDmatrix
+end
+#md nothing #hide
+
+# Initialise the parameters
 
 M = 15  # number of inducing points
 raw_initial_params = (
