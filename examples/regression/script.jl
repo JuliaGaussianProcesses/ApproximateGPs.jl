@@ -101,18 +101,17 @@ function prior(m::SVGPModel)
     return GP(kernel)
 end
 
-function make_approx(m::SVGPModel)
-    f = prior(m)
+function make_approx(m::SVGPModel, prior)
     q = MvNormal(m.m, m.A'm.A)
-    fz = f(m.z, jitter)
+    fz = prior(m.z, jitter)
     return SVGP(fz, q)
 end
 #md nothing #hide
 
 # Create the approximate posterior GP under the model.
 
-function posterior(m::SVGPModel)
-    svgp = make_approx(m)
+function model_posterior(m::SVGPModel)
+    svgp = make_approx(m, prior(m))
     return posterior(svgp)
 end
 #md nothing #hide
@@ -122,7 +121,7 @@ end
 # (defined by an `AbstractGPs.FiniteGP`).
 
 function (m::SVGPModel)(x)
-    post = posterior(m)
+    post = model_posterior(m)
     return post(x)
 end
 #md nothing #hide
@@ -132,8 +131,9 @@ end
 # minibatching used below.
 
 function loss(m::SVGPModel, x, y; n_data=length(y))
-    fx = prior(m)(x, lik_noise)
-    svgp = make_approx(m)
+    f = prior(m)
+    fx = f(x, lik_noise)
+    svgp = make_approx(m, f)
     return -elbo(svgp, fx, y; n_data)
 end
 #md nothing #hide
@@ -179,7 +179,7 @@ println(loss(model, x, y))
 # Finally, we plot samples from the optimised approximate posterior to see the
 # results.
 
-post = posterior(model)
+post = model_posterior(model)
 
 scatter(
     x,
