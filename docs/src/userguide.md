@@ -46,4 +46,4 @@ The approximate posterior constructed above will be a very poor approximation, s
 ```julia
 elbo(SVGP(fz, q), fx, y)
 ```
-<!-- A detailed example of how to carry out such optimisation is given in [Stochastic Variational Regression](@ref). -->
+A detailed example of how to carry out such optimisation is given in [Stochastic Variational Regression](@ref). For an example of non-conjugate inference, see [Stochastic Variational Classification](@ref).
