@@ -12,7 +12,7 @@
 using SparseGPs
 using Distributions
 using LinearAlgebra
-using IterTools
+using IterTools: ncycle
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
@@ -23,11 +23,9 @@ Random.seed!(1234)
 
 # ## Generate some training data
 #
-# The data generating function `g`
+# We define a data-generating function `g`:
 
-function g(x)
-    return sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
-end
+g(x) = sin(3π * x) + 0.3 * cos(9π * x) + 0.5 * sin(7π * x)
 
 N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
@@ -48,8 +46,10 @@ scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, lege
 
 using Flux
 
-function make_kernel(k)
-    return softplus(k[1]) * (SqExponentialKernel() ∘ ScaleTransform(softplus(k[2])))
+function make_kernel(k_params)
+    variance = softplus(k_params[1])
+    lengthscale = softplus(k_params[2])
+    return variance * with_lengthscale(SqExponentialKernel(), lengthscale)
 end
 
 k_init = [0.3, 10]
@@ -58,7 +58,7 @@ k_init = [0.3, 10]
 # Then, we select some inducing input locations `z_init`. In this case, we simply choose
 # the first `M` data inputs.
 
-M = 50 # number of inducing points
+M = 10 # number of inducing points
 z_init = x[1:M]
 #md nothing #hide
 
@@ -78,7 +78,7 @@ struct SVGPModel
     k  # kernel parameters
     z  # inducing points
     m  # variational mean
-    A  # variational covariance
+    A  # square-root of variational covariance
 end
 
 Flux.@functor SVGPModel (k, z, m, A)
@@ -90,6 +90,7 @@ Flux.@functor SVGPModel (k, z, m, A)
 
 lik_noise = 0.3
 jitter = 1e-5
+#md nothing #hide
 
 # Next, we define some useful functions on the model - creating the prior GP
 # under the model, as well as the `SVGP` struct needed to create the posterior

@@ -36,7 +36,8 @@ Random.seed!(1234)
 k_true = [30.0, 0.5]
 kernel_true = k_true[1] * (SqExponentialKernel() ∘ ScaleTransform(k_true[2]))
 
-lgp = LatentGP(GP(kernel_true), BernoulliLikelihood(), 1e-12)
+jitter = 1e-12  # for numeric stability
+lgp = LatentGP(GP(kernel_true), BernoulliLikelihood(), jitter)
 x_true = 0:0.02:6
 f_true, y_true = rand(lgp(x_true))
 
@@ -58,7 +59,7 @@ mask = sample(1:length(x_true), N; replace=false, ordered=true)  # Subsample som
 x, y = x_true[mask], y_true[mask]
 
 scatter(x, y; label="Sampled outputs")
-plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True function")
+plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True mean")
 
 # ## Creating an SVGP
 #
@@ -111,7 +112,7 @@ end
 M = 15  # number of inducing points
 raw_initial_params = (
     k=(var=positive(rand()), precision=positive(rand())),
-    z=bounded.(range(0.1; stop=5.9, length=M), 0.0, 6.0),  # constrain z to simplify optimisation
+    z=bounded.(range(0.1, 5.9; length=M), 0.0, 6.0),  # constrain z to simplify optimisation
     m=zeros(M),
     A=pdmatrix(4 * Matrix{Float64}(I, M, M)),  # pdmatrix is defined in utils.jl
 )
