@@ -4,7 +4,7 @@ struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
 end
 
 raw"""
-    approx_posterior(svgp::SVGP)
+    posterior(svgp::SVGP)
 
 Compute the approximate posterior [1] over the process `f = svgp.fz.f`, given inducing
 inputs `z = svgp.fz.x` and a variational distribution over inducing points `svgp.q(u)` where `u =

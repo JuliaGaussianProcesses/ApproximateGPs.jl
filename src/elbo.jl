@@ -36,7 +36,7 @@ exact solution. If there is no such solution, `Default()` either uses
 `Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
-Further, `fx.Σy` must be spherical - i.e. `fx.Σy = α * I`.
+Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
