@@ -13,6 +13,7 @@ using SparseGPs
 using Distributions
 using LinearAlgebra
 using IterTools: ncycle
+using StatsFuns: softplus, invsoftplus
 
 using Plots
 default(; legend=:outertopright, size=(700, 400))
@@ -41,38 +42,34 @@ scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, lege
 # of the variational distribution `q` and the parameters of the
 # kernel.
 #
-# First, we define a helper function to construct the kernel from its parameters
-# (often called kernel hyperparameters), and pick some initial values `k_init`.
+# First, we define a helper function to construct the kernel from its
+# parameters (often called kernel hyperparameters), and pick some
+# initial values `k_init`. Since Flux performs optimisation on
+# unconstrained parameters, we need to use softplus to ensure that the
+# kernel parameters are positive.
 
 using Flux
 
 function make_kernel(k_params)
-    variance = softplus(k_params[1])
-    lengthscale = softplus(k_params[2])
+    variance = StatsFuns.softplus(k_params[1])
+    lengthscale = StatsFuns.softplus(k_params[2])
     return variance * with_lengthscale(SqExponentialKernel(), lengthscale)
 end
 
-k_init = [0.3, 10]
+init_variance = 1.3
+init_lengthscale = 0.3
+k_init = [invsoftplus(init_variance), invsoftplus(init_lengthscale)]
 #md nothing #hide
 
-# Then, we select some inducing input locations `z_init`. In this case, we simply choose
-# the first `M` data inputs.
+# Then, we select some inducing input locations `z_init`. In this
+# case, we simply choose the first `M` data inputs.
 
 M = 10 # number of inducing points
 z_init = x[1:M]
 #md nothing #hide
 
-# Finally, we initialise the parameters of the variational distribution `q(u)`
-# where `u ~ f(z)` are the pseudo-points. We parameterise the covariance matrix
-# of `q` as `C = AᵀA` since this guarantees that `C` is positive definite.
-
-m_init = zeros(M)
-A_init = Matrix{Float64}(I, M, M)
-q_init = MvNormal(m_init, A_init'A_init)
-#md nothing #hide
-
-# Given a set of parameters, we now define a Flux 'layer' which forms the basis
-# of our model.
+# Given a set of parameters, we now define a Flux 'layer' which forms
+# the basis of our model.
 
 struct SVGPModel
     k  # kernel parameters
@@ -84,9 +81,8 @@ end
 Flux.@functor SVGPModel (k, z, m, A)
 #md nothing #hide
 
-# Create the 'model' from the parameters - i.e. return the FiniteGP at inputs x,
-# the FiniteGP at inducing inputs z and the variational posterior over inducing
-# points - q(u).
+# Set the observation noise for our model, along with a `jitter` term
+# to help with numerical stability.
 
 lik_noise = 0.3
 jitter = 1e-5
@@ -100,6 +96,11 @@ function prior(m::SVGPModel)
     kernel = make_kernel(m.k)
     return GP(kernel)
 end
+
+# The variational distribution is given by `q(u)` where ``u ~ f(z)``
+# are the pseudo-points. We parameterise the covariance matrix of
+# ``q`` as ``S = A^T A`` since this guarantees that ``S`` is positive
+# definite.
 
 function make_approx(m::SVGPModel, prior)
     q = MvNormal(m.m, m.A'm.A)
@@ -127,18 +128,22 @@ end
 #md nothing #hide
 
 # Return the loss given data - for the SVGP, the loss used is the negative ELBO
-# (also known as the Variational Free Energy). `n_data` is required for
+# (also known as the Variational Free Energy). `num_data` is required for
 # minibatching used below.
 
-function loss(m::SVGPModel, x, y; n_data=length(y))
+function loss(m::SVGPModel, x, y; num_data=length(y))
     f = prior(m)
     fx = f(x, lik_noise)
     svgp = make_approx(m, f)
-    return -elbo(svgp, fx, y; n_data)
+    return -elbo(svgp, fx, y; num_data)
 end
 #md nothing #hide
 
-# Finally, create the model with initial parameters
+# Finally, we choose some initial parameters and instantiate our model.
+
+m_init = zeros(M)
+A_init = Matrix{Float64}(I, M, M)
+q_init = MvNormal(m_init, A_init'A_init)
 
 model = SVGPModel(k_init, z_init, m_init, A_init)
 #md nothing #hide
@@ -160,12 +165,13 @@ data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
 
 # The loss (negative ELBO) before training
 
-println(loss(model, x, y))
+loss(model, x, y)
 
-# Train the model
+# Train the model. N.B. when using minibatching, the length of the
+# full dataset `num_data` must be passed to the loss.
 
 Flux.train!(
-    (x, y) -> loss(model, x, y; n_data=N),
+    (x, y) -> loss(model, x, y; num_data=N),
     params,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
@@ -174,9 +180,9 @@ Flux.train!(
 
 # Negative ELBO after training
 
-println(loss(model, x, y))
+loss(model, x, y)
 
-# Finally, we plot samples from the optimised approximate posterior to see the
+# Finally, we plot the optimised approximate posterior to see the
 # results.
 
 post = model_posterior(model)
