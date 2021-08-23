@@ -22,7 +22,7 @@ end
 MonteCarlo() = MonteCarlo(20)
 
 """
-    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; n_data=length(y), method=Default())
+    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), method=Default())
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
 svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
@@ -36,7 +36,7 @@ exact solution. If there is no such solution, `Default()` either uses
 `Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
-Further, `fx.Σy` must be spherical - i.e. `fx.Σy = α * I`.
+Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -46,11 +46,11 @@ function AbstractGPs.elbo(
     svgp::SVGP,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
-    n_data=length(y),
+    num_data=length(y),
     method=Default(),
 )
     @assert svgp.fz.f === fx.f
-    return _elbo(method, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), n_data)
+    return _elbo(method, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
 function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
@@ -60,15 +60,15 @@ function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
 end
 
 """
-    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; n_data=length(y), method=Default())
+    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; n_data=length(y), method=Default()
+    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default()
 )
     @assert svgp.fz.f === lfx.fx.f
-    return _elbo(method, svgp, lfx.fx, y, lfx.lik, n_data)
+    return _elbo(method, svgp, lfx.fx, y, lfx.lik, num_data)
 end
 
 # Compute the common elements of the ELBO
@@ -78,7 +78,7 @@ function _elbo(
     fx::FiniteGP,
     y::AbstractVector,
     lik::ScalarLikelihood,
-    n_data::Integer,
+    num_data::Integer,
 )
     @assert svgp.fz.f === fx.f
     post = posterior(svgp)
@@ -88,7 +88,7 @@ function _elbo(
     kl_term = kldivergence(svgp.q, svgp.fz)
 
     n_batch = length(y)
-    scale = n_data / n_batch
+    scale = num_data / n_batch
     return sum(variational_exp) * scale - kl_term
 end
 

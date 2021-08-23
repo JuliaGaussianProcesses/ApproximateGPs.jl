@@ -32,6 +32,6 @@
         y = rand.(rng, l.(zeros(10)))
 
         results = map(m -> SparseGPs.expected_loglik(m, y, q_f, l), methods)
-        @test all(x -> isapprox(x, results[end]; atol=1e3, rtol=1e-3), results)
+        @test all(x -> isapprox(x, results[end]; atol=1e-6, rtol=1e-3), results)
     end
 end

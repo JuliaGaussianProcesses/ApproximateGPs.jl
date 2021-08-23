@@ -4,12 +4,13 @@ struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
 end
 
 raw"""
-    approx_posterior(svgp::SVGP)
+    posterior(svgp::SVGP)
 
-Compute the approximate posterior [1] over the process `f = svgp.fz.f`, given inducing
-inputs `z = svgp.fz.x` and a variational distribution over inducing points `svgp.q(u)` where `u =
-f(z)`. The approximate posterior at test points ``x^*`` where ``f^* = f(x^*)``
-is then given by:
+Compute the approximate posterior [1] over the process `f =
+svgp.fz.f`, given inducing inputs `z = svgp.fz.x` and a variational
+distribution over inducing points `svgp.q` (which represents ``q(u)``
+where `u = f(z)`). The approximate posterior at test points ``x^*``
+where ``f^* = f(x^*)`` is then given by:
 
 ```math
 q(f^*) = \int p(f | u) q(u) du
@@ -22,11 +23,11 @@ Statistics. PMLR, 2015.
 """
 function AbstractGPs.posterior(svgp::SVGP)
     q, fz = svgp.q, svgp.fz
-    m, A = mean(q), _chol_cov(q)
+    m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
-    B = Kuu.L \ A.L
+    B = Kuu.L \ S.L
     α = Kuu \ (m - mean(fz))
-    data = (A=A, m=m, Kuu=Kuu, B=B, α=α)
+    data = (S=S, m=m, Kuu=Kuu, B=B, α=α)
     return ApproxPosteriorGP(svgp, fz.f, data)
 end
 
