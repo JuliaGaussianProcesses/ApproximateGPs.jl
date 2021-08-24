@@ -1,4 +1,6 @@
-# # Stochastic Variational Classification
+# # 2. Classification: Sparse Variational Approximation for
+# # Non-Conjugate Likelihoods with Optim's L-BFGS
+# 
 #
 # This example demonstrates how to carry out non-conjugate Gaussian process
 # inference using the stochastic variational Gaussian process (SVGP) model. For

@@ -1,7 +1,8 @@
 # A recreation of <https://gpflow.readthedocs.io/en/master/notebooks/advanced/gps_for_big_data.html>
 
-# # Stochastic Variational Regression
-#
+# # 1. Regression: Sparse Variational Gaussian Process for Stochastic
+# # Optimisation with Flux.jl
+
 # In this example, we show how to construct and train the stochastic variational
 # Gaussian process (SVGP) model for efficient inference in large scale datasets.
 # For a basic introduction to the functionality of this library, please refer to
