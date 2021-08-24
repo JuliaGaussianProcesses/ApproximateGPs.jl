@@ -65,7 +65,11 @@ end
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=Default()
+    svgp::SVGP,
+    lfx::LatentFiniteGP,
+    y::AbstractVector;
+    num_data=length(y),
+    quadrature=Default(),
 )
     @assert svgp.fz.f === lfx.fx.f
     return _elbo(quadrature, svgp, lfx.fx, y, lfx.lik, num_data)
@@ -200,7 +204,10 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    gh::GaussHermite, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
+    gh::GaussHermite,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik::ScalarLikelihood,
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
