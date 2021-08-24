@@ -24,7 +24,7 @@
 
     @testset "$lik" for lik in Base.uniontypes(SparseGPs.ScalarLikelihood)
         l = lik()
-        methods = [Quadrature(100), MonteCarlo(1e7)]
+        methods = [GaussHermite(100), MonteCarlo(1e7)]
         def = SparseGPs._default_method(l)
         if def isa Analytic
             push!(methods, def)
