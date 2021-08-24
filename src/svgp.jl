@@ -31,7 +31,10 @@ function AbstractGPs.posterior(svgp::SVGP)
     return ApproxPosteriorGP(svgp, fz.f, data)
 end
 
-AbstractGPs.posterior(svgp::SVGP, ::FiniteGP, ::AbstractVector) = posterior(svgp)
+function AbstractGPs.posterior(svgp::SVGP, fx::FiniteGP, ::AbstractVector)
+    @assert svgp.fz.f === fx.f
+    return posterior(svgp)
+end
 
 function Statistics.mean(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α

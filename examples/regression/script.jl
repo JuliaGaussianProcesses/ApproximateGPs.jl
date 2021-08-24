@@ -49,11 +49,9 @@ scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, lege
 # unconstrained parameters, we need to use softplus to ensure that the
 # kernel parameters are positive.
 
-using Flux
-
 function make_kernel(k_params)
-    variance = StatsFuns.softplus(k_params[1])
-    lengthscale = StatsFuns.softplus(k_params[2])
+    variance = softplus(k_params[1])
+    lengthscale = softplus(k_params[2])
     return variance * with_lengthscale(SqExponentialKernel(), lengthscale)
 end
 
@@ -71,6 +69,8 @@ z_init = x[1:M]
 
 # Given a set of parameters, we now define a Flux 'layer' which forms
 # the basis of our model.
+
+using Flux
 
 struct SVGPModel
     k  # kernel parameters
