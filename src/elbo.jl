@@ -8,7 +8,7 @@ ScalarLikelihood = Union{
 }
 
 abstract type QuadratureMethod end
-struct Default <: QuadratureMethod end
+struct DefaultQuadrature <: QuadratureMethod end
 struct Analytic <: QuadratureMethod end
 
 struct GaussHermite <: QuadratureMethod
@@ -22,7 +22,7 @@ end
 MonteCarlo() = MonteCarlo(20)
 
 """
-    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=Default())
+    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
 svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
@@ -30,9 +30,9 @@ svgp.fz.x` and `q(u)` is a variational distribution over inducing points `u =
 f(z)`.
 
 `quadrature` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `Default()`, `Analytic()`, `GaussHermite()` and
-`MonteCarlo()`. For likelihoods with an analytic solution, `Default()` uses this
-exact solution. If there is no such solution, `Default()` either uses
+the ELBO. The options are: `DefaultQuadrature()`, `Analytic()`, `GaussHermite()` and
+`MonteCarlo()`. For likelihoods with an analytic solution, `DefaultQuadrature()` uses this
+exact solution. If there is no such solution, `DefaultQuadrature()` either uses
 `GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
@@ -47,7 +47,7 @@ function AbstractGPs.elbo(
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
-    quadrature=Default(),
+    quadrature=DefaultQuadrature(),
 )
     @assert svgp.fz.f === fx.f
     return _elbo(quadrature, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
@@ -60,7 +60,7 @@ function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
 end
 
 """
-    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=Default())
+    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
@@ -69,7 +69,7 @@ function AbstractGPs.elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
-    quadrature=Default(),
+    quadrature=DefaultQuadrature(),
 )
     @assert svgp.fz.f === lfx.fx.f
     return _elbo(quadrature, svgp, lfx.fx, y, lfx.lik, num_data)
@@ -131,7 +131,7 @@ Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
 function expected_loglik(
-    ::Default, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
+    ::DefaultQuadrature, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
 )
     quadrature = _default_quadrature(lik)
     return expected_loglik(quadrature, y, q_f, lik)
@@ -189,7 +189,7 @@ function expected_loglik(::Analytic, y::AbstractVector, q_f::AbstractVector{<:No
     return error(
         "No analytic solution exists for ",
         typeof(lik),
-        ". Use `Default()`, `GaussHermite()` or `MonteCarlo()` instead.",
+        ". Use `DefaultQuadrature()`, `GaussHermite()` or `MonteCarlo()` instead.",
     )
 end
 
