@@ -22,11 +22,12 @@ end
 MonteCarlo() = MonteCarlo(20)
 
 """
-    elbo(fx::FiniteGP, y::AbstractVector{<:Real}, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=Default())
+    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), method=Default())
 
-Compute the Evidence Lower BOund from [1] for the process `fx.f` where `y` are
-observations of `fx`, pseudo-inputs are given by `z = fz.x` and `q(u)` is a
-variational distribution over inducing points `u = f(z)`.
+Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
+svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
+svgp.fz.x` and `q(u)` is a variational distribution over inducing points `u =
+f(z)`.
 
 `method` selects which method is used to calculate the expected loglikelihood in
 the ELBO. The options are: `Default()`, `Analytic()`, `Quadrature()` and
@@ -35,65 +36,59 @@ exact solution. If there is no such solution, `Default()` either uses
 `Quadrature()` or `MonteCarlo()`, depending on the likelihood.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
-Further, `fx.Σy` must be homoscedastic and uncorrelated - i.e. `fx.Σy = α * I`.
+Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
+    svgp::SVGP,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
-    y::AbstractVector{<:Real},
-    fz::FiniteGP,
-    q::AbstractMvNormal;
-    n_data=length(y),
+    y::AbstractVector{<:Real};
+    num_data=length(y),
     method=Default(),
 )
-    return _elbo(method, fx, y, fz, q, GaussianLikelihood(fx.Σy[1]), n_data)
+    @assert svgp.fz.f === fx.f
+    return _elbo(method, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
-function AbstractGPs.elbo(
-    ::FiniteGP, ::AbstractVector, ::FiniteGP, ::AbstractMvNormal; kwargs...
-)
+function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
     )
 end
 
 """
-    elbo(lfx::LatentFiniteGP, y::AbstractVector, fz::FiniteGP, q::AbstractMvNormal; n_data=length(y), method=Default())
+    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    lfx::LatentFiniteGP,
-    y::AbstractVector,
-    fz::FiniteGP,
-    q::AbstractMvNormal;
-    n_data=length(y),
-    method=Default(),
+    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default()
 )
-    return _elbo(method, lfx.fx, y, fz, q, lfx.lik, n_data)
+    @assert svgp.fz.f === lfx.fx.f
+    return _elbo(method, svgp, lfx.fx, y, lfx.lik, num_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
     method::ExpectationMethod,
+    svgp::SVGP,
     fx::FiniteGP,
     y::AbstractVector,
-    fz::FiniteGP,
-    q::AbstractMvNormal,
     lik::ScalarLikelihood,
-    n_data::Integer,
+    num_data::Integer,
 )
-    post = approx_posterior(SVGP(), fz, q)
+    @assert svgp.fz.f === fx.f
+    post = posterior(svgp)
     q_f = marginals(post(fx.x))
     variational_exp = expected_loglik(method, y, q_f, lik)
 
-    kl_term = kldivergence(q, fz)
+    kl_term = kldivergence(svgp.q, svgp.fz)
 
     n_batch = length(y)
-    scale = n_data / n_batch
+    scale = num_data / n_batch
     return sum(variational_exp) * scale - kl_term
 end
 
