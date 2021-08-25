@@ -131,7 +131,10 @@ Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
 function expected_loglik(
-    ::DefaultQuadrature, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
+    ::DefaultQuadrature,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik::ScalarLikelihood,
 )
     quadrature = _default_quadrature(lik)
     return expected_loglik(quadrature, y, q_f, lik)

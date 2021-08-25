@@ -156,7 +156,15 @@ model = SVGPModel(k_init, z_init, m_init, A_init)
 # very poor fit to the data, as expected:
 
 init_post = model_posterior(model)
-scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, label="Training Data")
+scatter(
+    x,
+    y;
+    xlabel="x",
+    ylabel="y",
+    markershape=:xcross,
+    markeralpha=0.1,
+    label="Training Data",
+)
 plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
 
 # ## Training the model
@@ -213,5 +221,5 @@ scatter(
     color=1,
 )
 plot!(-1:0.001:1, post; label="Posterior", color=4)
-sticks!(model.z, fill(0.13, M); label="Pseudo-points",  linewidth=1.5, color=5)
+sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
 # vline!(z_init; label="Pseudo-points")
