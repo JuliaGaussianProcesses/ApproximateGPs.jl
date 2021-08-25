@@ -50,7 +50,9 @@
 
         function construct_parts(m::SVGPModel, x)
             f = make_gp(make_kernel(m.k))
-            q = MvNormal(m.m, m.A'm.A)
+            L = LowerTriangular(m.A)
+            L_chol = Cholesky{eltype(L), typeof(L.data)}(L.data, 'L', 0)
+            q = MvNormal(m.m, PDMat(L_chol))
             fx = f(x, lik_noise)
             fz = f(m.z, jitter)
             return SVGP(fz, q), fx
