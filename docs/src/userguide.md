@@ -46,4 +46,4 @@ The approximate posterior constructed above will be a very poor approximation, s
 ```julia
 elbo(SVGP(fz, q), fx, y)
 ```
-A detailed example of how to carry out such optimisation is given in [1. Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [2. Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
+A detailed example of how to carry out such optimisation is given in [A. Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [B. Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
