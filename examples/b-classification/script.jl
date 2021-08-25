@@ -1,4 +1,4 @@
-# # B. Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS
+# # Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS
 # 
 #
 # This example demonstrates how to carry out non-conjugate Gaussian process
