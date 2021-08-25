@@ -13,11 +13,9 @@
 using SparseGPs
 using Distributions
 using LinearAlgebra
-using IterTools: ncycle
-using StatsFuns: softplus, invsoftplus
 
 using Plots
-default(; legend=:outertopright, size=(700, 400))
+default(; palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
 
 using Random
 Random.seed!(1234)
@@ -49,6 +47,8 @@ scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, lege
 # unconstrained parameters, we need to use softplus to ensure that the
 # kernel parameters are positive.
 
+using StatsFuns: softplus, invsoftplus
+
 function make_kernel(k_params)
     variance = softplus(k_params[1])
     lengthscale = softplus(k_params[2])
@@ -63,7 +63,7 @@ k_init = [invsoftplus(init_variance), invsoftplus(init_lengthscale)]
 # Then, we select some inducing input locations `z_init`. In this
 # case, we simply choose the first `M` data inputs.
 
-M = 10 # number of inducing points
+M = 20 # number of inducing points
 z_init = x[1:M]
 #md nothing #hide
 
@@ -98,13 +98,17 @@ function prior(m::SVGPModel)
     return GP(kernel)
 end
 
-# The variational distribution is given by `q(u)` where ``u ~ f(z)``
-# are the pseudo-points. We parameterise the covariance matrix of
-# ``q`` as ``S = A^T A`` since this guarantees that ``S`` is positive
-# definite.
+# The variational distribution is given by `q(u)` where ``u ~ f(z)`` are the
+# pseudo-points. We parameterise the covariance matrix of ``q`` as ``S = A A^T``
+# since this guarantees that ``S`` is positive definite. We also only use the
+# lower triangular part of `A`, to ensure the minimum number of free parameters.
+
+using PDMats: PDMat
 
 function make_approx(m::SVGPModel, prior)
-    q = MvNormal(m.m, m.A'm.A)
+    # Efficiently constructs S as A*Aᵀ
+    S = PDMat(Cholesky(LowerTriangular(m.A)))
+    q = MvNormal(m.m, S)
     fz = prior(m.z, jitter)
     return SVGP(fz, q)
 end
@@ -144,10 +148,16 @@ end
 
 m_init = zeros(M)
 A_init = Matrix{Float64}(I, M, M)
-q_init = MvNormal(m_init, A_init'A_init)
 
 model = SVGPModel(k_init, z_init, m_init, A_init)
 #md nothing #hide
+
+# Taking a look at the model posterior under these initial parameters shows a
+# very poor fit to the data, as expected:
+
+init_post = model_posterior(model)
+scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, label="Training Data")
+plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
 
 # ## Training the model
 #
@@ -170,6 +180,8 @@ loss(model, x, y)
 
 # Train the model. N.B. when using minibatching, the length of the
 # full dataset `num_data` must be passed to the loss.
+
+using IterTools: ncycle
 
 Flux.train!(
     (x, y) -> loss(model, x, y; num_data=N),
@@ -197,8 +209,9 @@ scatter(
     xlabel="x",
     ylabel="y",
     title="posterior (VI with sparse grid)",
-    label="Train Data",
+    label="Training Data",
+    color=1,
 )
-plot!(-1:0.001:1, post; label="Posterior")
-plot!(-1:0.001:1, g; label="True Function")
-vline!(z_init; label="Pseudo-points")
+plot!(-1:0.001:1, post; label="Posterior", color=4)
+sticks!(model.z, fill(0.13, M); label="Pseudo-points",  linewidth=1.5, color=5)
+# vline!(z_init; label="Pseudo-points")
