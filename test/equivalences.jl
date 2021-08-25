@@ -53,9 +53,8 @@
             fx = f(x, lik_noise)
             fz = f(m.z, jitter)
 
-            L = LowerTriangular(m.A)
-            L_chol = Cholesky{eltype(L), typeof(L.data)}(L.data, 'L', 0)
-            q = MvNormal(m.m, PDMat(L_chol))
+            S = PDMat(Cholesky(LowerTriangular(m.A)))
+            q = MvNormal(m.m, S)
             return SVGP(fz, q), fx
         end
 
