@@ -17,6 +17,7 @@ using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A
 
 export SVGP, Default, Analytic, Quadrature, MonteCarlo
 
+include("utils.jl")
 include("svgp.jl")
 include("elbo.jl")
 
