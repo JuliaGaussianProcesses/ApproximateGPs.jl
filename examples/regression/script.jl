@@ -106,7 +106,7 @@ end
 using PDMats: PDMat
 
 function make_approx(m::SVGPModel, prior)
-    # Efficiently constructs S as A*Aᵀ
+    ## Efficiently constructs S as A*Aᵀ
     S = PDMat(Cholesky(LowerTriangular(m.A)))
     q = MvNormal(m.m, S)
     fz = prior(m.z, jitter)
