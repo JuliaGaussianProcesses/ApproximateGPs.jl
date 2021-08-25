@@ -50,11 +50,12 @@
 
         function construct_parts(m::SVGPModel, x)
             f = make_gp(make_kernel(m.k))
+            fx = f(x, lik_noise)
+            fz = f(m.z, jitter)
+
             L = LowerTriangular(m.A)
             L_chol = Cholesky{eltype(L), typeof(L.data)}(L.data, 'L', 0)
             q = MvNormal(m.m, PDMat(L_chol))
-            fx = f(x, lik_noise)
-            fz = f(m.z, jitter)
             return SVGP(fz, q), fx
         end
 
@@ -75,15 +76,9 @@
         Flux.train!((x, y) -> svgp_loss(x, y), svgp_ps, ncycle(data, 20000), opt)
 
         ## construct the posteriors
-        function svgp_posterior(m::SVGPModel)
-            f = make_gp(make_kernel(m.k))
-            fz = f(m.z, jitter)
-            q = MvNormal(m.m, m.A'm.A)
-            return posterior(construct_parts)
-        end
-
         f_gpr = make_gp(make_kernel(k_init))
         gpr_post = posterior(f_gpr(x, lik_noise), y)
+
         svgp_post = posterior(first(construct_parts(svgp_model, x)))
 
         ## FIFTH - test equivalences
