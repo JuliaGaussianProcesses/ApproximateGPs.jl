@@ -7,33 +7,33 @@ ScalarLikelihood = Union{
     GammaLikelihood,
 }
 
-abstract type ExpectationMethod end
-struct Default <: ExpectationMethod end
-struct Analytic <: ExpectationMethod end
+abstract type QuadratureMethod end
+struct DefaultQuadrature <: QuadratureMethod end
+struct Analytic <: QuadratureMethod end
 
-struct Quadrature <: ExpectationMethod
+struct GaussHermite <: QuadratureMethod
     n_points::Int
 end
-Quadrature() = Quadrature(20)
+GaussHermite() = GaussHermite(20)
 
-struct MonteCarlo <: ExpectationMethod
+struct MonteCarlo <: QuadratureMethod
     n_samples::Int
 end
 MonteCarlo() = MonteCarlo(20)
 
 """
-    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), method=Default())
+    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
 svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
 svgp.fz.x` and `q(u)` is a variational distribution over inducing points `u =
 f(z)`.
 
-`method` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `Default()`, `Analytic()`, `Quadrature()` and
-`MonteCarlo()`. For likelihoods with an analytic solution, `Default()` uses this
-exact solution. If there is no such solution, `Default()` either uses
-`Quadrature()` or `MonteCarlo()`, depending on the likelihood.
+`quadrature` selects which method is used to calculate the expected loglikelihood in
+the ELBO. The options are: `DefaultQuadrature()`, `Analytic()`, `GaussHermite()` and
+`MonteCarlo()`. For likelihoods with an analytic solution, `DefaultQuadrature()` uses this
+exact solution. If there is no such solution, `DefaultQuadrature()` either uses
+`GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
 Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
@@ -47,10 +47,10 @@ function AbstractGPs.elbo(
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
-    method=Default(),
+    quadrature=DefaultQuadrature(),
 )
     @assert svgp.fz.f === fx.f
-    return _elbo(method, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
+    return _elbo(quadrature, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
 function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
@@ -60,20 +60,24 @@ function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
 end
 
 """
-    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default())
+    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), method=Default()
+    svgp::SVGP,
+    lfx::LatentFiniteGP,
+    y::AbstractVector;
+    num_data=length(y),
+    quadrature=DefaultQuadrature(),
 )
     @assert svgp.fz.f === lfx.fx.f
-    return _elbo(method, svgp, lfx.fx, y, lfx.lik, num_data)
+    return _elbo(quadrature, svgp, lfx.fx, y, lfx.lik, num_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
-    method::ExpectationMethod,
+    quadrature::QuadratureMethod,
     svgp::SVGP,
     fx::FiniteGP,
     y::AbstractVector,
@@ -83,7 +87,7 @@ function _elbo(
     @assert svgp.fz.f === fx.f
     post = posterior(svgp)
     q_f = marginals(post(fx.x))
-    variational_exp = expected_loglik(method, y, q_f, lik)
+    variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
     kl_term = kldivergence(svgp.q, svgp.fz)
 
@@ -93,7 +97,7 @@ function _elbo(
 end
 
 """
-    expected_loglik(method::ExpectationMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
+    expected_loglik(quadrature::QuadratureMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
 
 This function computes the expected log likelihood:
 
@@ -109,7 +113,7 @@ where `p(y | f)` is the process likelihood.
 where `q(u)` is the variational distribution over inducing points (see
 [`elbo`](@ref)). The marginal distributions of `q(f)` are given by `q_f`.
 
-`method` determines which method is used to calculate the expected log
+`quadrature` determines which method is used to calculate the expected log
 likelihood - see [`elbo`](@ref) for more details.
 
 # Extended help
@@ -117,20 +121,23 @@ likelihood - see [`elbo`](@ref) for more details.
 `q(f)` is assumed to be an `MvNormal` distribution and `p(y | f)` is assumed to
 have independent marginals such that only the marginals of `q(f)` are required.
 """
-expected_loglik(method, y, q_f, lik)
+expected_loglik(quadrature, y, q_f, lik)
 
 """
-    expected_loglik(method::ExpectationMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood)
+    expected_loglik(quadrature::QuadratureMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood)
 
-The expected log likelihood for a `ScalarLikelihood`, computed via `method`.
+The expected log likelihood for a `ScalarLikelihood`, computed via `quadrature`.
 Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
 function expected_loglik(
-    ::Default, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
+    ::DefaultQuadrature,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik::ScalarLikelihood,
 )
-    method = _default_method(lik)
-    return expected_loglik(method, y, q_f, lik)
+    quadrature = _default_quadrature(lik)
+    return expected_loglik(quadrature, y, q_f, lik)
 end
 
 # The closed form solution for independent Gaussian noise
@@ -185,7 +192,7 @@ function expected_loglik(::Analytic, y::AbstractVector, q_f::AbstractVector{<:No
     return error(
         "No analytic solution exists for ",
         typeof(lik),
-        ". Use `Default()`, `Quadrature()` or `MonteCarlo()` instead.",
+        ". Use `DefaultQuadrature()`, `GaussHermite()` or `MonteCarlo()` instead.",
     )
 end
 
@@ -200,7 +207,10 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    gh::Quadrature, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
+    gh::GaussHermite,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik::ScalarLikelihood,
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
@@ -217,5 +227,5 @@ ChainRulesCore.@non_differentiable gausshermite(n)
 AnalyticLikelihood = Union{
     PoissonLikelihood,GaussianLikelihood,ExponentialLikelihood,GammaLikelihood
 }
-_default_method(::AnalyticLikelihood) = Analytic()
-_default_method(_) = Quadrature()
+_default_quadrature(::AnalyticLikelihood) = Analytic()
+_default_quadrature(_) = GaussHermite()
