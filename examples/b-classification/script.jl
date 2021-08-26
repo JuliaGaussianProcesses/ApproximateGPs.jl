@@ -19,8 +19,7 @@ using Plots
 default(; legend=:outertopright, size=(700, 400))
 
 using Random
-Random.seed!(1234)
-#md nothing #hide
+Random.seed!(1234);
 
 # ## Generate some training data
 #
@@ -105,8 +104,7 @@ function ParameterHandling.flatten(::Type{T}, P::PDMatrix) where {T}
         return PDMatrix(A)
     end
     return v, unflatten_PDmatrix
-end
-#md nothing #hide
+end;
 
 # Initialise the parameters
 
@@ -116,8 +114,7 @@ raw_initial_params = (
     z=bounded.(range(0.1, 5.9; length=M), 0.0, 6.0),  # constrain z to simplify optimisation
     m=zeros(M),
     A=pdmatrix(4 * Matrix{Float64}(I, M, M)),  # pdmatrix is defined in utils.jl
-)
-#md nothing #hide
+);
 
 # `flatten` takes the `NamedTuple` of parameters and returns a flat vector of
 # `Float64` - along with a function `unflatten` to reconstruct the `NamedTuple`
@@ -128,8 +125,7 @@ raw_initial_params = (
 # parameter values.
 
 flat_init_params, unflatten = ParameterHandling.flatten(raw_initial_params)
-unpack = ParameterHandling.value ∘ unflatten
-#md nothing #hide
+unpack = ParameterHandling.value ∘ unflatten;
 
 # Now, we define a function to build the SVGP model from the constrained
 # parameters as well as a loss function - in this case the negative ELBO.
@@ -149,8 +145,7 @@ function loss(params::NamedTuple)
     svgp, f = build_SVGP(params)
     fx = f(x)
     return -elbo(svgp, fx, y)
-end
-#md nothing #hide
+end;
 
 # Optimise the parameters using LBFGS.
 

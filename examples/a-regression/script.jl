@@ -17,8 +17,7 @@ using Plots
 default(; palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
 
 using Random
-Random.seed!(1234)
-#md nothing #hide
+Random.seed!(1234);
 
 # ## Generate some training data
 #
@@ -56,15 +55,13 @@ end
 
 init_variance = 1.3
 init_lengthscale = 0.3
-k_init = [invsoftplus(init_variance), invsoftplus(init_lengthscale)]
-#md nothing #hide
+k_init = [invsoftplus(init_variance), invsoftplus(init_lengthscale)];
 
 # Then, we select some inducing input locations `z_init`. In this
 # case, we simply choose the first `M` data inputs.
 
 M = 20 # number of inducing points
-z_init = x[1:M]
-#md nothing #hide
+z_init = x[1:M];
 
 # Given a set of parameters, we now define a Flux 'layer' which forms
 # the basis of our model.
@@ -78,15 +75,13 @@ struct SVGPModel
     A  # square-root of variational covariance
 end
 
-Flux.@functor SVGPModel (k, z, m, A)
-#md nothing #hide
+Flux.@functor SVGPModel (k, z, m, A);
 
 # Set the observation noise for our model, along with a `jitter` term
 # to help with numerical stability.
 
 lik_noise = 0.3
-jitter = 1e-5
-#md nothing #hide
+jitter = 1e-5;
 
 # Next, we define some useful functions on the model - creating the prior GP
 # under the model, as well as the `SVGP` struct needed to create the posterior
@@ -110,16 +105,14 @@ function make_approx(m::SVGPModel, prior)
     q = MvNormal(m.m, S)
     fz = prior(m.z, jitter)
     return SVGP(fz, q)
-end
-#md nothing #hide
+end;
 
 # Create the approximate posterior GP under the model.
 
 function model_posterior(m::SVGPModel)
     svgp = make_approx(m, prior(m))
     return posterior(svgp)
-end
-#md nothing #hide
+end;
 
 # Define a predictive function for the model - in this case the prediction is
 # the joint distribution of the approximate posterior GP at some test inputs `x`
@@ -128,8 +121,7 @@ end
 function (m::SVGPModel)(x)
     post = model_posterior(m)
     return post(x)
-end
-#md nothing #hide
+end;
 
 # Return the loss given data - for the SVGP, the loss used is the negative ELBO
 # (also known as the Variational Free Energy). `num_data` is required for
@@ -140,16 +132,14 @@ function loss(m::SVGPModel, x, y; num_data=length(y))
     fx = f(x, lik_noise)
     svgp = make_approx(m, f)
     return -elbo(svgp, fx, y; num_data)
-end
-#md nothing #hide
+end;
 
 # Finally, we choose some initial parameters and instantiate our model.
 
 m_init = zeros(M)
 A_init = Matrix{Float64}(I, M, M)
 
-model = SVGPModel(k_init, z_init, m_init, A_init)
-#md nothing #hide
+model = SVGPModel(k_init, z_init, m_init, A_init);
 
 # Taking a look at the model posterior under these initial parameters shows a
 # very poor fit to the data, as expected:
@@ -171,8 +161,7 @@ plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
 # Training the model now simply proceeds with the usual `Flux.jl` training loop.
 
 opt = ADAM(0.001)  # Define the optimiser
-params = Flux.params(model)  # Extract the model parameters
-#md nothing #hide
+params = Flux.params(model);  # Extract the model parameters
 
 # One of the major advantages of the SVGP model is that it allows stochastic
 # estimation of the ELBO by using minibatching of the training data. This is
@@ -195,8 +184,7 @@ Flux.train!(
     params,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
-)
-#md nothing #hide
+);
 
 # Negative ELBO after training
 
