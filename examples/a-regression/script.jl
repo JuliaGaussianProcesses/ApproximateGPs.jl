@@ -221,4 +221,3 @@ scatter(
 )
 plot!(-1:0.001:1, post; label="Posterior", color=4)
 sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
-# vline!(z_init; label="Pseudo-points")
