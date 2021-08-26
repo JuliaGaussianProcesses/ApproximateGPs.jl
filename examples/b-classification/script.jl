@@ -113,7 +113,7 @@ raw_initial_params = (
     k=(var=positive(rand()), precision=positive(rand())),
     z=bounded.(range(0.1, 5.9; length=M), 0.0, 6.0),  # constrain z to simplify optimisation
     m=zeros(M),
-    A=pdmatrix(4 * Matrix{Float64}(I, M, M)),  # pdmatrix is defined in utils.jl
+    A=pdmatrix(4 * Matrix{Float64}(I, M, M)),
 );
 
 # `flatten` takes the `NamedTuple` of parameters and returns a flat vector of
