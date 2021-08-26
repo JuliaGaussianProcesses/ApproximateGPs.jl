@@ -43,10 +43,14 @@ function preprocess(content)
     return content
 end
 
+function md_postprocess(content)
+    return replace(content, r"[\n]nothing #hide$"m => "")
+end
+
 # Convert to markdown and notebook
 const SCRIPTJL = joinpath(EXAMPLEPATH, "script.jl")
 Literate.markdown(
-    SCRIPTJL, OUTDIR; name=EXAMPLE, documenter=true, execute=true, preprocess=preprocess
+    SCRIPTJL, OUTDIR; name=EXAMPLE, documenter=true, execute=true, preprocess=preprocess, postprocess=md_postprocess
 )
 Literate.notebook(
     SCRIPTJL, OUTDIR; name=EXAMPLE, documenter=true, execute=true, preprocess=preprocess
