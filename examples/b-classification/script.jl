@@ -33,10 +33,10 @@ Random.seed!(1234);
 # ```
 # and sample a function `f`.
 
-k_true = [30.0, 0.5]
+k_true = [30.0, 1.5]
 kernel_true = k_true[1] * (SqExponentialKernel() ∘ ScaleTransform(k_true[2]))
 
-jitter = 1e-12  # for numeric stability
+jitter = 1e-8  # for numeric stability
 lgp = LatentGP(GP(kernel_true), BernoulliLikelihood(), jitter)
 x_true = 0:0.02:6
 f_true, y_true = rand(lgp(x_true))
