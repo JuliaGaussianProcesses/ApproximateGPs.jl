@@ -81,31 +81,6 @@ plot!(x_true, mean.(lgp.lik.(f_true)); seriescolor="red", label="True mean")
 # [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl)
 # readme.
 
-# First, we need to define a quick and dirty positive definite matrix type for
-# ParameterHandling.jl - this code can safely be ignored.
-
-struct PDMatrix{TA}
-    A::TA
-end
-
-function pdmatrix(A::AbstractMatrix)
-    return PDMatrix(A)
-end
-
-function ParameterHandling.value(P::PDMatrix)
-    A = copy(P.A)
-    return A'A
-end
-
-function ParameterHandling.flatten(::Type{T}, P::PDMatrix) where {T}
-    v, unflatten_to_Array = flatten(T, P.A)
-    function unflatten_PDmatrix(v_new::Vector{T})
-        A = unflatten_to_Array(v_new)
-        return PDMatrix(A)
-    end
-    return v, unflatten_PDmatrix
-end;
-
 # Initialise the parameters
 
 M = 15  # number of inducing points
@@ -113,7 +88,7 @@ raw_initial_params = (
     k=(var=positive(rand()), precision=positive(rand())),
     z=bounded.(range(0.1, 5.9; length=M), 0.0, 6.0),  # constrain z to simplify optimisation
     m=zeros(M),
-    A=pdmatrix(4 * Matrix{Float64}(I, M, M)),
+    A=positive_definite(Matrix{Float64}(I, M, M)),
 );
 
 # `flatten` takes the `NamedTuple` of parameters and returns a flat vector of
