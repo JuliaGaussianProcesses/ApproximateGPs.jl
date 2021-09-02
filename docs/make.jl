@@ -73,4 +73,6 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/JuliaGaussianProcesses/ApproximateGPs.jl.git", push_preview=true)
+deploydocs(;
+    repo="github.com/JuliaGaussianProcesses/ApproximateGPs.jl.git", push_preview=true
+)
