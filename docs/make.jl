@@ -39,22 +39,22 @@ isempty(processes) || success(processes) || error("some examples were not run su
 ### Build documentation
 using Documenter
 
-using SparseGPs
+using ApproximateGPs
 
 # Doctest setup
 DocMeta.setdocmeta!(
-    SparseGPs,
+    ApproximateGPs,
     :DocTestSetup,
     quote
-        using SparseGPs
+        using ApproximateGPs
     end;  # we have to load all packages used (implicitly) within jldoctest blocks in the API docstrings
     recursive=true,
 )
 
 makedocs(;
-    sitename="SparseGPs.jl",
+    sitename="ApproximateGPs.jl",
     format=Documenter.HTML(),
-    modules=[SparseGPs],
+    modules=[ApproximateGPs],
     pages=[
         "Home" => "index.md",
         "userguide.md",
@@ -73,4 +73,4 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/JuliaGaussianProcesses/SparseGPs.jl.git", push_preview=true)
+deploydocs(; repo="github.com/JuliaGaussianProcesses/ApproximateGPs.jl.git", push_preview=true)

@@ -1,9 +1,9 @@
 # User Guide
 
 ## Setup
-SparseGPs builds on top of [AbstractGPs.jl](https://juliagaussianprocesses.github.io/AbstractGPs.jl/dev/), so all of its features are reexported automatically by SparseGPs.
+ApproximateGPs builds on top of [AbstractGPs.jl](https://juliagaussianprocesses.github.io/AbstractGPs.jl/dev/), so all of its features are reexported automatically by ApproximateGPs.
 ```julia
-using SparseGPs, Random
+using ApproximateGPs, Random
 rnd = MersenneTwister(1453)  # set a random seed
 ```
 

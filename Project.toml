@@ -1,4 +1,4 @@
-name = "SparseGPs"
+name = "ApproximateGPs"
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 authors = ["Ross Viljoen <ross@viljoen.co.uk>"]
 version = "0.1.0"

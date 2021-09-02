@@ -9,7 +9,7 @@
 #
 # ## Setup
 
-using SparseGPs
+using ApproximateGPs
 using Distributions
 using LinearAlgebra
 

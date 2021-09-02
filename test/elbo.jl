@@ -22,16 +22,16 @@
     rng = MersenneTwister(123456)
     q_f = Normal.(zeros(10), ones(10))
 
-    @testset "$lik" for lik in Base.uniontypes(SparseGPs.ScalarLikelihood)
+    @testset "$lik" for lik in Base.uniontypes(ApproximateGPs.ScalarLikelihood)
         l = lik()
         methods = [GaussHermite(100), MonteCarlo(1e7)]
-        def = SparseGPs._default_quadrature(l)
+        def = ApproximateGPs._default_quadrature(l)
         if def isa Analytic
             push!(methods, def)
         end
         y = rand.(rng, l.(zeros(10)))
 
-        results = map(m -> SparseGPs.expected_loglik(m, y, q_f, l), methods)
+        results = map(m -> ApproximateGPs.expected_loglik(m, y, q_f, l), methods)
         @test all(x -> isapprox(x, results[end]; atol=1e-6, rtol=1e-3), results)
     end
 end

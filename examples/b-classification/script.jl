@@ -8,7 +8,7 @@
 #
 # ## Setup
 
-using SparseGPs
+using ApproximateGPs
 using ParameterHandling
 using Zygote
 using Distributions

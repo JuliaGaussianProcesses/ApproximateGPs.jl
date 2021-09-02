@@ -1,5 +1,5 @@
-# SparseGPs API
+# ApproximateGPs API
 
 ```@autodocs
-Modules = [SparseGPs]
+Modules = [ApproximateGPs]
 ```
