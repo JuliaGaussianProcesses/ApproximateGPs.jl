@@ -1,6 +1,6 @@
 using Random
 using Test
-using SparseGPs
+using ApproximateGPs
 using Flux
 using IterTools
 using AbstractGPs
@@ -9,11 +9,11 @@ using LinearAlgebra
 using PDMats
 
 const GROUP = get(ENV, "GROUP", "All")
-const PKGDIR = dirname(dirname(pathof(SparseGPs)))
+const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
 
 include("test_utils.jl")
 
-@testset "SparseGPs" begin
+@testset "ApproximateGPs" begin
     include("svgp.jl")
     println(" ")
     @info "Ran svgp tests"

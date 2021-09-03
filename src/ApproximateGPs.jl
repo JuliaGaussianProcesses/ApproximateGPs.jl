@@ -1,4 +1,4 @@
-module SparseGPs
+module ApproximateGPs
 
 using Reexport
 @reexport using AbstractGPs
