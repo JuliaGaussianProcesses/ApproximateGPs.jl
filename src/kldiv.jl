@@ -32,3 +32,5 @@ end
 function trAinvB(A::PDMat, B::PDMat)
     return tr(A.chol \ B.mat)  # workaround for AD issues
 end
+
+ChainRulesCore.@opt_out ChainRulesCore.rrule(::Type{<:Matrix}, ::Distributions.PDMat)
