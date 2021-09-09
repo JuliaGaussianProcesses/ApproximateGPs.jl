@@ -25,4 +25,7 @@ end
 
 kldivergence(p, q) = KL(p, q)
 
-ChainRulesCore.@opt_out ChainRulesCore.rrule(::Type{<:Matrix}, ::Distributions.PDMat)  # workaround for AD issue
+# opt-out of generic rrule for `Matrix` defined in ChainRules.jl.
+# It's horrible that this code is needed. Given that it does, its ideal home is PDMats.jl.
+# We're type-pirating for now.
+ChainRulesCore.@opt_out ChainRulesCore.rrule(::Type{<:Matrix}, ::PDMats.PDMat)
