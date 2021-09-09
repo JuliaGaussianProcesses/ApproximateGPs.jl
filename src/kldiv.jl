@@ -18,19 +18,11 @@ function KL(p::MvNormal, q::MvNormal)
         ),
     )
     return 0.5 * (
-        trAinvB(q.Σ, p.Σ) + invquad(q.Σ, mean(p) - mean(q)) - length(p) + logdet(q.Σ) -
+        tr(q.Σ \ p.Σ) + invquad(q.Σ, mean(p) - mean(q)) - length(p) + logdet(q.Σ) -
         logdet(p.Σ)
     )
 end
 
 kldivergence(p, q) = KL(p, q)
 
-function trAinvB(A::AbstractMatrix, B::AbstractMatrix)
-    return tr(A \ B)
-end
-
-function trAinvB(A::PDMat, B::PDMat)
-    return tr(A.chol \ B.mat)  # workaround for AD issues
-end
-
-ChainRulesCore.@opt_out ChainRulesCore.rrule(::Type{<:Matrix}, ::Distributions.PDMat)
+ChainRulesCore.@opt_out ChainRulesCore.rrule(::Type{<:Matrix}, ::Distributions.PDMat)  # workaround for AD issue
