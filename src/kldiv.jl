@@ -11,7 +11,15 @@ function KL(p::MvNormal, q::MvNormal)
     # We use p.Σ and q.Σ to take the advantage that they are defined as PDMats objects
     length(p) == length(q) || 
         throw(DimensionMismatch("Distributions p and q have different dimensions $(length(p)) and $(length(q))"))
-    0.5 * (tr(q.Σ \ p.Σ) + invquad(q.Σ, mean(p) - mean(q)) - length(p) + logdet(q.Σ) - logdet(p.Σ))
+    0.5 * (trAinvB(q.Σ, p.Σ) + invquad(q.Σ, mean(p) - mean(q)) - length(p) + logdet(q.Σ) - logdet(p.Σ))
 end
 
 kldivergence(p, q) = KL(p, q)
+
+function trAinvB(A::AbstractMatrix, B::AbstractMatrix)
+    return tr(A \ B)
+end
+
+function trAinvB(A::PDMat, B::PDMat)
+    return tr(A.chol \ B.mat)  # workaround for AD issues
+end
