@@ -19,7 +19,7 @@ uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 version = "3.3.1"
 
 [[ApproximateGPs]]
-deps = ["AbstractGPs", "ChainRulesCore", "Distributions", "FastGaussQuadrature", "FillArrays", "GPLikelihoods", "KLDivergences", "LinearAlgebra", "Reexport", "SpecialFunctions", "Statistics", "StatsBase"]
+deps = ["AbstractGPs", "ChainRulesCore", "Distributions", "FastGaussQuadrature", "FillArrays", "GPLikelihoods", "LinearAlgebra", "PDMats", "Reexport", "SpecialFunctions", "Statistics", "StatsBase"]
 path = "../.."
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 version = "0.1.0"
@@ -445,12 +445,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "d735490ac75c5cb9f1b00d8b5509c11984dc6943"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.0+0"
-
-[[KLDivergences]]
-deps = ["Distances", "Distributions", "LinearAlgebra", "PDMats", "SpecialFunctions", "StatsBase"]
-git-tree-sha1 = "6dda0f7d61bd978bdeece26c4f76c6d0631cd76e"
-uuid = "3c9cd921-3d3f-41e2-830c-e020174918cc"
-version = "0.1.3"
 
 [[KernelFunctions]]
 deps = ["ChainRulesCore", "Compat", "CompositionsBase", "Distances", "FillArrays", "Functors", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "Random", "Requires", "SpecialFunctions", "StatsBase", "TensorCore", "Test", "ZygoteRules"]
