@@ -22,7 +22,7 @@
         q_ex = exact_variational_posterior(fz, fx, y)
 
         gpr_post = posterior(fx, y) # Exact GP regression
-        vfe_post = approx_posterior(VFE(), fx, y, fz) # Titsias posterior
+        vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
         svgp_post = posterior(SVGP(fz, q_ex)) # Hensman (2013) exact posterior
 
         @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
