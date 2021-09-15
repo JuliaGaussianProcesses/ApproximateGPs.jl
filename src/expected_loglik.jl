@@ -49,10 +49,7 @@ Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
 function expected_loglik(
-    ::DefaultQuadrature,
-    y::AbstractVector,
-    q_f::AbstractVector{<:Normal},
-    lik,
+    ::DefaultQuadrature, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik
 )
     quadrature = _default_quadrature(lik)
     return expected_loglik(quadrature, y, q_f, lik)
@@ -69,10 +66,7 @@ function expected_loglik(
 end
 
 function expected_loglik(
-    gh::GaussHermite,
-    y::AbstractVector,
-    q_f::AbstractVector{<:Normal},
-    lik,
+    gh::GaussHermite, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
