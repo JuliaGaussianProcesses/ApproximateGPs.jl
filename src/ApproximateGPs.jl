@@ -19,6 +19,7 @@ export SVGP, DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
 include("svgp.jl")
+include("expected_loglik.jl")
 include("elbo.jl")
 
 end
