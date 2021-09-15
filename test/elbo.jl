@@ -29,6 +29,22 @@
         GaussianLikelihood,
     ]
 
+    @testset "testing all analytic implementations" begin
+        ### Test that we're not missing any analytic implementation in `analytic_likelihoods`!
+        default_quadrature_method_types = Set(
+            [m.sig.types[2] for m in methods(ApproximateGPs._default_quadrature)]
+        )
+        delete!(default_quadrature_method_types, Any)  # ignore fallback
+        for lik in default_quadrature_method_types
+            if lik.body.name.name == :GammaLikelihood
+                # workaround while waiting for JuliaGaussianProcesses/GPLikelihoods.jl#41
+                @test any(l.body.name.name == lik.body.name.name for l in analytic_likelihoods)
+            else
+                @test any(lik <: l for l in analytic_likelihoods)
+            end
+        end
+    end
+
     @testset "$lik" for lik in analytic_likelihoods
         l = lik()
         methods = [GaussHermite(100), MonteCarlo(1e7)]
