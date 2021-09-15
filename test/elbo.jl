@@ -23,10 +23,7 @@
     q_f = Normal.(zeros(10), ones(10))
 
     analytic_likelihoods = [
-        ExponentialLikelihood,
-        GammaLikelihood,
-        PoissonLikelihood,
-        GaussianLikelihood,
+        ExponentialLikelihood, GammaLikelihood, PoissonLikelihood, GaussianLikelihood
     ]
 
     @testset "$lik" for lik in analytic_likelihoods
