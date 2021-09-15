@@ -1,12 +1,3 @@
-"Likelihoods which take a scalar as input and return a scalar."
-ScalarLikelihood = Union{
-    BernoulliLikelihood,
-    PoissonLikelihood,
-    GaussianLikelihood,
-    ExponentialLikelihood,
-    GammaLikelihood,
-}
-
 abstract type QuadratureMethod end
 struct DefaultQuadrature <: QuadratureMethod end
 struct Analytic <: QuadratureMethod end
@@ -20,6 +11,8 @@ struct MonteCarlo <: QuadratureMethod
     n_samples::Int
 end
 MonteCarlo() = MonteCarlo(20)
+
+_default_quadrature(_) = GaussHermite()
 
 """
     expected_loglik(quadrature::QuadratureMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
@@ -49,9 +42,9 @@ have independent marginals such that only the marginals of `q(f)` are required.
 expected_loglik(quadrature, y, q_f, lik)
 
 """
-    expected_loglik(quadrature::QuadratureMethod, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood)
+    expected_loglik(::DefaultQuadrature, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
 
-The expected log likelihood for a `ScalarLikelihood`, computed via `quadrature`.
+The expected log likelihood.
 Defaults to a closed form solution if it exists, otherwise defaults to
 Gauss-Hermite quadrature.
 """
@@ -59,10 +52,46 @@ function expected_loglik(
     ::DefaultQuadrature,
     y::AbstractVector,
     q_f::AbstractVector{<:Normal},
-    lik::ScalarLikelihood,
+    lik,
 )
     quadrature = _default_quadrature(lik)
     return expected_loglik(quadrature, y, q_f, lik)
+end
+
+function expected_loglik(
+    mc::MonteCarlo, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik
+)
+    # take `n_samples` reparameterised samples
+    f_μ = mean.(q_f)
+    fs = f_μ .+ std.(q_f) .* randn(eltype(f_μ), length(q_f), mc.n_samples)
+    lls = loglikelihood.(lik.(fs), y)
+    return sum(lls) / mc.n_samples
+end
+
+function expected_loglik(
+    gh::GaussHermite,
+    y::AbstractVector,
+    q_f::AbstractVector{<:Normal},
+    lik,
+)
+    # Compute the expectation via Gauss-Hermite quadrature
+    # using a reparameterisation by change of variable
+    # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
+    xs, ws = gausshermite(gh.n_points)
+    # size(fs): (length(y), n_points)
+    fs = √2 * std.(q_f) .* transpose(xs) .+ mean.(q_f)
+    lls = loglikelihood.(lik.(fs), y)
+    return sum((1 / √π) * lls * ws)
+end
+
+ChainRulesCore.@non_differentiable gausshermite(n)
+
+function expected_loglik(::Analytic, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
+    return error(
+        "No analytic solution exists for ",
+        typeof(lik),
+        ". Use `DefaultQuadrature()`, `GaussHermite()` or `MonteCarlo()` instead.",
+    )
 end
 
 # The closed form solution for independent Gaussian noise
@@ -77,16 +106,20 @@ function expected_loglik(
     )
 end
 
+_default_quadrature(::GaussianLikelihood) = Analytic()
+
 # The closed form solution for a Poisson likelihood with an exponential inverse link function
 function expected_loglik(
     ::Analytic,
-    y::AbstractVector,
+    y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
     ::PoissonLikelihood{ExpLink},
 )
     f_μ = mean.(q_f)
     return sum((y .* f_μ) - exp.(f_μ .+ (var.(q_f) / 2)) - loggamma.(y .+ 1))
 end
+
+_default_quadrature(::PoissonLikelihood{ExpLink}) = Analytic()
 
 # The closed form solution for an Exponential likelihood with an exponential inverse link function
 function expected_loglik(
@@ -98,6 +131,8 @@ function expected_loglik(
     f_μ = mean.(q_f)
     return sum(-f_μ - y .* exp.((var.(q_f) / 2) .- f_μ))
 end
+
+_default_quadrature(::ExponentialLikelihood{ExpLink}) = Analytic()
 
 # The closed form solution for a Gamma likelihood with an exponential inverse link function
 function expected_loglik(
@@ -113,44 +148,4 @@ function expected_loglik(
     )
 end
 
-function expected_loglik(::Analytic, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik)
-    return error(
-        "No analytic solution exists for ",
-        typeof(lik),
-        ". Use `DefaultQuadrature()`, `GaussHermite()` or `MonteCarlo()` instead.",
-    )
-end
-
-function expected_loglik(
-    mc::MonteCarlo, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik::ScalarLikelihood
-)
-    # take 'n_samples' reparameterised samples
-    f_μ = mean.(q_f)
-    fs = f_μ .+ std.(q_f) .* randn(eltype(f_μ), length(q_f), mc.n_samples)
-    lls = loglikelihood.(lik.(fs), y)
-    return sum(lls) / mc.n_samples
-end
-
-function expected_loglik(
-    gh::GaussHermite,
-    y::AbstractVector,
-    q_f::AbstractVector{<:Normal},
-    lik::ScalarLikelihood,
-)
-    # Compute the expectation via Gauss-Hermite quadrature
-    # using a reparameterisation by change of variable
-    # (see eg. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
-    xs, ws = gausshermite(gh.n_points)
-    # size(fs): (length(y), n_points)
-    fs = √2 * std.(q_f) .* transpose(xs) .+ mean.(q_f)
-    lls = loglikelihood.(lik.(fs), y)
-    return sum((1 / √π) * lls * ws)
-end
-
-ChainRulesCore.@non_differentiable gausshermite(n)
-
-AnalyticLikelihood = Union{
-    PoissonLikelihood,GaussianLikelihood,ExponentialLikelihood,GammaLikelihood
-}
-_default_quadrature(::AnalyticLikelihood) = Analytic()
-_default_quadrature(_) = GaussHermite()
+_default_quadrature(::GammaLikelihood{<:Any,ExpLink}) = Analytic()
