@@ -37,4 +37,3 @@
         @test all(x -> isapprox(x, results[end]; atol=1e-6, rtol=1e-3), results)
     end
 end
-
