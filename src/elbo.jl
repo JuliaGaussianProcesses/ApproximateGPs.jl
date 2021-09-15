@@ -58,7 +58,7 @@ function _elbo(
     svgp::SVGP,
     fx::FiniteGP,
     y::AbstractVector,
-    lik::ScalarLikelihood,
+    lik,
     num_data::Integer,
 )
     @assert svgp.fz.f === fx.f

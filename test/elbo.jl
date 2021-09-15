@@ -22,7 +22,14 @@
     rng = MersenneTwister(123456)
     q_f = Normal.(zeros(10), ones(10))
 
-    @testset "$lik" for lik in Base.uniontypes(ApproximateGPs.ScalarLikelihood)
+    analytic_likelihoods = [
+        ExponentialLikelihood,
+        GammaLikelihood,
+        PoissonLikelihood,
+        GaussianLikelihood,
+    ]
+
+    @testset "$lik" for lik in analytic_likelihoods
         l = lik()
         methods = [GaussHermite(100), MonteCarlo(1e7)]
         def = ApproximateGPs._default_quadrature(l)
