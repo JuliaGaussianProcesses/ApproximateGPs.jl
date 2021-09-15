@@ -33,7 +33,7 @@
         ])
         delete!(default_quadrature_method_types, Any)  # ignore fallback
         for lik in default_quadrature_method_types
-            if lik.body.name.name == :GammaLikelihood
+            if nameof(lik) == :GammaLikelihood
                 # workaround while waiting for JuliaGaussianProcesses/GPLikelihoods.jl#41
                 @test any(
                     l.body.name.name == lik.body.name.name for l in analytic_likelihoods
