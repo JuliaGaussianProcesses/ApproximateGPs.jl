@@ -22,7 +22,7 @@ This function computes the expected log likelihood:
 ```math
     ∫ q(f) log p(y | f) df
 ```
-where `p(y | f)` is the process likelihood.
+where `p(y | f)` is the process likelihood. This is described by `lik`, which should be a callable that takes `f` as input and returns a Distribution over `y` that supports `loglikelihood(lik(f), y)`.
 
 `q(f)` is an approximation to the latent function values `f` given by:
 ```math
@@ -73,7 +73,7 @@ function expected_loglik(
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
-    fs = √2 * std.(q_f) .* transpose(xs) .+ mean.(q_f)
+    fs = √2 * std.(q_f) .* xs' .+ mean.(q_f)
     lls = loglikelihood.(lik.(fs), y)
     return sum((1 / √π) * lls * ws)
 end
