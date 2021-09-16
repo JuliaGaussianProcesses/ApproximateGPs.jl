@@ -22,6 +22,10 @@ include("test_utils.jl")
     println(" ")
     @info "Ran elbo tests"
 
+    include("expected_loglik.jl")
+    println(" ")
+    @info "Ran expected_loglik tests"
+
     include("equivalences.jl")
     println(" ")
     @info "Ran equivalences tests"
