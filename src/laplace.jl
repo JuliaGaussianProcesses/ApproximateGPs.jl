@@ -1,25 +1,43 @@
-function _laplace_train_intermediates(overall_loglik, K, f)
-    loglik = overall_loglik(f)  # TODO use withgradient instead
-    d_loglik, = gradient(overall_loglik, f)
-    d2_loglik, = diaghessian(overall_loglik, f)
+function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
+    # Ψ = log p(y|f) + log p(f)
+    #   = loglik + log p(f)
+    # dΨ/df = d_loglik - K⁻¹ f
+    # at fhat: d_loglik = K⁻¹ f
+	
+    # d²Ψ/df² = d2_loglik - K⁻¹
+    #         = -W - K⁻¹
 
-    W = -Diagonal(d2_loglik)
+    ll, d_ll, d2_ll = loglik_and_derivs(dist_y_given_f, ys, f)
+
+    W = -Diagonal(d2_ll)
     Wsqrt = sqrt(W)
     B = I + Wsqrt * K * Wsqrt
     B_ch = cholesky(Symmetric(B))
-    b = W * f + d_loglik
+    b = W * f + d_ll
     a = b - Wsqrt * (B_ch \ (Wsqrt * K * b))
     
-    return (; W, Wsqrt, K, a, loglik, d_loglik, B_ch)
+    return (; W, Wsqrt, K, a, loglik=ll, d_loglik=d_ll, B_ch)
 end
 
-function _newton_step(overall_loglik, K, f)
-    cache = _laplace_train_intermediates(overall_loglik, K, f)
+# dist_y_given_f(f) = Bernoulli(logistic(f))
+
+function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
+    loglik(fs) = sum(logpdf(dist_y_given_f(f), y) for (f, y) in zip(fs, ys))
+    ll = loglik(f)  # TODO use withgradient instead
+    d_ll, = gradient(loglik, f)
+    d2_ll, = diaghessian(loglik, f)
+    return ll, d_ll, d2_ll
+end
+#lik = f -> logpdf(Distribution(f), y)
+#dlik = ForwardDiff.derivative(lik)
+
+function _newton_step(dist_y_given_f, ys, K, f)
+    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     fnew = K * cache.a
     return fnew, cache
 end
 
-function laplace_lml(f, c)
+function _laplace_lml(f, c)
     return -c.a' * f / 2 + c.loglik - sum(log.(diag(c.B_ch.L)))
 end
 
@@ -39,7 +57,7 @@ function LaplaceResult(f, fnew, cache)
     # TODO should we use fnew?
     f_cov = laplace_f_cov(cache)
     q = MvNormal(f, AbstractGPs._symmetric(f_cov))
-    lml_approx = laplace_lml(f, cache)
+    lml_approx = _laplace_lml(f, cache)
 
     return (; f, f_cov, q, lml_approx, cache)
 end
@@ -48,18 +66,18 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter = 100, f = mean(f_pr
     @assert mean(f_prior) == zero(mean(f_prior))  # might work with non-zero prior mean but not checked
     @assert length(ys) == length(f_prior) == length(f)
 
-    overall_loglik(fs) = sum(logpdf(dist_y_given_f(f), y) for (f, y) in zip(fs, ys))
     K = cov(f_prior)
 
     res_array = []
     for i = 1:maxiter
-        @info "iteration $i"
-        fnew, cache = _newton_step(overall_loglik, K, f)
+        @info "  - Newton iteration $i"
+        fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
 
         push!(res_array, LaplaceResult(f, fnew, cache))
-        # TODO don't do all these computations
+        # TODO don't do all these computations unless we actually want them
 
         if isapprox(f, fnew)
+	    @info "  + converged"
             break  # converged
         else
             f = fnew
@@ -69,53 +87,70 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter = 100, f = mean(f_pr
     return res_array
 end
 
-function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, Y)
-    newt_res = laplace_steps(lfX.lik, lfX.fx, Y)
+function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, Y; kwargs...)
+    newt_res = laplace_steps(lfX.lik, lfX.fx, Y; kwargs...)
     f_post = LaplacePosteriorGP(lfX.fx, newt_res[end])
     return f_post
+end
+
+"""
+laplace_lml(f::Vector, lfX::LatentFiniteGP, Y::Vector)
+
+`f` 
+"""
+function laplace_lml!(f, lfX, Y)
+    f_opt = Zygote.ignore() do
+        newt_res = laplace_steps(lfX.lik, lfX.fx, Y; f)
+        f_opt = newt_res[end].f
+        f .= f_opt
+        return f_opt
+    end
+
+    # TODO ideally I wouldn't copy&paste the following lines
+    # but we have to re-compute this outside the Zygote.ignore() to compute gradients
+    cache = _laplace_train_intermediates(lfX.lik, Y, cov(lfX.fx), f_opt)
+    return _laplace_lml(f_opt, cache)
+end
+
+#function rrule(::laplace_lml!, ...)
+#
+#end
+
+function laplace_lml(lfX, Y)
+    f = mean(lfX.fx)
+    return laplace_lml!(f, lfX, Y)
 end
 
 function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
     lf = build_latent_gp(theta0)
-    lfX = lf(X)
-    f = mean(lfX.fx)
+    f = mean(lf(X).fx)  # will be mutated in-place to "warm-start" the Newton steps
 
     function objective(theta)
-        # @info "Hyperparameters: $theta" # TODO does not work with Zygote
+        Zygote.ignore() do
+	    # Zygote does not like the try/catch within @info
+	    @info "Hyperparameters: $theta" 
+	end
         lf = build_latent_gp(theta)
-        lfX = lf(X)
-
-        f_opt = Zygote.ignore() do
-            newt_res = laplace_steps(lfX.lik, lfX.fx, Y; f)
-            f_opt = newt_res[end].f
-            f .= f_opt
-            return f_opt
-        end
-
-	# TODO ideally I wouldn't copy&paste the following lines
-        overall_loglik(fs) = sum(logpdf(lfX.lik(f), y) for (f, y) in zip(fs, Y))
-        K = cov(lfX.fx)
-
-	# but we have to re-compute this outside the Zygote.ignore() to compute gradients
-        cache = _laplace_train_intermediates(overall_loglik, K, f_opt)
-        return -laplace_lml(f_opt, cache)
+	lml = laplace_lml!(f, lf(X), Y)
+        return -lml
     end
 
+    #training_results = Optim.optimize(
+    #    objective, θ -> only(Zygote.gradient(objective, θ)), theta0, optimizer, optim_options;
+    #    inplace=false,
+    #)
     training_results = Optim.optimize(
-        objective, θ -> only(Zygote.gradient(objective, θ)), theta0, optimizer, optim_options;
+        objective, theta0, optimizer, optim_options;
         inplace=false,
     )
     
     lf = build_latent_gp(training_results.minimizer)
-    lfX = lf(X)
-
-    newt_res = laplace_steps(lfX.lik, lfX.fx, Y; f)
-    f_post = LaplacePosteriorGP(lfX.fx, newt_res[end])
-    return f_post
+    f_post = laplace_posterior(lf(X), Y; f)
+    return f_post, training_results
 end
 
 struct LaplacePosteriorGP{Tprior,Tdata} <: AbstractGPs.AbstractGP
-    prior::Tprior
+    prior::Tprior  # this is lfx.fx; should we store lfx itself (including lik) instead?
     data::Tdata
 end
 
