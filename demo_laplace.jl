@@ -5,7 +5,7 @@ using Plots
 using Optim
 using AbstractGPs
 using AbstractGPs: LatentFiniteGP
-using NonConjugateGPViz
+using ApproximateGPs
 
 Random.seed!(1)
 X = range(0, 23.5; length=48)
