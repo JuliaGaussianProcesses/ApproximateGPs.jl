@@ -3,7 +3,7 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     #   = loglik + log p(f)
     # dΨ/df = d_loglik - K⁻¹ f
     # at fhat: d_loglik = K⁻¹ f
-	
+
     # d²Ψ/df² = d2_loglik - K⁻¹
     #         = -W - K⁻¹
 
@@ -15,7 +15,7 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     B_ch = cholesky(Symmetric(B))
     b = W * f + d_ll
     a = b - Wsqrt * (B_ch \ (Wsqrt * K * b))
-    
+
     return (; W, Wsqrt, K, a, loglik=ll, d_loglik=d_ll, B_ch)
 end
 
@@ -24,9 +24,9 @@ end
 function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
     function per_observation(fhat, y)
         ll(f) = logpdf(dist_y_given_f(f), y)
-	d_ll(f) = ForwardDiff.derivative(ll, f)
-	d2_ll(f) = ForwardDiff.derivative(d_ll, f)
-	return ll(fhat), d_ll(fhat), d2_ll(fhat)
+        d_ll(f) = ForwardDiff.derivative(ll, f)
+        d2_ll(f) = ForwardDiff.derivative(d_ll, f)
+        return ll(fhat), d_ll(fhat), d2_ll(fhat)
     end
     vec_of_l_d_d2 = map(per_observation, f, ys)
     ls = map(res -> res[1], vec_of_l_d_d2)
@@ -67,14 +67,14 @@ function LaplaceResult(f, fnew, cache)
     return (; f, f_cov, q, lml_approx, cache)
 end
 
-function laplace_steps(dist_y_given_f, f_prior, ys; maxiter = 100, f = mean(f_prior))
+function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior))
     @assert mean(f_prior) == zero(mean(f_prior))  # might work with non-zero prior mean but not checked
     @assert length(ys) == length(f_prior) == length(f)
 
     K = cov(f_prior)
 
     res_array = []
-    for i = 1:maxiter
+    for i in 1:maxiter
         @info "  - Newton iteration $i"
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
 
@@ -82,7 +82,7 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter = 100, f = mean(f_pr
         # TODO don't do all these computations unless we actually want them
 
         if isapprox(f, fnew)
-	    @info "  + converged"
+            @info "  + converged"
             break  # converged
         else
             f = fnew
@@ -132,11 +132,11 @@ function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
 
     function objective(theta)
         Zygote.ignore() do
-	    # Zygote does not like the try/catch within @info
-	    @info "Hyperparameters: $theta" 
-	end
+            # Zygote does not like the try/catch within @info
+            @info "Hyperparameters: $theta"
+        end
         lf = build_latent_gp(theta)
-	lml = laplace_lml!(f, lf(X), Y)
+        lml = laplace_lml!(f, lf(X), Y)
         return -lml
     end
 
@@ -145,10 +145,9 @@ function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
     #    inplace=false,
     #)
     training_results = Optim.optimize(
-        objective, theta0, optimizer, optim_options;
-        inplace=false,
+        objective, theta0, optimizer, optim_options; inplace=false
     )
-    
+
     lf = build_latent_gp(training_results.minimizer)
     f_post = laplace_posterior(lf(X), Y; f)
     return f_post, training_results
@@ -169,7 +168,7 @@ end
 
 function StatsBase.mean_and_var(f::LaplacePosteriorGP, x::AbstractVector)
     f_mean, v = _laplace_predict_intermediates(f.data.cache, f.prior, x)
-    f_var = var(f.prior.f, x) - vec(sum(v .^ 2, dims = 1))
+    f_var = var(f.prior.f, x) - vec(sum(v .^ 2; dims=1))
     return f_mean, f_var
 end
 
