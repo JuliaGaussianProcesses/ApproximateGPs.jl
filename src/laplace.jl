@@ -22,14 +22,19 @@ end
 # dist_y_given_f(f) = Bernoulli(logistic(f))
 
 function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
-    loglik(fs) = sum(logpdf(dist_y_given_f(f), y) for (f, y) in zip(fs, ys))
-    ll = loglik(f)  # TODO use withgradient instead
-    d_ll, = gradient(loglik, f)
-    d2_ll, = diaghessian(loglik, f)
+    function per_observation(fhat, y)
+        ll(f) = logpdf(dist_y_given_f(f), y)
+	d_ll(f) = ForwardDiff.derivative(ll, f)
+	d2_ll(f) = ForwardDiff.derivative(d_ll, f)
+	return ll(fhat), d_ll(fhat), d2_ll(fhat)
+    end
+    vec_of_l_d_d2 = map(per_observation, f, ys)
+    ls = map(res -> res[1], vec_of_l_d_d2)
+    ll = sum(ls)
+    d_ll = map(res -> res[2], vec_of_l_d_d2)
+    d2_ll = map(res -> res[3], vec_of_l_d_d2)
     return ll, d_ll, d2_ll
 end
-#lik = f -> logpdf(Distribution(f), y)
-#dlik = ForwardDiff.derivative(lik)
 
 function _newton_step(dist_y_given_f, ys, K, f)
     cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f)
