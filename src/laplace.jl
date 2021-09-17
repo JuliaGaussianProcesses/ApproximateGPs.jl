@@ -93,7 +93,7 @@ function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
         end
 
 	# TODO ideally I wouldn't copy&paste the following lines
-        overall_loglik(fs) = sum(logpdf(dist_y_given_f(f), y) for (f, y) in zip(fs, Y))
+        overall_loglik(fs) = sum(logpdf(lfX.lik(f), y) for (f, y) in zip(fs, Y))
         K = cov(lfX.fx)
 
 	# but we have to re-compute this outside the Zygote.ignore() to compute gradients
