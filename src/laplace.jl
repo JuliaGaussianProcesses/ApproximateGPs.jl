@@ -46,6 +46,8 @@ function _laplace_lml(f, c)
     return -c.a' * f / 2 + c.loglik - sum(log.(diag(c.B_ch.L)))
 end
 
+#function _laplace_lml_deriv()
+
 function laplace_f_cov(cache)
     # (K⁻¹ + W)⁻¹
     # = (√W⁻¹) (√W⁻¹ (K⁻¹ + W) √W⁻¹)⁻¹ (√W⁻¹)
@@ -117,14 +119,81 @@ function laplace_lml!(f, lfX, Y)
     return _laplace_lml(f_opt, cache)
 end
 
-#function rrule(::laplace_lml!, ...)
-#
-#end
-
-function laplace_lml(lfX, Y)
-    f = mean(lfX.fx)
-    return laplace_lml!(f, lfX, Y)
+function laplace_lml_nonewton(f_opt, lfX, Y)
+    cache = _laplace_train_intermediates(lfX.lik, Y, cov(lfX.fx), f_opt)
+    return _laplace_lml(f_opt, cache)
+    # d lml / d theta = \partial lml / \partial theta + \partial lml / \partial fhat \partial fhat / \partial theta
 end
+
+function newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
+    f = f_init
+    for i in 1:maxiter
+        @info "  - Newton iteration $i"
+        fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
+
+        if isapprox(f, fnew)
+            @info "  + converged"
+            break  # converged
+        else
+            f = fnew
+        end
+    end
+    return fnew #, cache
+end
+
+function ChainRulesCore.rrule(
+    config::RuleConfig{>:HasReverseMode},
+    ::typeof(newton_inner_loop),
+    K,
+    dist_y_given_f,
+    Y;
+    f_init,
+    maxiter,
+)
+    fopt = newton_inner_loop(K, dist_y_given_f, Y; f_init, maxiter)
+    cache = _laplace_train_intermediates(dist_y_given_f, Y, K, fopt)
+
+    function newton_pullback(Δfopt)
+        δself = NoTangent()
+        function newton_single_step(K, dist_y_given_f, ys)
+            fnew, cache = _newton_step(dist_y_given_f, ys, K, fopt)
+            return fnew
+        end
+
+        fopt2, d_fopt = rrule_via_ad(config, newton_single_step, K, dist_y_given_f, Y)
+        return d_fopt(Δfopt)
+        dfopt_dK_times_Δfopt = d_fopt(Δfopt)[2]
+
+        dfopt_dlik_times_Δfopt = @not_implemented(
+            "gradient of lml w.r.t. likelihood parameters"
+        )
+        dfopt_dY_times_Δfopt = @not_implemented("gradient of lml w.r.t. observations")
+        return (δself, dfopt_dK_times_Δfopt, dfopt_dlik_times_Δfopt, dfopt_dY_times_Δfopt)
+    end
+
+    return (fnew, cache), newton_pullback
+end
+
+function laplace_lml(K, dist_y_given_f, Y; f=zeros(length(Y)), maxiter)
+    f_opt, cache = newton_inner_loop(dist_y_given_f, Y, K; f, maxiter)
+    return _laplace_lml(f_opt, cache)
+end
+
+#function ChainRulesCore.rrule(::typeof(laplace_lml), K, dist_y_given_f, Y)
+#    newt_res = laplace_steps(lfX.lik, lfX.fx, Y)
+#    f_opt = newt_res[end].f
+#    cache = newt_res[end].cache
+#    lml = _laplace_lml(f_opt, cache)
+#
+#    function laplace_lml_pullback(Δlml)
+#        ..._d(lfX.fx.f)
+#	[..._d("lfx.lik")]
+#        dlml_dlfX = ?
+#        return NoTangent(), dlml_dlfX * Δlml, @not_implemented("gradient of lml @not_implemented("gradient of lml w.r.t. observations")
+#    end
+#
+#    return lml, laplace_lml_pullback
+#end
 
 function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
     lf = build_latent_gp(theta0)
@@ -140,13 +209,18 @@ function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options)
         return -lml
     end
 
+    training_results = Optim.optimize(
+        objective,
+        θ -> only(Zygote.gradient(objective, θ)),
+        theta0,
+        optimizer,
+        optim_options;
+        inplace=false,
+    )
     #training_results = Optim.optimize(
-    #    objective, θ -> only(Zygote.gradient(objective, θ)), theta0, optimizer, optim_options;
+    #    objective, theta0, optimizer, optim_options;
     #    inplace=false,
     #)
-    training_results = Optim.optimize(
-        objective, theta0, optimizer, optim_options; inplace=false
-    )
 
     lf = build_latent_gp(training_results.minimizer)
     f_post = laplace_posterior(lf(X), Y; f)
