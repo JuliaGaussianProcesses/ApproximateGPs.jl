@@ -22,4 +22,12 @@ include("svgp.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
 
+using Zygote
+using QuadGK
+using Optim
+
+export laplace_steps, laplace_posterior, optimize_elbo
+include("laplace.jl")
+include("ep.jl")
+
 end
