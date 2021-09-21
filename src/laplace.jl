@@ -180,31 +180,36 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys
     @info "Hit rrule"
     f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
 
-    # f = K grad_log_p_y_given_f(f)
-    # fdot = Kdot grad_log_p_y_given_f(f) + K grad2_log_p_y_given_f(f) fdot
-    # fdot (I - K grad2_log_p_y_given_f(f)) = Kdot grad_log_p_y_given_f(f)
-    # fdot = (I - K grad2_log_p_y_given_f(f))⁻¹ Kdot grad_log_p_y_given_f(f)
-    # (I - K grad2_log_p_y_given_f(f)) = (I + K W) = (√W)⁻¹ (I + √W K √W) √W = (√W)⁻¹ B √W
-    # fdot = (√W)⁻¹ B⁻¹ √W Kdot grad_log_p_y_given_f(f)
+    # f = K (∇log p(y|f))                               (RW 3.17)
+    # δf = δK (∇log p(y|f)) + K δ(∇log p(y|f))
+    #    = δK (∇log p(y|f)) + K ∇(∇log p(y|f)) δf
+    # δf (I - K ∇∇log p(y|f)) = δK (∇log p(y|f))
+    # δf (I + K W) = δK (∇log p(y|f))
+    # δf = (I + K W)⁻¹ δK (∇log p(y|f))                 (RW 5.24)
+    # (I + K W) = (√W)⁻¹ (I + √W K √W) √W = (√W)⁻¹ B √W
+    # δf = (√W)⁻¹ B⁻¹ √W δK (∇log p(y|f))
 
     # ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
 
-    # Re<Δf, fdot> = Re<Δf, Wsqrt\inv B\inv Wsqrt Kdot d_loglik>
-    #              = Re<Wsqrt' Binv' Wsqrt\inv' Δf d_loglik', Kdot >
+    # Re<Δf, δf> = Re<Δf, Wsqrt\inv B\inv Wsqrt δK d_loglik>
+    #            = Re<Wsqrt' B\inv' Wsqrt\inv' Δf d_loglik', δK>
     #
-    # ΔK = Wsqrt * cache.B_ch' \ Wsqrt \ Δf_opt * cache.d_loglik'
+    # ΔK = Wsqrt' * cache.B_ch' \ Wsqrt' \ Δf_opt * cache.d_loglik'
 
     function newton_pullback(Δf_opt)
         ∂self = NoTangent()
 
-        # ΔK = cache.B_ch' \ Δf_opt * cache.d_loglik'
-	dfopt_dK_times_Δfopt = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
+        # ∂K = df/dK Δf
+	∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
 
-        dfopt_dlik_times_Δfopt = @not_implemented(
-            "gradient of lml w.r.t. likelihood parameters"
+        ∂dist_y_given_f = @not_implemented(
+            "gradient of Newton's method w.r.t. likelihood parameters"
         )
-        dfopt_dY_times_Δfopt = @not_implemented("gradient of lml w.r.t. observations")
-        return (∂self, dfopt_dK_times_Δfopt, dfopt_dlik_times_Δfopt, dfopt_dY_times_Δfopt)
+
+        ∂Y = @not_implemented("gradient of Newton's method w.r.t. observations")
+
+        return (∂self, ∂K, ∂dist_y_given_f, ∂Y)
+	#return (∂self, ∂K, NoTangent(), NoTangent())
     end
 
     return f_opt, newton_pullback
