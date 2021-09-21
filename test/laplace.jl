@@ -18,7 +18,22 @@ function build_latent_gp(theta)
     return LatentGP(GP(kernel), dist_y_given_f, 1e-8)
 end
 
-@testset "laplace" begin
+@testset "chainrule" begin
+    xs = [0.2, 0.3, 0.7]
+    ys = [1, 1, 0]
+    K = kernelmatrix(with_lengthscale(Matern52Kernel(), 0.3), xs)
+    test_frule(
+        ApproximateGPs.newton_inner_loop,
+        dist_y_given_f,
+        ys,
+        K;
+        fkwargs=(; f_init=zero(ys), maxiter=100),
+        rtol=0.01,
+    )
+    #test_rrule(ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; fkwargs=(;f_init=zero(ys), maxiter=100), rtol=0.05)  # my rrule might still be broken
+end
+
+@testset "optimization" begin
     X, Y = generate_data()
     theta0 = [0.0, 1.0]
 
@@ -34,6 +49,7 @@ end
         expected_thetahat = [7.708967951453345, 1.5182348363613536]
 
         res = Optim.optimize(objective, theta0, NelderMead(); inplace=false)
+        #@info res
 
         @test res.minimizer ≈ expected_thetahat
     end
@@ -47,7 +63,7 @@ end
             LBFGS();
             inplace=false,
         )
-        @info res
+        #@info res
 
         @test res.minimizer ≈ expected_thetahat
 

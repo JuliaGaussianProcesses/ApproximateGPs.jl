@@ -11,6 +11,7 @@ using LinearAlgebra
 using PDMats
 using Optim
 using Zygote
+using ChainRulesTestUtils
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
