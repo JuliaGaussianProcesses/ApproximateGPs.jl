@@ -173,7 +173,7 @@ function ChainRulesCore.frule((Δself, ΔK, Δdist_y_given_f, Δys), ::typeof(ne
 
     @info "Hit frule"
 
-    return f_opt, (∂f_opt, NoTangent())
+    return f_opt, ∂f_opt
 end
 
 function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys; f_init, maxiter)
