@@ -4,9 +4,13 @@ using ApproximateGPs
 using Flux
 using IterTools
 using AbstractGPs
+using AbstractGPs: LatentFiniteGP
 using Distributions
+using LogExpFunctions: logistic
 using LinearAlgebra
 using PDMats
+using Optim
+using Zygote
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
@@ -14,19 +18,27 @@ const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
-    include("svgp.jl")
-    println(" ")
-    @info "Ran svgp tests"
+    #include("expected_loglik.jl")
+    #println(" ")
+    #@info "Ran expected_loglik tests"
+    #
+    #@testset "SVGP" begin
+    #    include("svgp.jl")
+    #    println(" ")
+    #    @info "Ran svgp tests"
+    #
+    #    include("elbo.jl")
+    #    println(" ")
+    #    @info "Ran elbo tests"
+    #
+    #    include("equivalences.jl")
+    #    println(" ")
+    #    @info "Ran equivalences tests"
+    #end
 
-    include("elbo.jl")
-    println(" ")
-    @info "Ran elbo tests"
-
-    include("expected_loglik.jl")
-    println(" ")
-    @info "Ran expected_loglik tests"
-
-    include("equivalences.jl")
-    println(" ")
-    @info "Ran equivalences tests"
+    @testset "Laplace" begin
+        include("laplace.jl")
+        println(" ")
+        @info "Ran laplace tests"
+    end
 end
