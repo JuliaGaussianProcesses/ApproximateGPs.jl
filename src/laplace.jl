@@ -52,7 +52,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
     cache = nothing
     for i in 1:maxiter
         Zygote.ignore() do
-            @info "  - Newton iteration $i: f[1:3]=$(f[1:3])"
+            @debug "  - Newton iteration $i: f[1:3]=$(f[1:3])"
         end
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
         if !isnothing(callback)
@@ -61,7 +61,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
 
         if isapprox(f, fnew)
             Zygote.ignore() do
-                @info "  + converged"
+                @debug "  + converged"
             end
             break  # converged
         else
@@ -95,13 +95,13 @@ function ChainRulesCore.frule(
     # fdot = (√W)⁻¹ B⁻¹ √W Kdot grad_log_p_y_given_f(f)
     ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
 
-    @info "Hit frule"
+    @debug "Hit frule"
 
     return f_opt, ∂f_opt
 end
 
 function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K; kwargs...)
-    @info "Hit rrule"
+    @debug "Hit rrule"
     f_opt, cache = _newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
 
     # f = K (∇log p(y|f))                               (RW 3.17)
@@ -132,8 +132,8 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
         # ∂K = df/dK Δf
         ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
 
-        return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
-        #return (∂self, NoTangent(), NoTangent(), ∂K)
+        #return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
+        return (∂self, NoTangent(), NoTangent(), ∂K)  # workaround until https://github.com/JuliaDiff/ChainRulesTestUtils.jl/pull/218 is merged
     end
 
     return f_opt, newton_pullback
@@ -173,8 +173,8 @@ function optimize_elbo(
 
     function objective(theta)
         Zygote.ignore() do
-            # Zygote does not like the try/catch within @info
-            @info "Hyperparameters: $theta"
+            # Zygote does not like the try/catch within @info etc.
+            @debug "Hyperparameters: $theta"
         end
         lf = build_latent_gp(theta)
         f_opt, lml = laplace_f_and_lml(
