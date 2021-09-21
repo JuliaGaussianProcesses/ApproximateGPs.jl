@@ -26,7 +26,7 @@ end
         lf = build_latent_gp(theta)
         lfX = lf(X)
         f_init, K = mean_and_cov(lfX.fx)
-        lml = ApproximateGPs.laplace_lml(K, lfX.lik, Y; f_init, maxiter=100)
+        lml = ApproximateGPs.laplace_lml(lfX.lik, Y, K; f_init, maxiter=100)
         return -lml
     end
 

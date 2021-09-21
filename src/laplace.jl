@@ -42,8 +42,9 @@ function _newton_step(dist_y_given_f, ys, K, f)
     return fnew, cache
 end
 
-function _laplace_lml(f, c)
-    return -c.a' * f / 2 + c.loglik - sum(log.(diag(c.B_ch.L)))
+function _laplace_lml(f, cache)
+    # -a' * f / 2 + loglik - sum(log.(diag(B_ch.L)))
+    return -cache.a' * f / 2 + cache.loglik - sum(log.(diag(cache.B_ch.L)))
 end
 
 function laplace_f_cov(cache)
@@ -80,7 +81,7 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior)
         return f .= fnew
     end
 
-    _ = _newton_inner_loop(K, dist_y_given_f, ys; f_init=f, maxiter, callback=store_result!)
+    _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init=f, maxiter, callback=store_result!)
 
     return res_array
 end
@@ -91,7 +92,7 @@ function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, Y; kwargs...)
     return f_post
 end
 
-function _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=nothing)
+function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
     f = f_init
     cache = nothing
     for i in 1:maxiter
@@ -115,20 +116,21 @@ function _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=not
     return f, cache
 end
 
-function newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=nothing)
-    f_opt, _ = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback)
+# Currently, we have a separate function that returns only f_opt to simplify frule/rrule
+function newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
+    f_opt, _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback)
     return f_opt
 end
 
 function ChainRulesCore.frule(
-    (Δself, ΔK, Δdist_y_given_f, Δys),
+    (Δself, Δdist_y_given_f, Δys, ΔK),
     ::typeof(newton_inner_loop),
-    K,
     dist_y_given_f,
-    ys;
+    ys,
+    K;
     kwargs...,
 )
-    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; kwargs...)
+    f_opt, cache = _newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
 
     # f = K grad_log_p_y_given_f(f)
     # fdot = Kdot grad_log_p_y_given_f(f) + K grad2_log_p_y_given_f(f) fdot
@@ -143,9 +145,9 @@ function ChainRulesCore.frule(
     return f_opt, ∂f_opt
 end
 
-function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys; kwargs...)
+function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K; kwargs...)
     @info "Hit rrule"
-    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; kwargs...)
+    f_opt, cache = _newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
 
     # f = K (∇log p(y|f))                               (RW 3.17)
     # δf = δK (∇log p(y|f)) + K δ(∇log p(y|f))
@@ -166,25 +168,27 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys
     function newton_pullback(Δf_opt)
         ∂self = NoTangent()
 
-        # ∂K = df/dK Δf
-        ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
-
         ∂dist_y_given_f = @not_implemented(
             "gradient of Newton's method w.r.t. likelihood parameters"
         )
 
         ∂Y = @not_implemented("gradient of Newton's method w.r.t. observations")
 
-        return (∂self, ∂K, ∂dist_y_given_f, ∂Y)
-        #return (∂self, ∂K, NoTangent(), NoTangent())
+        # ∂K = df/dK Δf
+        ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
+
+        return (∂self, ∂dist_y_given_f, ∂Y, ∂K)
+        #return (∂self, NoTangent(), NoTangent(), ∂K)
     end
 
     return f_opt, newton_pullback
 end
 
-function laplace_lml(K, dist_y_given_f, Y; f_init=zeros(length(Y)), maxiter)
-    f_opt = newton_inner_loop(K, dist_y_given_f, Y; f_init, maxiter)
-    cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
+function laplace_lml(
+    dist_y_given_f, ys, K; f_init=zeros(length(Y)), maxiter, newton_kwargs...
+)
+    f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
+    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
     return _laplace_lml(f_opt, cache)
 end
 
@@ -211,7 +215,7 @@ function optimize_elbo(
         K = cov(lfX.fx)
         dist_y_given_f = lfX.lik
         f_opt = newton_inner_loop(
-            K, dist_y_given_f, Y; f_init=f, maxiter=100, callback=newton_callback
+            dist_y_given_f, Y, K; f_init=f, maxiter=100, callback=newton_callback
         )
         cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
         lml = _laplace_lml(f_opt, cache)
@@ -242,7 +246,7 @@ function optimize_elbo(
 end
 
 struct LaplacePosteriorGP{Tprior,Tdata} <: AbstractGPs.AbstractGP
-    prior::Tprior  # this is lfx.fx; should we store lfx itself (including lik) instead?
+    prior::Tprior  # TODO: this is lfx.fx; should we store lfx itself (including lik) instead?
     data::Tdata
 end
 
