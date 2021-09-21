@@ -139,18 +139,29 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
     return f_opt, newton_pullback
 end
 
+function laplace_lml(dist_y_given_f, ys, K, f_opt)
+    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
+    return _laplace_lml(f_opt, cache)
+end
+
 function laplace_lml(
     dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter, newton_kwargs...
 )
     f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
-    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
-    return _laplace_lml(f_opt, cache)
+    return laplace_lml(dist_y_given_f, ys, K, f_opt)
+end
+
+function laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+    K = cov(lfx.fx)
+    f_opt = newton_inner_loop(lfx.lik, ys, K; newton_kwargs...)
+    lml = laplace_lml(lfx.lik, ys, K, f_opt)
+    return f_opt, lml
 end
 
 function optimize_elbo(
     build_latent_gp,
     theta0,
-    X,
+    xs,
     ys,
     optimizer,
     optim_options;
@@ -158,7 +169,7 @@ function optimize_elbo(
     newton_callback=nothing,
 )
     lf = build_latent_gp(theta0)
-    f = mean(lf(X).fx)  # will be mutated in-place to "warm-start" the Newton steps
+    f = mean(lf(xs).fx)  # will be mutated in-place to "warm-start" the Newton steps
 
     function objective(theta)
         Zygote.ignore() do
@@ -166,12 +177,9 @@ function optimize_elbo(
             @info "Hyperparameters: $theta"
         end
         lf = build_latent_gp(theta)
-        lfX = lf(X)
-        f_opt = newton_inner_loop(
-            lfX.lik, ys, cov(lfX.fx); f_init=f, maxiter=100, callback=newton_callback
+        f_opt, lml = laplace_f_and_lml(
+            lf(xs), ys; f_init=f, maxiter=100, callback=newton_callback
         )
-        cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
-        lml = _laplace_lml(f_opt, cache)
         Zygote.ignore() do
             if newton_warmstart
                 f .= f_opt
@@ -188,14 +196,10 @@ function optimize_elbo(
         optim_options;
         inplace=false,
     )
-    #training_results = Optim.optimize(
-    #    objective, theta0, optimizer, optim_options;
-    #    inplace=false,
-    #)
 
     lf = build_latent_gp(training_results.minimizer)
 
-    f_post = laplace_posterior(lf(X), ys; f)
+    f_post = laplace_posterior(lf(xs), ys; f)
     return f_post, training_results
 end
 
