@@ -46,8 +46,6 @@ function _laplace_lml(f, c)
     return -c.a' * f / 2 + c.loglik - sum(log.(diag(c.B_ch.L)))
 end
 
-#function _laplace_lml_deriv()
-
 function laplace_f_cov(cache)
     # (K⁻¹ + W)⁻¹
     # = (√W⁻¹) (√W⁻¹ (K⁻¹ + W) √W⁻¹)⁻¹ (√W⁻¹)
@@ -76,20 +74,13 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior)
     K = cov(f_prior)
 
     res_array = []
-    for i in 1:maxiter
-        @info "  - Newton iteration $i"
-        fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
 
-        push!(res_array, LaplaceResult(f, fnew, cache))
-        # TODO don't do all these computations unless we actually want them
-
-        if isapprox(f, fnew)
-            @info "  + converged"
-            break  # converged
-        else
-            f = fnew
-        end
+    function store_result!(fnew, cache)
+        push!(res_array, LaplaceResult(copy(f), fnew, cache))
+        return f .= fnew
     end
+
+    _ = _newton_inner_loop(K, dist_y_given_f, ys; f_init=f, maxiter, callback=store_result!)
 
     return res_array
 end
@@ -100,53 +91,22 @@ function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, Y; kwargs...)
     return f_post
 end
 
-"""
-laplace_lml(f::Vector, lfX::LatentFiniteGP, Y::Vector)
-
-`f` 
-"""
-function laplace_lml!(f, lfX, Y)
-    f_opt = Zygote.ignore() do
-        newt_res = laplace_steps(lfX.lik, lfX.fx, Y; f)
-        f_opt = newt_res[end].f
-        f .= f_opt
-        return f_opt
-    end
-
-    # TODO ideally I wouldn't copy&paste the following lines
-    # but we have to re-compute this outside the Zygote.ignore() to compute gradients
-    cache = _laplace_train_intermediates(lfX.lik, Y, cov(lfX.fx), f_opt)
-    return _laplace_lml(f_opt, cache)
-end
-
-function laplace_lml_nonewton(f_opt, lfX, Y)
-    cache = _laplace_train_intermediates(lfX.lik, Y, cov(lfX.fx), f_opt)
-    return _laplace_lml(f_opt, cache)
-    # d lml / d theta = \partial lml / \partial theta + \partial lml / \partial fhat \partial fhat / \partial theta
-end
-
-NEWTON_COUNTER = 0
-
-function _reset()
-	global NEWTON_COUNTER
-	NEWTON_COUNTER = 0
-end
-
-function _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
-    global NEWTON_COUNTER
+function _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=nothing)
     f = f_init
     cache = nothing
     for i in 1:maxiter
-	Zygote.ignore() do
-		@info "  - Newton iteration $i: f[1:3]=$(f[1:3])"
-	end
+        Zygote.ignore() do
+            @info "  - Newton iteration $i: f[1:3]=$(f[1:3])"
+        end
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
-	NEWTON_COUNTER += 1
+        if !isnothing(callback)
+            callback(fnew, cache)
+        end
 
         if isapprox(f, fnew)
-	    Zygote.ignore() do
-		    @info "  + converged"
-	    end
+            Zygote.ignore() do
+                @info "  + converged"
+            end
             break  # converged
         else
             f = fnew
@@ -160,7 +120,15 @@ function newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
     return f_opt
 end
 
-function ChainRulesCore.frule((Δself, ΔK, Δdist_y_given_f, Δys), ::typeof(newton_inner_loop), K, dist_y_given_f, ys; f_init, maxiter)
+function ChainRulesCore.frule(
+    (Δself, ΔK, Δdist_y_given_f, Δys),
+    ::typeof(newton_inner_loop),
+    K,
+    dist_y_given_f,
+    ys;
+    f_init,
+    maxiter,
+)
     f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
 
     # f = K grad_log_p_y_given_f(f)
@@ -176,7 +144,9 @@ function ChainRulesCore.frule((Δself, ΔK, Δdist_y_given_f, Δys), ::typeof(ne
     return f_opt, ∂f_opt
 end
 
-function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys; f_init, maxiter)
+function ChainRulesCore.rrule(
+    ::typeof(newton_inner_loop), K, dist_y_given_f, ys; f_init, maxiter
+)
     @info "Hit rrule"
     f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
 
@@ -200,7 +170,7 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys
         ∂self = NoTangent()
 
         # ∂K = df/dK Δf
-	∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
+        ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
 
         ∂dist_y_given_f = @not_implemented(
             "gradient of Newton's method w.r.t. likelihood parameters"
@@ -209,61 +179,11 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys
         ∂Y = @not_implemented("gradient of Newton's method w.r.t. observations")
 
         return (∂self, ∂K, ∂dist_y_given_f, ∂Y)
-	#return (∂self, ∂K, NoTangent(), NoTangent())
+        #return (∂self, ∂K, NoTangent(), NoTangent())
     end
 
     return f_opt, newton_pullback
 end
-
-#function _newton_inner_loop_dual(::Type{T}, dual_args...) where {T<:Dual}
-#    ȧrgs = (NO_FIELDS,  partials.(dual_args)...)
-#    args = (_newton_inner_loop, value.(dual_args)...)
-#    y, ẏ = frule(ȧrgs, args...)
-#    T(y, ẏ)
-#end
-#
-#function __newton_inner_loop(ϵ1::T1, ϵ2::T2, θ::T3) where {T1,T2,T3}
-#    T = promote_type(T1, T2, T3)
-#    if T <: Dual
-#        _solve_dual(T, ϵ1, ϵ2, θ)
-#    else
-#        _solve(ϵ1, ϵ2, θ)
-#    end
-#end
-
-
-#function ChainRulesCore.rrule(
-#    config::RuleConfig{>:HasReverseMode},
-#    ::typeof(newton_inner_loop),
-#    K,
-#    dist_y_given_f,
-#    Y;
-#    f_init,
-#    maxiter,
-#)
-#    fopt = newton_inner_loop(K, dist_y_given_f, Y; f_init, maxiter)
-#    cache = _laplace_train_intermediates(dist_y_given_f, Y, K, fopt)
-#
-#    function newton_pullback(Δfopt)
-#        δself = NoTangent()
-#        function newton_single_step(K, dist_y_given_f, ys)
-#            fnew, cache = _newton_step(dist_y_given_f, ys, K, fopt)
-#            return fnew
-#        end
-#
-#        fopt2, d_fopt = rrule_via_ad(config, newton_single_step, K, dist_y_given_f, Y)
-#        return d_fopt(Δfopt)
-#        dfopt_dK_times_Δfopt = d_fopt(Δfopt)[2]
-#
-#        dfopt_dlik_times_Δfopt = @not_implemented(
-#            "gradient of lml w.r.t. likelihood parameters"
-#        )
-#        dfopt_dY_times_Δfopt = @not_implemented("gradient of lml w.r.t. observations")
-#        return (δself, dfopt_dK_times_Δfopt, dfopt_dlik_times_Δfopt, dfopt_dY_times_Δfopt)
-#    end
-#
-#    return (fnew, cache), newton_pullback
-#end
 
 function laplace_lml(K, dist_y_given_f, Y; f_init=zeros(length(Y)), maxiter)
     f_opt = newton_inner_loop(K, dist_y_given_f, Y; f_init, maxiter)
@@ -271,23 +191,9 @@ function laplace_lml(K, dist_y_given_f, Y; f_init=zeros(length(Y)), maxiter)
     return _laplace_lml(f_opt, cache)
 end
 
-#function ChainRulesCore.rrule(::typeof(laplace_lml), K, dist_y_given_f, Y)
-#    newt_res = laplace_steps(lfX.lik, lfX.fx, Y)
-#    f_opt = newt_res[end].f
-#    cache = newt_res[end].cache
-#    lml = _laplace_lml(f_opt, cache)
-#
-#    function laplace_lml_pullback(Δlml)
-#        ..._d(lfX.fx.f)
-#	[..._d("lfx.lik")]
-#        dlml_dlfX = ?
-#        return NoTangent(), dlml_dlfX * Δlml, @not_implemented("gradient of lml @not_implemented("gradient of lml w.r.t. observations")
-#    end
-#
-#    return lml, laplace_lml_pullback
-#end
-
-function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options, newton_warmstart=true)
+function optimize_elbo(
+    build_latent_gp, theta0, X, Y, optimizer, optim_options, newton_warmstart=true
+)
     lf = build_latent_gp(theta0)
     f = mean(lf(X).fx)  # will be mutated in-place to "warm-start" the Newton steps
 
@@ -298,17 +204,17 @@ function optimize_elbo(build_latent_gp, theta0, X, Y, optimizer, optim_options, 
         end
         lf = build_latent_gp(theta)
         #lml = laplace_lml!(f, lf(X), Y)
-	lfX = lf(X)
-	K = cov(lfX.fx)
-	dist_y_given_f = lfX.lik
+        lfX = lf(X)
+        K = cov(lfX.fx)
+        dist_y_given_f = lfX.lik
         f_opt = newton_inner_loop(K, dist_y_given_f, Y; f_init=f, maxiter=100)
-	cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
+        cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
         lml = _laplace_lml(f_opt, cache)
-	Zygote.ignore() do
-		if newton_warmstart
-			f .= f_opt
-		end
-	end
+        Zygote.ignore() do
+            if newton_warmstart
+                f .= f_opt
+            end
+        end
         return -lml
     end
 
