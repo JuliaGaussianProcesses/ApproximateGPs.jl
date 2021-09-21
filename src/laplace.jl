@@ -115,8 +115,8 @@ function _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=not
     return f, cache
 end
 
-function newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
-    f_opt, _ = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
+function newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback=nothing)
+    f_opt, _ = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter, callback)
     return f_opt
 end
 
@@ -126,10 +126,9 @@ function ChainRulesCore.frule(
     K,
     dist_y_given_f,
     ys;
-    f_init,
-    maxiter,
+    kwargs...,
 )
-    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
+    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; kwargs...)
 
     # f = K grad_log_p_y_given_f(f)
     # fdot = Kdot grad_log_p_y_given_f(f) + K grad2_log_p_y_given_f(f) fdot
@@ -144,11 +143,9 @@ function ChainRulesCore.frule(
     return f_opt, ∂f_opt
 end
 
-function ChainRulesCore.rrule(
-    ::typeof(newton_inner_loop), K, dist_y_given_f, ys; f_init, maxiter
-)
+function ChainRulesCore.rrule(::typeof(newton_inner_loop), K, dist_y_given_f, ys; kwargs...)
     @info "Hit rrule"
-    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; f_init, maxiter)
+    f_opt, cache = _newton_inner_loop(K, dist_y_given_f, ys; kwargs...)
 
     # f = K (∇log p(y|f))                               (RW 3.17)
     # δf = δK (∇log p(y|f)) + K δ(∇log p(y|f))
@@ -192,7 +189,14 @@ function laplace_lml(K, dist_y_given_f, Y; f_init=zeros(length(Y)), maxiter)
 end
 
 function optimize_elbo(
-    build_latent_gp, theta0, X, Y, optimizer, optim_options, newton_warmstart=true
+    build_latent_gp,
+    theta0,
+    X,
+    Y,
+    optimizer,
+    optim_options;
+    newton_warmstart=true,
+    newton_callback=nothing,
 )
     lf = build_latent_gp(theta0)
     f = mean(lf(X).fx)  # will be mutated in-place to "warm-start" the Newton steps
@@ -203,11 +207,12 @@ function optimize_elbo(
             @info "Hyperparameters: $theta"
         end
         lf = build_latent_gp(theta)
-        #lml = laplace_lml!(f, lf(X), Y)
         lfX = lf(X)
         K = cov(lfX.fx)
         dist_y_given_f = lfX.lik
-        f_opt = newton_inner_loop(K, dist_y_given_f, Y; f_init=f, maxiter=100)
+        f_opt = newton_inner_loop(
+            K, dist_y_given_f, Y; f_init=f, maxiter=100, callback=newton_callback
+        )
         cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
         lml = _laplace_lml(f_opt, cache)
         Zygote.ignore() do
