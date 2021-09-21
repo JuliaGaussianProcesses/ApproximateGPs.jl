@@ -83,7 +83,8 @@ end
             newton_callback=count_warmstart!,
         )
 
-        @test n_newton_warmstart < n_newton_coldstart
+        @info "Newton steps: $n_newton_coldstart (coldstart) vs $n_newton_warmstart (warmstart)"
+        @test n_newton_coldstart - n_newton_warmstart > 100
         @test res_cold.minimizer ≈ res_warm.minimizer
     end
 end

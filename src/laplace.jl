@@ -47,51 +47,6 @@ function _laplace_lml(f, cache)
     return -cache.a' * f / 2 + cache.loglik - sum(log.(diag(cache.B_ch.L)))
 end
 
-function laplace_f_cov(cache)
-    # (K⁻¹ + W)⁻¹
-    # = (√W⁻¹) (√W⁻¹ (K⁻¹ + W) √W⁻¹)⁻¹ (√W⁻¹)
-    # = (√W⁻¹) (√W⁻¹ K⁻¹ √W⁻¹ + I)⁻¹ (√W⁻¹)
-    # ; (I + C⁻¹)⁻¹ = I - (I + C)⁻¹
-    # = (√W⁻¹) (I - (I + √W K √W)⁻¹) (√W⁻¹)
-    # = (√W⁻¹) (I - B⁻¹) (√W⁻¹)
-    B_ch = cache.B_ch
-    Wsqrt_inv = inv(cache.Wsqrt)
-    return Wsqrt_inv * (I - inv(B_ch)) * Wsqrt_inv
-end
-
-function LaplaceResult(f, fnew, cache)
-    # TODO should we use fnew?
-    f_cov = laplace_f_cov(cache)
-    q = MvNormal(f, AbstractGPs._symmetric(f_cov))
-    lml_approx = _laplace_lml(f, cache)
-
-    return (; f, f_cov, q, lml_approx, cache)
-end
-
-function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior))
-    @assert mean(f_prior) == zero(mean(f_prior))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(f_prior) == length(f)
-
-    K = cov(f_prior)
-
-    res_array = []
-
-    function store_result!(fnew, cache)
-        push!(res_array, LaplaceResult(copy(f), fnew, cache))
-        return f .= fnew
-    end
-
-    _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init=f, maxiter, callback=store_result!)
-
-    return res_array
-end
-
-function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, Y; kwargs...)
-    newt_res = laplace_steps(lfX.lik, lfX.fx, Y; kwargs...)
-    f_post = LaplacePosteriorGP(lfX.fx, newt_res[end])
-    return f_post
-end
-
 function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
     f = f_init
     cache = nothing
@@ -172,12 +127,12 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
             "gradient of Newton's method w.r.t. likelihood parameters"
         )
 
-        ∂Y = @not_implemented("gradient of Newton's method w.r.t. observations")
+        ∂ys = @not_implemented("gradient of Newton's method w.r.t. observations")
 
         # ∂K = df/dK Δf
         ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
 
-        return (∂self, ∂dist_y_given_f, ∂Y, ∂K)
+        return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
         #return (∂self, NoTangent(), NoTangent(), ∂K)
     end
 
@@ -185,18 +140,20 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
 end
 
 function laplace_lml(
-    dist_y_given_f, ys, K; f_init=zeros(length(Y)), maxiter, newton_kwargs...
+    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter, newton_kwargs...
 )
     f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
     cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
     return _laplace_lml(f_opt, cache)
 end
 
+
+
 function optimize_elbo(
     build_latent_gp,
     theta0,
     X,
-    Y,
+    ys,
     optimizer,
     optim_options;
     newton_warmstart=true,
@@ -215,9 +172,9 @@ function optimize_elbo(
         K = cov(lfX.fx)
         dist_y_given_f = lfX.lik
         f_opt = newton_inner_loop(
-            dist_y_given_f, Y, K; f_init=f, maxiter=100, callback=newton_callback
+            dist_y_given_f, ys, K; f_init=f, maxiter=100, callback=newton_callback
         )
-        cache = _laplace_train_intermediates(dist_y_given_f, Y, K, f_opt)
+        cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
         lml = _laplace_lml(f_opt, cache)
         Zygote.ignore() do
             if newton_warmstart
@@ -241,13 +198,62 @@ function optimize_elbo(
     #)
 
     lf = build_latent_gp(training_results.minimizer)
-    f_post = laplace_posterior(lf(X), Y; f)
+
+    f_post = laplace_posterior(lf(X), ys; f)
     return f_post, training_results
 end
 
-struct LaplacePosteriorGP{Tprior,Tdata} <: AbstractGPs.AbstractGP
+
+
+function laplace_f_cov(cache)
+    # (K⁻¹ + W)⁻¹
+    # = (√W⁻¹) (√W⁻¹ (K⁻¹ + W) √W⁻¹)⁻¹ (√W⁻¹)
+    # = (√W⁻¹) (√W⁻¹ K⁻¹ √W⁻¹ + I)⁻¹ (√W⁻¹)
+    # ; (I + C⁻¹)⁻¹ = I - (I + C)⁻¹
+    # = (√W⁻¹) (I - (I + √W K √W)⁻¹) (√W⁻¹)
+    # = (√W⁻¹) (I - B⁻¹) (√W⁻¹)
+    B_ch = cache.B_ch
+    Wsqrt_inv = inv(cache.Wsqrt)
+    return Wsqrt_inv * (I - inv(B_ch)) * Wsqrt_inv
+end
+
+function LaplaceResult(f, fnew, cache)
+    # TODO should we use fnew?
+    f_cov = laplace_f_cov(cache)
+    q = MvNormal(f, AbstractGPs._symmetric(f_cov))
+    lml_approx = _laplace_lml(f, cache)
+
+    return (; f, f_cov, q, lml_approx, cache)
+end
+
+function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior))
+    @assert mean(f_prior) == zero(mean(f_prior))  # might work with non-zero prior mean but not checked
+    @assert length(ys) == length(f_prior) == length(f)
+
+    K = cov(f_prior)
+
+    res_array = []
+
+    function store_result!(fnew, cache)
+        push!(res_array, LaplaceResult(copy(f), fnew, cache))
+        return f .= fnew
+    end
+
+    _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init=f, maxiter, callback=store_result!)
+
+    return res_array
+end
+
+function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, ys; kwargs...)
+    newt_res = laplace_steps(lfX.lik, lfX.fx, ys; kwargs...)
+    cache = newt_res[end].cache
+    f_post = LaplacePosteriorGP(lfX.fx, cache)
+    return f_post
+end
+
+struct LaplacePosteriorGP{Tprior,Tcache} <: AbstractGPs.AbstractGP
     prior::Tprior  # TODO: this is lfx.fx; should we store lfx itself (including lik) instead?
-    data::Tdata
+    cache::Tcache
 end
 
 function _laplace_predict_intermediates(cache, prior_at_x, xnew)
@@ -259,19 +265,19 @@ function _laplace_predict_intermediates(cache, prior_at_x, xnew)
 end
 
 function StatsBase.mean_and_var(f::LaplacePosteriorGP, x::AbstractVector)
-    f_mean, v = _laplace_predict_intermediates(f.data.cache, f.prior, x)
+    f_mean, v = _laplace_predict_intermediates(f.cache, f.prior, x)
     f_var = var(f.prior.f, x) - vec(sum(v .^ 2; dims=1))
     return f_mean, f_var
 end
 
 function StatsBase.mean_and_cov(f::LaplacePosteriorGP, x::AbstractVector)
-    f_mean, v = _laplace_predict_intermediates(f.data.cache, f.prior, x)
+    f_mean, v = _laplace_predict_intermediates(f.cache, f.prior, x)
     f_cov = cov(f.prior.f, x) - v' * v
     return f_mean, f_cov
 end
 
 function Statistics.mean(f::LaplacePosteriorGP, x::AbstractVector)
-    d_loglik = f.data.cache.d_loglik
+    d_loglik = f.cache.d_loglik
     return mean(f.prior.f, x) + cov(f.prior.f, f.prior.x, x)' * d_loglik
 end
 
