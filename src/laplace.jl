@@ -147,8 +147,6 @@ function laplace_lml(
     return _laplace_lml(f_opt, cache)
 end
 
-
-
 function optimize_elbo(
     build_latent_gp,
     theta0,
@@ -169,10 +167,8 @@ function optimize_elbo(
         end
         lf = build_latent_gp(theta)
         lfX = lf(X)
-        K = cov(lfX.fx)
-        dist_y_given_f = lfX.lik
         f_opt = newton_inner_loop(
-            dist_y_given_f, ys, K; f_init=f, maxiter=100, callback=newton_callback
+            lfX.lik, ys, cov(lfX.fx); f_init=f, maxiter=100, callback=newton_callback
         )
         cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
         lml = _laplace_lml(f_opt, cache)
@@ -202,8 +198,6 @@ function optimize_elbo(
     f_post = laplace_posterior(lf(X), ys; f)
     return f_post, training_results
 end
-
-
 
 function laplace_f_cov(cache)
     # (K⁻¹ + W)⁻¹
