@@ -86,7 +86,7 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     alik_i = epsite_dist(ep_state.sites[i].q)
     cav_i = div_dist(q_fi, alik_i)
     qhat_i = moment_match(cav_i, ep_problem.lik_evals[i])
-    new_t = div_dist(qhat_i.q, cav_i)
+    return new_t = div_dist(qhat_i.q, cav_i)
     #delta_eta = 
     #new_q = rank_one_update(ep_state.q, 
 
@@ -102,12 +102,12 @@ function EPResult(results)
     return (; results)
 end
 
-function ep_steps(dist_y_given_f, f_prior, y; maxiter = 100)
+function ep_steps(dist_y_given_f, f_prior, y; maxiter=100)
     f = mean(f_prior)
     @assert f == zero(f)  # might work with non-zero prior mean but not checked
     converged = false
     res_array = []
-    for i = 1:maxiter
+    for i in 1:maxiter
         results = ep_step!(f, dist_y_given_f, f_prior, y)
         push!(res_array, EPResult(results))
         if isapprox(f, results.fnew)
@@ -118,4 +118,3 @@ function ep_steps(dist_y_given_f, f_prior, y; maxiter = 100)
     end
     return res_array
 end
-
