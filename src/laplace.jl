@@ -63,6 +63,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
             Zygote.ignore() do
                 @debug "  + converged"
             end
+            #f = fnew
             break  # converged
         else
             f = fnew
@@ -145,17 +146,36 @@ function laplace_lml(dist_y_given_f, ys, K, f_opt)
 end
 
 function laplace_lml(
-    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter, newton_kwargs...
+    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter=100, newton_kwargs...
 )
     f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
     return laplace_lml(dist_y_given_f, ys, K, f_opt)
 end
 
+function laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+    return laplace_lml(dist_y_given_f, ys, K; newton_kwargs...)
+end
+
 function laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
-    K = cov(lfx.fx)
-    f_opt = newton_inner_loop(lfx.lik, ys, K; newton_kwargs...)
-    lml = laplace_lml(lfx.lik, ys, K, f_opt)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+    f_opt = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    lml = laplace_lml(dist_y_given_f, ys, K, f_opt)
     return f_opt, lml
+end
+
+function _check_laplace_inputs(
+    lfx::LatentFiniteGP, ys; f_init=nothing, maxiter=100, newton_kwargs...
+)
+    fx = lfx.fx
+    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
+    @assert length(ys) == length(fx)
+    dist_y_given_f = lfx.lik
+    K = cov(fx)
+    if isnothing(f_init)
+        f_init = mean(fx)
+    end
+    return dist_y_given_f, K, (; f_init, maxiter, newton_kwargs...)
 end
 
 function optimize_elbo(
@@ -199,7 +219,7 @@ function optimize_elbo(
 
     lf = build_latent_gp(training_results.minimizer)
 
-    f_post = laplace_posterior(lf(xs), ys; f)
+    f_post = laplace_posterior(lf(xs), ys; f_init=f)
     return f_post, training_results
 end
 
@@ -242,10 +262,10 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior)
     return res_array
 end
 
-function laplace_posterior(lfX::AbstractGPs.LatentFiniteGP, ys; kwargs...)
-    newt_res = laplace_steps(lfX.lik, lfX.fx, ys; kwargs...)
-    cache = newt_res[end].cache
-    f_post = LaplacePosteriorGP(lfX.fx, cache)
+function laplace_posterior(lfx::AbstractGPs.LatentFiniteGP, ys; newton_kwargs...)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+    _, cache = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    f_post = LaplacePosteriorGP(lfx.fx, cache)
     return f_post
 end
 
