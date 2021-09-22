@@ -18,6 +18,25 @@ function build_latent_gp(theta)
     return LatentGP(GP(kernel), dist_y_given_f, 1e-8)
 end
 
+@testset "Gaussian" begin
+    # should check for convergence in one step, and agreement with exact GPR
+end
+
+@testset "gradients" begin
+    X, Y = generate_data()
+    @testset "laplace_lml" begin
+        theta0 = rand(2)
+        function objective(theta)
+            lf = build_latent_gp(theta)
+            lml = ApproximateGPs.laplace_lml(lf(X), Y)
+            return -lml
+        end
+        fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
+        ad_grad = only(Zygote.gradient(objective, theta0))
+        @test ad_grad ≈ fd_grad
+    end
+end
+
 @testset "chainrule" begin
     xs = [0.2, 0.3, 0.7]
     ys = [1, 1, 0]

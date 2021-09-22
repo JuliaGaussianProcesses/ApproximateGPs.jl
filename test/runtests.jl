@@ -12,6 +12,7 @@ using PDMats
 using Optim
 using Zygote
 using ChainRulesTestUtils
+using FiniteDifferences
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
