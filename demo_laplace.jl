@@ -9,7 +9,7 @@ using ApproximateGPs
 
 Random.seed!(1)
 X = range(0, 23.5; length=48)
-fs = @. 3*sin(10 + 0.6X) + sin(0.1X) - 1
+fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
 # invlink = normcdf
 invlink = logistic
 ps = invlink.(fs)
@@ -18,7 +18,7 @@ Y = [rand(Bernoulli(p)) for p in ps]
 function plot_data()
     plot()
     plot!(X, ps)
-    scatter!(X, Y)
+    return scatter!(X, Y)
 end
 
 dist_y_given_f(f) = Bernoulli(invlink(f))
@@ -32,7 +32,7 @@ end
 
 function plot_samples!(Xgrid, fpost; samples=100, color=2)
     fsamples = rand(fpost(Xgrid, 1e-8), samples)
-    plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
+    return plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
 end
 
 using Zygote
@@ -50,7 +50,9 @@ lfX = lf(X)
 
 newt_res = laplace_steps(lfX.lik, lfX.fx, Y)
 
-f_post, opt_res = ApproximateGPs.optimize_elbo(build_latent_gp, theta0, X, Y, NelderMead(), optim_options)
+f_post, opt_res = ApproximateGPs.optimize_elbo(
+    build_latent_gp, theta0, X, Y, NelderMead(), optim_options
+)
 
 theta1 = opt_res.minimizer
 
@@ -73,7 +75,6 @@ end
 using FiniteDifferences
 
 FiniteDifferences.grad(central_fdm(5, 1), full_objective, theta0)
-
 
 function comp_lml(theta)
     _lf = build_latent_gp(theta)
