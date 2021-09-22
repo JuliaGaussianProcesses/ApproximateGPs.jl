@@ -82,6 +82,7 @@ end
             newton_warmstart=false,
             newton_callback=count_coldstart!,
         )
+        @info "Coldstart:\n$res_cold"
 
         n_newton_warmstart = 0
         function count_warmstart!(_, _)
@@ -98,6 +99,7 @@ end
             newton_warmstart=true,
             newton_callback=count_warmstart!,
         )
+        @info "Warmstart:\n$res_warm"
 
         @info "Newton steps: $n_newton_coldstart (coldstart) vs $n_newton_warmstart (warmstart)"
         @test n_newton_coldstart - n_newton_warmstart > 100
