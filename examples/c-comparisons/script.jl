@@ -9,11 +9,11 @@
 # ## Setup
 
 using ApproximateGPs
-using ParameterHandling
-using Zygote
-using Distributions
-using LogExpFunctions
 using LinearAlgebra
+using Distributions
+using LogExpFunctions: logistic
+#using ParameterHandling
+using Zygote
 using Optim
 
 using Plots
@@ -28,8 +28,7 @@ Xgrid = -4:0.1:29
 X = range(0, 23.5; length=48)
 f(x) = 3 * sin(10 + 0.6x) + sin(0.1x) - 1
 fs = f.(X)
-# invlink = normcdf
-invlink = logistic
+invlink = logistic  # could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
 ps = invlink.(fs)
 Y = [rand(Bernoulli(p)) for p in ps]
 
