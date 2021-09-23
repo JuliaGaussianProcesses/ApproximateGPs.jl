@@ -27,7 +27,9 @@ using ForwardDiff
 using QuadGK
 using Optim
 
-export laplace_steps, laplace_posterior, optimize_elbo
+export laplace_lml, build_laplace_objective, build_laplace_objective!
+export laplace_posterior
+export laplace_steps
 include("laplace.jl")
 include("ep.jl")
 

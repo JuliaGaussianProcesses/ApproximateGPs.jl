@@ -18,6 +18,35 @@ function build_latent_gp(theta)
     return LatentGP(GP(kernel), dist_y_given_f, 1e-8)
 end
 
+function optimize_elbo(
+    build_latent_gp,
+    theta0,
+    xs,
+    ys,
+    optimizer,
+    optim_options;
+    newton_warmstart=true,
+    newton_callback=nothing,
+)
+    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
+    objective = build_laplace_objective!(
+        f, build_latent_gp, xs, ys; newton_warmstart, newton_callback
+    )
+
+    training_results = Optim.optimize(
+        objective,
+        θ -> only(Zygote.gradient(objective, θ)),
+        theta0,
+        optimizer,
+        optim_options;
+        inplace=false,
+    )
+
+    lf = build_latent_gp(training_results.minimizer)
+    f_post = laplace_posterior(lf(xs), ys; f_init=f)
+    return f_post, training_results
+end
+
 @testset "Gaussian" begin
     # should check for convergence in one step, and agreement with exact GPR
 end
@@ -28,7 +57,7 @@ end
         theta0 = rand(2)
         function objective(theta)
             lf = build_latent_gp(theta)
-            lml = ApproximateGPs.laplace_lml(lf(X), Y)
+            lml = laplace_lml(lf(X), Y)
             return -lml
         end
         fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
@@ -58,10 +87,7 @@ end
 
     function objective(theta)
         lf = build_latent_gp(theta)
-        lfX = lf(X)
-        f_init, K = mean_and_cov(lfX.fx)
-        lml = ApproximateGPs.laplace_lml(lfX.lik, Y, K; f_init, maxiter=100)
-        return -lml
+        return -laplace_lml(lf(X), Y)
     end
 
     @testset "NelderMead" begin
@@ -91,7 +117,7 @@ end
             return n_newton_coldstart += 1
         end
 
-        _, res_cold = ApproximateGPs.optimize_elbo(
+        _, res_cold = optimize_elbo(
             build_latent_gp,
             theta0,
             X,
@@ -108,7 +134,7 @@ end
             return n_newton_warmstart += 1
         end
 
-        _, res_warm = ApproximateGPs.optimize_elbo(
+        _, res_warm = optimize_elbo(
             build_latent_gp,
             theta0,
             X,

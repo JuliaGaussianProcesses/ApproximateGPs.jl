@@ -223,36 +223,6 @@ function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
     return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
 end
 
-function optimize_elbo(
-    build_latent_gp,
-    theta0,
-    xs,
-    ys,
-    optimizer,
-    optim_options;
-    newton_warmstart=true,
-    newton_callback=nothing,
-)
-    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
-    objective = build_laplace_objective!(
-        f, build_latent_gp, xs, ys; newton_warmstart, newton_callback
-    )
-
-    training_results = Optim.optimize(
-        objective,
-        θ -> only(Zygote.gradient(objective, θ)),
-        theta0,
-        optimizer,
-        optim_options;
-        inplace=false,
-    )
-
-    lf = build_latent_gp(training_results.minimizer)
-
-    f_post = laplace_posterior(lf(xs), ys; f_init=f)
-    return f_post, training_results
-end
-
 function laplace_f_cov(cache)
     # (K⁻¹ + W)⁻¹
     # = (√W⁻¹) (√W⁻¹ (K⁻¹ + W) √W⁻¹)⁻¹ (√W⁻¹)
