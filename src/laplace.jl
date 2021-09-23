@@ -261,17 +261,27 @@ function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior)
     return res_array
 end
 
-function laplace_posterior(lfx::AbstractGPs.LatentFiniteGP, ys; newton_kwargs...)
-    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+struct LaplaceApproximation{Tkw}
+    newton_kwargs::Tkw
+end
+
+LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation(newton_kwargs)
+
+function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+    return laplace_lml(lfx, ys; la.newton_kwargs...)
+end
+
+function AbstractGPs.posterior(
+    la::LaplaceApproximation, lfx::AbstractGPs.LatentFiniteGP, ys
+)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
     _, cache = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
-    f_post = LaplacePosteriorGP(lfx.fx, cache)
+    f_post = ApproxPosteriorGP(la, lfx.fx, cache)
+    # TODO: instead of lfx.fx, should we store lfx itself (including lik)?
     return f_post
 end
 
-struct LaplacePosteriorGP{Tprior,Tcache} <: AbstractGPs.AbstractGP
-    prior::Tprior  # TODO: this is lfx.fx; should we store lfx itself (including lik) instead?
-    cache::Tcache
-end
+const LaplacePosteriorGP = ApproxPosteriorGP{<:LaplaceApproximation}
 
 function _laplace_predict_intermediates(cache, prior_at_x, xnew)
     k_x_xnew = cov(prior_at_x.f, prior_at_x.x, xnew)

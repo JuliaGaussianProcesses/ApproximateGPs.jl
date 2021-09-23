@@ -43,7 +43,7 @@ function optimize_elbo(
     )
 
     lf = build_latent_gp(training_results.minimizer)
-    f_post = laplace_posterior(lf(xs), ys; f_init=f)
+    f_post = posterior(LaplaceApproximation(; f_init=f), lf(xs), ys)
     return f_post, training_results
 end
 

@@ -25,9 +25,10 @@ include("elbo.jl")
 using ForwardDiff
 using QuadGK  # TODO replace with FastGaussQuadrature
 
+export LaplaceApproximation
 export laplace_lml, build_laplace_objective, build_laplace_objective!
-export laplace_posterior
-export laplace_steps
+export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
+export laplace_steps  # TODO clean up/discard
 include("laplace.jl")
 include("ep.jl")
 
