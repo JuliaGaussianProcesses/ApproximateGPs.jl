@@ -56,17 +56,22 @@ function plot_samples!(Xgrid, fpost; samples=100, color=2)
     return plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
 end
 
-# Initialise the parameters
+# Initialise the hyperparameters
 
 theta0 = [0.0, 1.0]
 
 lf = build_latent_gp(theta0)
 
+lf.f.kernel
+
+# Plot samples from approximate posterior
+
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
 
+plot_data()
 plot_samples!(Xgrid, f_post)
 
-# Optimise the parameters
+# ## Optimise the parameters
 
 objective = build_laplace_objective(build_latent_gp, X, Y; newton_warmstart=true)
 
@@ -75,6 +80,12 @@ training_results = Optim.optimize(
 )
 
 lf2 = build_latent_gp(training_results.minimizer)
+
+lf2.f.kernel
+
+# Plot samples from approximate posterior for optimised hyperparameters
+
 f_post2 = posterior(LaplaceApproximation(), lf(X), Y)
 
+plot_data()
 plot_samples!(Xgrid, f_post2)
