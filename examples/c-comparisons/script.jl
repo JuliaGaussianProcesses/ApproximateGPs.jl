@@ -87,7 +87,7 @@ lf2.f.kernel
 
 # Plot samples from approximate posterior for optimised hyperparameters
 
-f_post2 = posterior(LaplaceApproximation(), lf2(X), Y)
+f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 
 p2 = plot_data()
 plot_samples!(Xgrid, f_post2)

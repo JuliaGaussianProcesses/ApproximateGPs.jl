@@ -28,9 +28,8 @@ function optimize_elbo(
     newton_warmstart=true,
     newton_callback=nothing,
 )
-    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
-    objective = build_laplace_objective!(
-        f, build_latent_gp, xs, ys; newton_warmstart, newton_callback
+    objective = build_laplace_objective(
+        build_latent_gp, xs, ys; newton_warmstart, newton_callback
     )
     objective_grad(θ) = only(Zygote.gradient(objective, θ))
 
@@ -39,7 +38,7 @@ function optimize_elbo(
     )
 
     lf = build_latent_gp(training_results.minimizer)
-    f_post = posterior(LaplaceApproximation(; f_init=f), lf(xs), ys)
+    f_post = posterior(LaplaceApproximation(; f_init=objective.f), lf(xs), ys)
     return f_post, training_results
 end
 
