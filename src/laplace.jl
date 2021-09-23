@@ -295,19 +295,19 @@ function _laplace_predict_intermediates(cache, prior_at_x, xnew)
 end
 
 function StatsBase.mean_and_var(f::LaplacePosteriorGP, x::AbstractVector)
-    f_mean, v = _laplace_predict_intermediates(f.cache, f.prior, x)
+    f_mean, v = _laplace_predict_intermediates(f.data, f.prior, x)
     f_var = var(f.prior.f, x) - vec(sum(v .^ 2; dims=1))
     return f_mean, f_var
 end
 
 function StatsBase.mean_and_cov(f::LaplacePosteriorGP, x::AbstractVector)
-    f_mean, v = _laplace_predict_intermediates(f.cache, f.prior, x)
+    f_mean, v = _laplace_predict_intermediates(f.data, f.prior, x)
     f_cov = cov(f.prior.f, x) - v' * v
     return f_mean, f_cov
 end
 
 function Statistics.mean(f::LaplacePosteriorGP, x::AbstractVector)
-    d_loglik = f.cache.d_loglik
+    d_loglik = f.data.d_loglik
     return mean(f.prior.f, x) + cov(f.prior.f, f.prior.x, x)' * d_loglik
 end
 
