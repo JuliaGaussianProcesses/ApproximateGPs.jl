@@ -1,3 +1,7 @@
+# workaround for https://github.com/JuliaDiff/ChainRulesCore.jl/issues/470 to avoid Zygote dependency
+ignore_ad(closure) = closure()
+@non_differentiable ignore_ad(closure)
+
 function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     # Ψ = log p(y|f) + log p(f)
     #   = loglik + log p(f)
@@ -51,7 +55,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
     f = f_init
     cache = nothing
     for i in 1:maxiter
-        Zygote.ignore() do
+        ignore_ad() do
             @debug "  - Newton iteration $i: f[1:3]=$(f[1:3])"
         end
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
@@ -60,7 +64,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
         end
 
         if isapprox(f, fnew)
-            Zygote.ignore() do
+            ignore_ad() do
                 @debug "  + converged"
             end
             #f = fnew
@@ -178,6 +182,47 @@ function _check_laplace_inputs(
     return dist_y_given_f, K, (; f_init, maxiter, newton_kwargs...)
 end
 
+function build_laplace_objective!(
+    f,
+    build_latent_gp,
+    xs,
+    ys;
+    newton_warmstart=true,
+    newton_callback=nothing,
+    newton_maxiter=100,
+)
+    initialize_f = true
+
+    function objective(theta)
+        lf = build_latent_gp(theta)
+        lfx = lf(xs)
+        ignore_ad() do
+            # Zygote does not like the try/catch within @info etc.
+            @debug "Hyperparameters: $theta"
+            if initialize_f
+                f .= mean(lfx.fx)
+            end
+        end
+        f_opt, lml = laplace_f_and_lml(
+            lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
+        )
+        ignore_ad() do
+            if newton_warmstart
+                f .= f_opt
+                initialize_f = false
+            end
+        end
+        return -lml
+    end
+
+    return objective
+end
+
+function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
+    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
+    return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
+end
+
 function optimize_elbo(
     build_latent_gp,
     theta0,
@@ -188,25 +233,10 @@ function optimize_elbo(
     newton_warmstart=true,
     newton_callback=nothing,
 )
-    lf = build_latent_gp(theta0)
-    f = mean(lf(xs).fx)  # will be mutated in-place to "warm-start" the Newton steps
-
-    function objective(theta)
-        Zygote.ignore() do
-            # Zygote does not like the try/catch within @info etc.
-            @debug "Hyperparameters: $theta"
-        end
-        lf = build_latent_gp(theta)
-        f_opt, lml = laplace_f_and_lml(
-            lf(xs), ys; f_init=f, maxiter=100, callback=newton_callback
-        )
-        Zygote.ignore() do
-            if newton_warmstart
-                f .= f_opt
-            end
-        end
-        return -lml
-    end
+    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
+    objective = build_laplace_objective!(
+        f, build_latent_gp, xs, ys; newton_warmstart, newton_callback
+    )
 
     training_results = Optim.optimize(
         objective,
