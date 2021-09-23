@@ -278,7 +278,8 @@ end
 
 function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
-    _, cache = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    _, cache = _newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    # TODO: should we run newton_inner_loop() and _laplace_train_intermediates() explicitly?
     f_post = ApproxPosteriorGP(la, lfx.fx, cache)
     # TODO: instead of lfx.fx, should we store lfx itself (including lik)?
     return f_post
