@@ -32,10 +32,11 @@ function optimize_elbo(
     objective = build_laplace_objective!(
         f, build_latent_gp, xs, ys; newton_warmstart, newton_callback
     )
+    objective_grad(θ) = only(Zygote.gradient(objective, θ))
 
     training_results = Optim.optimize(
         objective,
-        θ -> only(Zygote.gradient(objective, θ)),
+        objective_grad,
         theta0,
         optimizer,
         optim_options;
