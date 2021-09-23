@@ -137,8 +137,7 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
         # ∂K = df/dK Δf
         ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
 
-        #return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
-        return (∂self, NoTangent(), NoTangent(), ∂K)  # workaround until https://github.com/JuliaDiff/ChainRulesTestUtils.jl/pull/218 is merged
+        return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
     end
 
     return f_opt, newton_pullback
