@@ -35,12 +35,7 @@ function optimize_elbo(
     objective_grad(θ) = only(Zygote.gradient(objective, θ))
 
     training_results = Optim.optimize(
-        objective,
-        objective_grad,
-        theta0,
-        optimizer,
-        optim_options;
-        inplace=false,
+        objective, objective_grad, theta0, optimizer, optim_options; inplace=false
     )
 
     lf = build_latent_gp(training_results.minimizer)
