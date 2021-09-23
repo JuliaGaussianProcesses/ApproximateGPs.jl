@@ -22,10 +22,8 @@ include("svgp.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
 
-using Zygote
 using ForwardDiff
-using QuadGK
-using Optim
+using QuadGK  # TODO replace with FastGaussQuadrature
 
 export laplace_lml, build_laplace_objective, build_laplace_objective!
 export laplace_posterior
