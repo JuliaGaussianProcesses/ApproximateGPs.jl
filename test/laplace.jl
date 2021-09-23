@@ -69,16 +69,62 @@ end
 @testset "chainrule" begin
     xs = [0.2, 0.3, 0.7]
     ys = [1, 1, 0]
-    K = kernelmatrix(with_lengthscale(Matern52Kernel(), 0.3), xs)
-    test_frule(
-        ApproximateGPs.newton_inner_loop,
+    L = randn(3, 3)
+
+    function newton_inner_loop_from_L(dist_y_given_f, ys, L; kwargs...)
+        K = L'L
+        return ApproximateGPs.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
+    end
+
+    function ChainRulesCore.frule(
+        (Δself, Δdist_y_given_f, Δys, ΔL),
+        ::typeof(newton_inner_loop_from_L),
         dist_y_given_f,
         ys,
-        K;
-        fkwargs=(; f_init=zero(ys), maxiter=100),
-        rtol=0.01,
+        L;
+        kwargs...,
     )
-    #test_rrule(ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; fkwargs=(;f_init=zero(ys), maxiter=100), rtol=0.05)  # my rrule might still be broken
+        K = L'L
+        # K̇ = L̇'L + L'L̇
+        ΔK = ΔL'L + L'ΔL
+        return frule(
+            (Δself, Δdist_y_given_f, Δys, ΔK),
+            ApproximateGPs.newton_inner_loop,
+            dist_y_given_f,
+            ys,
+            K;
+            kwargs...,
+        )
+    end
+
+    function ChainRulesCore.rrule(
+        ::typeof(newton_inner_loop_from_L), dist_y_given_f, ys, L; kwargs...
+    )
+        K = L'L
+        f_opt, newton_from_K_pullback = rrule(
+            ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
+        )
+
+        function newton_from_L_pullback(Δf_opt)
+            (∂self, ∂dist_y_given_f, ∂ys, ∂K) = newton_from_K_pullback(Δf_opt)
+            # Re⟨K̄, K̇⟩ = Re⟨K̄, L̇'L + L'L̇⟩
+            # = Re⟨K̄, L̇'L⟩ + Re⟨K̄, L'L̇⟩
+            # = Re⟨K̄L', L̇'⟩ + Re⟨LK̄, L̇⟩
+            # = Re⟨LK̄', L̇⟩ + Re⟨LK̄, L̇⟩
+            # = Re⟨LK̄' + LK̄, L̇⟩
+            # = Re⟨L̄, L̇⟩
+            # L̄ = L(K̄' + K̄)
+            ∂L = @thunk(L * (∂K' + ∂K))
+
+            return (∂self, ∂dist_y_given_f, ∂ys, ∂L)
+        end
+
+        return f_opt, newton_from_L_pullback
+    end
+
+    fkwargs = (; f_init=zero(ys), maxiter=100)
+    test_frule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
+    test_rrule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
 end
 
 @testset "optimization" begin
