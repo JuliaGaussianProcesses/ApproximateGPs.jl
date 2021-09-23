@@ -1,6 +1,7 @@
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
 ApproximateGPs = "298c2ebc-0411-48ad-af38-99e88101b606"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
@@ -17,6 +18,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 AbstractGPs = "0.4, 0.5"
 ApproximateGPs = "0.1"
+ChainRulesCore = "1"
 ChainRulesTestUtils = "1"
 Distributions = "0.25"
 FiniteDifferences = "0.12"

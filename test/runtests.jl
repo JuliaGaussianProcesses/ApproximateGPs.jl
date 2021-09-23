@@ -11,6 +11,7 @@ using LinearAlgebra
 using PDMats
 using Optim
 using Zygote
+using ChainRulesCore
 using ChainRulesTestUtils
 using FiniteDifferences
 
