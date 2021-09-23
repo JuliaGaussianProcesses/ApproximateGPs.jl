@@ -34,9 +34,9 @@ ps = invlink.(fs)
 Y = [rand(Bernoulli(p)) for p in ps]
 
 function plot_data()
-    plot(xlims=extrema(Xgrid), xticks=0:6:24)
-    plot!(Xgrid, invlink ∘ f, label="true probabilities")
-    return scatter!(X, Y, label="observations", color=3)
+    plot(; xlims=extrema(Xgrid), xticks=0:6:24)
+    plot!(Xgrid, invlink ∘ f; label="true probabilities")
+    return scatter!(X, Y; label="observations", color=3)
 end
 
 plot_data()
