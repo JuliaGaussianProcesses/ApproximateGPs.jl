@@ -52,8 +52,10 @@ function build_latent_gp(theta)
 end
 
 function plot_samples!(Xgrid, fpost; samples=100, color=2)
-    fsamples = rand(fpost(Xgrid, 1e-8), samples)
-    return plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
+    fx = fpost(Xgrid, 1e-8)
+    fsamples = rand(fx, samples)
+    plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
+    return plot!(Xgrid, invlink.(mean(fx)); color, alpha=1, lw=2, label="")
 end
 
 # Initialise the hyperparameters
