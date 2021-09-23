@@ -11,7 +11,7 @@
 using ApproximateGPs
 using LinearAlgebra
 using Distributions
-using LogExpFunctions: logistic
+using LogExpFunctions: logistic, softplus
 #using ParameterHandling
 using Zygote
 using Optim
