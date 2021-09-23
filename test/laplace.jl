@@ -131,66 +131,50 @@ end
     X, Y = generate_data()
     theta0 = [0.0, 1.0]
 
-    function objective(theta)
-        lf = build_latent_gp(theta)
-        return -laplace_lml(lf(X), Y)
+    @testset "reference optimum" begin
+        function objective(theta)
+            lf = build_latent_gp(theta)
+            return -laplace_lml(lf(X), Y)
+        end
+
+        @testset "NelderMead" begin
+            expected_thetahat = [7.708967951453345, 1.5182348363613536]
+
+            res = Optim.optimize(objective, theta0, NelderMead())
+            #@info res
+
+            @test res.minimizer ≈ expected_thetahat
+        end
+
+        @testset "gradient-based" begin
+            expected_thetahat = [7.709076337653239, 1.51820292019697]
+
+            objective_grad(θ) = only(Zygote.gradient(objective, θ))
+            res = Optim.optimize(objective, objective_grad, theta0, LBFGS(); inplace=false)
+            #@info res
+
+            @test res.minimizer ≈ expected_thetahat
+        end
     end
 
-    @testset "NelderMead" begin
-        expected_thetahat = [7.708967951453345, 1.5182348363613536]
-
-        res = Optim.optimize(objective, theta0, NelderMead(); inplace=false)
-        #@info res
-
-        @test res.minimizer ≈ expected_thetahat
-    end
-    @testset "gradient-based" begin
-        expected_thetahat = [7.709076337653239, 1.51820292019697]
-
-        res = Optim.optimize(
-            objective,
-            θ -> only(Zygote.gradient(objective, θ)),
-            theta0,
-            LBFGS();
-            inplace=false,
-        )
-        #@info res
-
-        @test res.minimizer ≈ expected_thetahat
+    @testset "warmstart vs coldstart" begin
+        args = (build_latent_gp, theta0, X, Y, LBFGS(), Optim.Options(; iterations=1000))
 
         n_newton_coldstart = 0
-        function count_coldstart!(_, _)
-            return n_newton_coldstart += 1
-        end
+        count_coldstart!(_, _) = (n_newton_coldstart += 1)
 
         _, res_cold = optimize_elbo(
-            build_latent_gp,
-            theta0,
-            X,
-            Y,
-            LBFGS(),
-            Optim.Options(; iterations=1000);
-            newton_warmstart=false,
-            newton_callback=count_coldstart!,
+            args...; newton_warmstart=false, newton_callback=count_coldstart!
         )
-        @info "Coldstart:\n$res_cold"
+        #@info "Coldstart:\n$res_cold"
 
         n_newton_warmstart = 0
-        function count_warmstart!(_, _)
-            return n_newton_warmstart += 1
-        end
+        count_warmstart!(_, _) = (n_newton_warmstart += 1)
 
         _, res_warm = optimize_elbo(
-            build_latent_gp,
-            theta0,
-            X,
-            Y,
-            LBFGS(),
-            Optim.Options(; iterations=1000);
-            newton_warmstart=true,
-            newton_callback=count_warmstart!,
+            args...; newton_warmstart=true, newton_callback=count_warmstart!
         )
-        @info "Warmstart:\n$res_warm"
+        #@info "Warmstart:\n$res_warm"
 
         @info "Newton steps: $n_newton_coldstart (coldstart) vs $n_newton_warmstart (warmstart)"
         @test n_newton_coldstart - n_newton_warmstart > 100
