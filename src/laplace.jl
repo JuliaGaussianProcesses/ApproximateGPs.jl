@@ -20,7 +20,7 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     b = W * f + d_ll
     a = b - Wsqrt * (B_ch \ (Wsqrt * K * b))
 
-    return (; W, Wsqrt, K, a, loglik=ll, d_loglik=d_ll, B_ch)
+    return (; K, f, W, Wsqrt, loglik=ll, d_loglik=d_ll, B_ch, a)
 end
 
 # dist_y_given_f(f) = Bernoulli(logistic(f))
@@ -234,29 +234,34 @@ function laplace_f_cov(cache)
     return Wsqrt_inv * (I - inv(B_ch)) * Wsqrt_inv
 end
 
-function LaplaceResult(f, fnew, cache)
-    # TODO should we use fnew?
+function LaplaceResult(fnew, cache)
+    f = cache.f
     f_cov = laplace_f_cov(cache)
     q = MvNormal(f, AbstractGPs._symmetric(f_cov))
     lml_approx = _laplace_lml(f, cache)
 
-    return (; f, f_cov, q, lml_approx, cache)
+    return (; fnew, f_cov, q, lml_approx, cache...)
 end
 
-function laplace_steps(dist_y_given_f, f_prior, ys; maxiter=100, f=mean(f_prior))
-    @assert mean(f_prior) == zero(mean(f_prior))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(f_prior) == length(f)
+"""
+    laplace_steps(lfx::LatentFiniteGP, ys; newton_kwargs...)
 
-    K = cov(f_prior)
+For demonstration purposes: returns an array of all the intermediate
+approximations of each Newton step.
+
+If you are only interested in the actual posterior, use
+[`posterior(::LaplaceApproximation, ::LatentFiniteGP, ::AbstractArray)`](@ref).
+"""
+function laplace_steps(lfx::LatentFiniteGP, ys; newton_kwargs...)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
 
     res_array = []
 
     function store_result!(fnew, cache)
-        push!(res_array, LaplaceResult(copy(f), fnew, cache))
-        return f .= fnew
+        push!(res_array, LaplaceResult(fnew, cache))
     end
 
-    _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init=f, maxiter, callback=store_result!)
+    _ = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs..., callback=store_result!)
 
     return res_array
 end
@@ -272,7 +277,7 @@ function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
 end
 
 function AbstractGPs.posterior(
-    la::LaplaceApproximation, lfx::AbstractGPs.LatentFiniteGP, ys
+    la::LaplaceApproximation, lfx::LatentFiniteGP, ys
 )
     dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
     _, cache = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
