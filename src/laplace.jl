@@ -258,7 +258,7 @@ function laplace_steps(lfx::LatentFiniteGP, ys; newton_kwargs...)
     res_array = []
 
     function store_result!(fnew, cache)
-        push!(res_array, LaplaceResult(fnew, cache))
+        return push!(res_array, LaplaceResult(fnew, cache))
     end
 
     _ = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs..., callback=store_result!)
@@ -276,9 +276,7 @@ function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     return laplace_lml(lfx, ys; la.newton_kwargs...)
 end
 
-function AbstractGPs.posterior(
-    la::LaplaceApproximation, lfx::LatentFiniteGP, ys
-)
+function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
     _, cache = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
     f_post = ApproxPosteriorGP(la, lfx.fx, cache)
