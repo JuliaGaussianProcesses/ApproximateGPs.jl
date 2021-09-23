@@ -24,18 +24,19 @@ Random.seed!(1);
 
 # ## Generate some training data
 
-Xgrid = -5:0.1:29
+Xgrid = -4:0.1:29
 X = range(0, 23.5; length=48)
-fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
+f(x) = 3 * sin(10 + 0.6x) + sin(0.1x) - 1
+fs = f.(X)
 # invlink = normcdf
 invlink = logistic
 ps = invlink.(fs)
 Y = [rand(Bernoulli(p)) for p in ps]
 
 function plot_data()
-    plot()
-    plot!(X, ps)
-    return scatter!(X, Y)
+    plot(xlims=extrema(Xgrid), xticks=0:6:24)
+    plot!(Xgrid, invlink ∘ f, label="true probabilities")
+    return scatter!(X, Y, label="observations", color=3)
 end
 
 plot_data()
@@ -54,13 +55,13 @@ end
 function plot_samples!(Xgrid, fpost; samples=100, color=2)
     fx = fpost(Xgrid, 1e-8)
     fsamples = rand(fx, samples)
-    plot!(Xgrid, invlink.(fsamples); color, alpha=0.3, label="")
-    return plot!(Xgrid, invlink.(mean(fx)); color, alpha=1, lw=2, label="")
+    plot!(Xgrid, invlink.(fsamples); color, alpha=0.2, label="")
+    return plot!(Xgrid, invlink.(mean(fx)); color, lw=2, label="posterior fit")
 end
 
 # Initialise the hyperparameters
 
-theta0 = [0.0, 1.0]
+theta0 = [0.0, 3.0]
 
 lf = build_latent_gp(theta0)
 
@@ -70,7 +71,7 @@ lf.f.kernel
 
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
 
-plot_data()
+p1 = plot_data()
 plot_samples!(Xgrid, f_post)
 
 # ## Optimise the parameters
@@ -89,5 +90,5 @@ lf2.f.kernel
 
 f_post2 = posterior(LaplaceApproximation(), lf2(X), Y)
 
-plot_data()
+p2 = plot_data()
 plot_samples!(Xgrid, f_post2)
