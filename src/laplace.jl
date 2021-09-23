@@ -250,7 +250,9 @@ For demonstration purposes: returns an array of all the intermediate
 approximations of each Newton step.
 
 If you are only interested in the actual posterior, use
-[`posterior(::LaplaceApproximation, ::LatentFiniteGP, ::AbstractArray)`](@ref).
+`posterior(::LaplaceApproximation, ...`.
+
+TODO figure out how to get the `@ref` to work...
 """
 function laplace_steps(lfx::LatentFiniteGP, ys; newton_kwargs...)
     dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
