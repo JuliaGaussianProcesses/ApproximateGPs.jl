@@ -11,7 +11,7 @@
 using ApproximateGPs
 using LinearAlgebra
 using Distributions
-using LogExpFunctions: logistic, softplus
+using LogExpFunctions: logistic, softplus, invsoftplus
 #using ParameterHandling
 using Zygote
 using Optim
@@ -28,7 +28,7 @@ Xgrid = -4:0.1:29
 X = range(0, 23.5; length=48)
 f(x) = 3 * sin(10 + 0.6x) + sin(0.1x) - 1
 fs = f.(X)
-invlink = logistic  # could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
+const invlink = logistic  # could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
 ps = invlink.(fs)
 Y = [rand(Bernoulli(p)) for p in ps]
 
@@ -42,7 +42,7 @@ plot_data()
 
 # ## Creating the latent GP
 
-dist_y_given_f(f) = Bernoulli(invlink(f))
+const dist_y_given_f(f) = Bernoulli(invlink(f))
 
 function build_latent_gp(theta)
     variance = softplus(theta[1])
@@ -60,7 +60,7 @@ end
 
 # Initialise the hyperparameters
 
-theta0 = [0.0, 3.0]
+theta0 = [invsoftplus(1.0), invsoftplus(5.0)]
 
 lf = build_latent_gp(theta0)
 

@@ -2,6 +2,17 @@
 ignore_ad(closure) = closure()
 @non_differentiable ignore_ad(closure)
 
+struct LaplaceCache{Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky}
+    K::Tm
+    f::Tv
+    W::Td
+    Wsqrt::Td
+    loglik::Tf
+    d_loglik::Tv
+    B_ch::Tc
+    a::Tv
+end
+
 function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     # Ψ = log p(y|f) + log p(f)
     #   = loglik + log p(f)
@@ -20,23 +31,22 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     b = W * f + d_ll
     a = b - Wsqrt * (B_ch \ (Wsqrt * K * b))
 
-    return (; K, f, W, Wsqrt, loglik=ll, d_loglik=d_ll, B_ch, a)
+    #return (; K, f, W, Wsqrt, loglik=ll, d_loglik=d_ll, B_ch, a)
+    return LaplaceCache(K, f, W, Wsqrt, ll, d_ll, B_ch, a)
 end
 
 # dist_y_given_f(f) = Bernoulli(logistic(f))
 
 function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
-    function per_observation(fhat, y)
-        ll(f) = logpdf(dist_y_given_f(f), y)
-        d_ll(f) = ForwardDiff.derivative(ll, f)
-        d2_ll(f) = ForwardDiff.derivative(d_ll, f)
-        return ll(fhat), d_ll(fhat), d2_ll(fhat)
-    end
-    vec_of_l_d_d2 = map(per_observation, f, ys)
-    ls = map(res -> res[1], vec_of_l_d_d2)
+    l(_f, _y) = logpdf(dist_y_given_f(_f), _y)
+    dl(_f, _y) = ForwardDiff.derivative(__f -> l(__f, _y), _f)
+    d2l(_f, _y) = ForwardDiff.derivative(__f -> dl(__f, _y), _f)
+
+    ls = map(l, f, ys)
+    d_ll = map(dl, f, ys)
+    d2_ll = map(d2l, f, ys)
+
     ll = sum(ls)
-    d_ll = map(res -> res[2], vec_of_l_d_d2)
-    d2_ll = map(res -> res[3], vec_of_l_d_d2)
     return ll, d_ll, d2_ll
 end
 
@@ -55,8 +65,9 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
     f = f_init
     cache = nothing
     for i in 1:maxiter
+        f_debug = f[1:3]  # needs to be outside the ignore_ad() for type stability
         ignore_ad() do
-            @debug "  - Newton iteration $i: f[1:3]=$(f[1:3])"
+            @debug "  - Newton iteration $i: f[1:3]=$f_debug"
         end
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
         if !isnothing(callback)
@@ -272,7 +283,7 @@ struct LaplaceApproximation{Tkw}
     newton_kwargs::Tkw
 end
 
-LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation(newton_kwargs)
+LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation((; newton_kwargs...))
 
 function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     return laplace_lml(lfx, ys; la.newton_kwargs...)
