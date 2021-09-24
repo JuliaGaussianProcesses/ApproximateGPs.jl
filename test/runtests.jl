@@ -14,6 +14,7 @@ using Zygote
 using ChainRulesCore
 using ChainRulesTestUtils
 using FiniteDifferences
+using QuadGK
 
 const GROUP = get(ENV, "GROUP", "All")
 const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
@@ -43,5 +44,11 @@ include("test_utils.jl")
         include("laplace.jl")
         println(" ")
         @info "Ran laplace tests"
+    end
+
+    @testset "EP" begin
+        include("ep.jl")
+        println(" ")
+        @info "Ran ep tests"
     end
 end

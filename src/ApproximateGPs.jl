@@ -23,7 +23,6 @@ include("expected_loglik.jl")
 include("elbo.jl")
 
 using ForwardDiff
-using QuadGK  # TODO replace with FastGaussQuadrature
 
 export LaplaceApproximation
 export laplace_lml, build_laplace_objective, build_laplace_objective!

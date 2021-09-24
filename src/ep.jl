@@ -53,12 +53,16 @@ function epsite_pdf(site, f)
     return site.Z * pdf(epsite_dist(site), f)
 end
 
-function moment_match(cav_i::UnivariateDistribution, lik_eval_i)
-    lower = mean(cav_i) - 20 * std(cav_i)
-    upper = mean(cav_i) + 20 * std(cav_i)
-    m0, _ = quadgk(f -> pdf(cav_i, f) * lik_eval_i(f), lower, upper)
-    m1, _ = quadgk(f -> f * pdf(cav_i, f) * lik_eval_i(f), lower, upper)
-    m2, _ = quadgk(f -> f^2 * pdf(cav_i, f) * lik_eval_i(f), lower, upper)
+function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=20)
+    xs, ws = gausshermite(n_points)
+    fs = √2 * std(cav_i) * xs .+ mean(cav_i)
+    scale = (1 / √π)
+    lik_ws = lik_eval_i.(fs) .* ws
+    fs_lik_ws = fs .* lik_ws
+    fs²_lik_ws = fs .* fs_lik_ws
+    m0 = scale * sum(lik_ws)
+    m1 = scale * sum(fs_lik_ws)
+    m2 = scale * sum(fs²_lik_ws)
     matched_Z = m0
     matched_mean = m1 / m0
     matched_var = m2 / m0 - matched_mean^2
