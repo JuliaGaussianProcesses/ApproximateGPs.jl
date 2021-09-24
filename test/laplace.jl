@@ -43,12 +43,14 @@ function optimize_elbo(
 end
 
 @testset "Gaussian" begin
-    # should check for convergence in one step, and agreement with exact GPR
+    # TODO: check for convergence in one step, and agreement with exact GPR
+    # move to test/equivalences.jl?
 end
 
 @testset "gradients" begin
     X, Y = generate_data()
     @testset "laplace_lml" begin
+        Random.seed!(123)
         theta0 = rand(2)
         function objective(theta)
             lf = build_latent_gp(theta)
@@ -62,6 +64,8 @@ end
 end
 
 @testset "chainrule" begin
+    Random.seed!(54321)
+
     xs = [0.2, 0.3, 0.7]
     ys = [1, 1, 0]
     L = randn(3, 3)
