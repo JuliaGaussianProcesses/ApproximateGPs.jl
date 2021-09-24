@@ -2,7 +2,9 @@
 ignore_ad(closure) = closure()
 @non_differentiable ignore_ad(closure)
 
-struct LaplaceCache{Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky}
+struct LaplaceCache{
+    Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
+}
     K::Tm
     f::Tv
     W::Td
