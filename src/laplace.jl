@@ -62,29 +62,25 @@ function _laplace_lml(f, cache)
 end
 
 function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
+    @assert maxiter >= 1
     f = f_init
     cache = nothing
     for i in 1:maxiter
-        f_debug = f[1:3]  # needs to be outside the ignore_ad() for type stability
-        ignore_ad() do
-            @debug "  - Newton iteration $i: f[1:3]=$f_debug"
-        end
+        @debug "  - Newton iteration $i: f[1:3]=$(f[1:3])"
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
         if !isnothing(callback)
             callback(fnew, cache)
         end
 
         if isapprox(f, fnew)
-            ignore_ad() do
-                @debug "  + converged"
-            end
+            @debug "  + converged"
             #f = fnew
             break  # converged
         else
             f = fnew
         end
     end
-    return f, cache
+    return f, something(cache)
 end
 
 # Currently, we have a separate function that returns only f_opt to simplify frule/rrule
