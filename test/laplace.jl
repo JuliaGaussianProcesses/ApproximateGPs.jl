@@ -117,7 +117,7 @@ end
         return f_opt, newton_from_L_pullback
     end
 
-    fkwargs = (; f_init=zero(ys), maxiter=100)
+    fkwargs = (; f_init=zeros(length(ys)), maxiter=100)
     test_frule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
     test_rrule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
 end
