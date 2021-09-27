@@ -35,6 +35,8 @@ which also executes the code and generates embedded plots etc. in the same way a
 ## Add a new example
 
 Create a new subdirectory in here, and put your code in a file called `script.jl` so that it will get picked up by the automatic docs build.
+NB the examples in the resulting documentation are ordered alphabetically by subdirectory name, so make sure to
+follow the existing naming convention of prepending the next available letter to the subdirectory name - `examples/a-...`, `examples/b-...` etc.
 
 Every example uses a separate project environment. Therefore you should also create a new
 project environment in the directory of the example that contains all packages required by your script.
@@ -44,10 +46,11 @@ From a Julia REPL started in your example script's directory, you can run
 ```julia
 julia> ] activate .
 julia> ] add Literate
-julia> # the following line adds a dependency on KernelFunctions that is based on the local directories, not a hash:
+julia> # the following line adds a dependency on ApproximateGPs that is based on the local directories, not a hash:
 julia> ] dev ../..
 julia> # add any other example-specific dependencies
 ```
 to generate the project files.
 
 Make sure to commit both the `Project.toml` and the `Manifest.toml` file when you want to contribute your example in a pull request.
+
