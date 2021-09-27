@@ -1,18 +1,19 @@
 # workaround for https://github.com/JuliaDiff/ChainRulesCore.jl/issues/470 to avoid Zygote dependency
+# will be replaced by https://github.com/JuliaDiff/ChainRulesCore.jl/pull/229
 ignore_ad(closure) = closure()
 @non_differentiable ignore_ad(closure)
 
 struct LaplaceCache{
     Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
 }
-    K::Tm
-    f::Tv
-    W::Td
-    Wsqrt::Td
-    loglik::Tf
-    d_loglik::Tv
-    B_ch::Tc
-    a::Tv
+    K::Tm  # kernel matrix
+    f::Tv  # mode of posterior p(f | y)
+    W::Td  # diagonal matrix of ∂²/∂fᵢ² loglik
+    Wsqrt::Td  # sqrt(W)
+    loglik::Tf  # ∑ᵢlog p(yᵢ|fᵢ)
+    d_loglik::Tv  # ∂/∂fᵢloglik
+    B_ch::Tc  # cholesky(I + Wsqrt * K * Wsqrt)
+    a::Tv  # K⁻¹ f
 end
 
 function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
@@ -283,6 +284,14 @@ end
 
 LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation((; newton_kwargs...))
 
+"""
+    approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+
+Compute an approximation to the log of the marginal likelihood (also known as
+"evidence"), which can be used to optimise the hyperparameters of `lfx`.
+
+This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
+"""
 function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     return laplace_lml(lfx, ys; la.newton_kwargs...)
 end
@@ -292,7 +301,6 @@ function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys
     _, cache = _newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
     # TODO: should we run newton_inner_loop() and _laplace_train_intermediates() explicitly?
     f_post = ApproxPosteriorGP(la, lfx.fx, cache)
-    # TODO: instead of lfx.fx, should we store lfx itself (including lik)?
     return f_post
 end
 

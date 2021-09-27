@@ -29,6 +29,5 @@ export laplace_lml, build_laplace_objective, build_laplace_objective!
 export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
 export laplace_steps  # TODO clean up/discard
 include("laplace.jl")
-include("ep.jl")
 
 end
