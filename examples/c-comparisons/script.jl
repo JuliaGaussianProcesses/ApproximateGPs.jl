@@ -77,6 +77,11 @@ lf.f.kernel
 
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
 
+# This finds the mode of the posterior (for the given values of the
+# hyperparameters) using iterated Newton's method (i.e. solving an optimisation
+# problem) and then constructs a Gaussian approximation to the posterior by
+# matching the curvature at the mode.
+
 # Let's plot samples from this approximate posterior:
 
 function plot_samples!(Xgrid, fpost; samples=100, color=2)
@@ -89,7 +94,9 @@ end
 p1 = plot_data()
 plot_samples!(Xgrid, f_post)
 
-# We can improve this fit by optimising the hyperparameters.
+# We can improve this fit by optimising the hyperparameters. For exact Gaussian
+# process regression, the maximization objective is the marginal likelihood.
+# Here, we can only optimise an _approximation_ to the marginal likelihood.
 
 # ## Optimise the parameters
 #
