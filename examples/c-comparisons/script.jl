@@ -50,15 +50,15 @@ plot_data()
 # likelihood".
 
 function build_latent_gp(theta)
-    # `theta` is unconstrained, but kernel variance and lengthscale must be positive:
+    ## `theta` is unconstrained, but kernel variance and lengthscale must be positive:
     variance = softplus(theta[1])
     lengthscale = softplus(theta[2])
 
     kernel = variance * with_lengthscale(SqExponentialKernel(), lengthscale)
 
     dist_y_given_f = BernoulliLikelihood()  # has logistic invlink by default
-    # We could also be explicit and define it as a function:
-    # dist_y_given_f(f) = Bernoulli(invlink(f))
+    ## We could also be explicit and define it as a function:
+    ## dist_y_given_f(f) = Bernoulli(invlink(f))
 
     jitter = 1e-8  # required for numeric stability [TODO: where to explain this better?]
     return LatentGP(GP(kernel), dist_y_given_f, jitter)
