@@ -21,7 +21,7 @@ default(; legend=:outertopright, size=(700, 400))
 using Random
 Random.seed!(1);
 
-# ## Generate some training data
+# ## Generate training data
 #
 # We create a binary-labelled toy dataset:
 
@@ -46,7 +46,7 @@ end
 
 plot_data()
 
-# ## Creating the latent GP
+# ## Create a latent GP
 # 
 # Here we write a function that creates our latent GP prior, given the
 # hyperparameter vector `theta`. Compared to a "vanilla" GP, the `LatentGP`
@@ -103,7 +103,7 @@ plot_samples!(Xgrid, f_post)
 # process regression, the maximization objective is the marginal likelihood.
 # Here, we can only optimise an _approximation_ to the marginal likelihood.
 
-# ## Optimise the parameters
+# ## Optimise the hyperparameters
 #
 # ApproximateGPs provides a convenience function `build_laplace_objective` that
 # constructs an objective function for optimising the hyperparameters, based on
@@ -122,13 +122,13 @@ lf2 = build_latent_gp(training_results.minimizer)
 
 lf2.f.kernel
 
-# Finally, we need to obtain the posterior given the observations again:
+# Finally, we need to construct again the posterior given the observations for the latent GP with optimised hyperparameters:
 
 f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 
-# `f_init=objective.f` let's the Laplace approximation "warm-start" at the last
-# point of the inner-loop Newton optimisation; `objective.f` is a field on the
-# `objective` closure.
+# By passing `f_init=objective.f` we let the Laplace approximation "warm-start"
+# at the last point of the inner-loop Newton optimisation; `objective.f` is a
+# field on the `objective` closure.
 
 # Let's plot samples from the approximate posterior for the optimised hyperparameters:
 
