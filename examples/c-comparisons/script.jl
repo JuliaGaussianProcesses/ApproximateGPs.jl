@@ -67,7 +67,7 @@ function build_latent_gp(theta)
 
     jitter = 1e-8  # required for numeric stability [TODO: where to explain this better?]
     return LatentGP(GP(kernel), dist_y_given_f, jitter)
-end
+end;
 
 # We define a latent GP at our initial hyperparameter values, here with
 # variance 1.0 and lengthscale 5.0:
@@ -78,7 +78,8 @@ lf = build_latent_gp(theta0)
 
 lf.f.kernel
 
-# We can now compute the posterior `p(f | y)` under the Laplace approximation:
+# We can now compute the Laplace approximation ``q(f)`` to the true posterior
+# ``p(f | y)``:
 
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
 
@@ -108,9 +109,10 @@ plot_samples!(Xgrid, f_post)
 # ApproximateGPs provides a convenience function `build_laplace_objective` that
 # constructs an objective function for optimising the hyperparameters, based on
 # the Laplace approximation to the log marginal likelihood.
-# We pass this objective to Optim.jl's LBFGS optimiser:
 
-objective = build_laplace_objective(build_latent_gp, X, Y)
+objective = build_laplace_objective(build_latent_gp, X, Y);
+
+# We pass this objective to Optim.jl's LBFGS optimiser:
 
 training_results = Optim.optimize(
     objective, θ -> only(Zygote.gradient(objective, θ)), theta0, LBFGS(); inplace=false
@@ -122,7 +124,8 @@ lf2 = build_latent_gp(training_results.minimizer)
 
 lf2.f.kernel
 
-# Finally, we need to construct again the posterior given the observations for the latent GP with optimised hyperparameters:
+# Finally, we need to construct again the (approximate) posterior given the
+# observations for the latent GP with optimised hyperparameters:
 
 f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 
