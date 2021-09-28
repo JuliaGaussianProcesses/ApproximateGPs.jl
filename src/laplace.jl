@@ -1,8 +1,3 @@
-# workaround for https://github.com/JuliaDiff/ChainRulesCore.jl/issues/470 to avoid Zygote dependency
-# will be replaced by https://github.com/JuliaDiff/ChainRulesCore.jl/pull/229
-ignore_ad(closure) = closure()
-@non_differentiable ignore_ad(closure)
-
 struct LaplaceCache{
     Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
 }
@@ -215,9 +210,10 @@ function build_laplace_objective!(
     function objective(args...)
         lf = build_latent_gp(args...)
         lfx = lf(xs)
-        ignore_ad() do
+        ignore_derivatives() do
             # Zygote does not like the try/catch within @info etc.
             @debug "Objective arguments: $args"
+            # Zygote does not like in-place assignments either
             if initialize_f
                 f .= mean(lfx.fx)
             end
@@ -225,7 +221,7 @@ function build_laplace_objective!(
         f_opt, lml = laplace_f_and_lml(
             lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
         )
-        ignore_ad() do
+        ignore_derivatives() do
             if newton_warmstart
                 f .= f_opt
                 initialize_f = false
