@@ -4,6 +4,145 @@
 # - http://www.gaussianprocess.org/gpml/chapters/RW3.pdf
 # - http://www.gaussianprocess.org/gpml/chapters/RW5.pdf
 
+struct LaplaceApproximation{Tkw}
+    newton_kwargs::Tkw
+end
+
+LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation((; newton_kwargs...))
+
+"""
+    approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+
+Compute an approximation to the log of the marginal likelihood (also known as
+"evidence"), which can be used to optimise the hyperparameters of `lfx`.
+
+This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
+"""
+function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+    return laplace_lml(lfx, ys; la.newton_kwargs...)
+end
+
+"""
+    posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+
+Construct a Gaussian approximation `q(f)` to the posterior `p(f | y)` using the
+Laplace approximation. Solves for the mode of the posterior using Newton's
+method.
+"""
+function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
+    _, cache = _newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    # TODO: should we run newton_inner_loop() and _laplace_train_intermediates() explicitly?
+    f_post = ApproxPosteriorGP(la, lfx.fx, cache)
+    return f_post  # TODO return LatentGP(f_post, lfx.lik, lfx.fx.Σy)
+end
+
+"""
+    build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
+
+Construct a closure that computes the minimisation objective for optimising
+hyperparameters of the latent GP in the Laplace approximation. The returned
+closure passes its arguments to `build_latent_gp`, which must return the
+`LatentGP` prior.
+
+# Keyword arguments
+
+- `newton_warmstart=true`: (default) begin Newton optimisation at the mode of
+  the previous call to the objective
+- `newton_callback`: called as `newton_callback(fnew, cache)` after each Newton step
+- `newton_maxiter=100`: maximum number of Newton steps.
+"""
+function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
+    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
+    return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
+end
+
+function build_laplace_objective!(
+    f,
+    build_latent_gp,
+    xs,
+    ys;
+    newton_warmstart=true,
+    newton_callback=nothing,
+    newton_maxiter=100,
+)
+    initialize_f = true
+
+    function objective(args...)
+        lf = build_latent_gp(args...)
+        lfx = lf(xs)
+        ignore_derivatives() do
+            # Zygote does not like the try/catch within @info etc.
+            @debug "Objective arguments: $args"
+            # Zygote does not like in-place assignments either
+            if initialize_f
+                f .= mean(lfx.fx)
+            end
+        end
+        f_opt, lml = laplace_f_and_lml(
+            lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
+        )
+        ignore_derivatives() do
+            if newton_warmstart
+                f .= f_opt
+                initialize_f = false
+            end
+        end
+        return -lml
+    end
+
+    return objective
+end
+
+"""
+    laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+
+Compute the mode of the posterior and the Laplace approximation to the log
+marginal likelihood.
+"""
+function laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+    f_opt = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    lml = laplace_lml(dist_y_given_f, ys, K, f_opt)
+    return f_opt, lml
+end
+
+"""
+    laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+
+Compute the Laplace approximation to the log marginal likelihood.
+"""
+function laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
+    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
+    return laplace_lml(dist_y_given_f, ys, K; newton_kwargs...)
+end
+
+function laplace_lml(
+    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter=100, newton_kwargs...
+)
+    f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
+    return laplace_lml(dist_y_given_f, ys, K, f_opt)
+end
+
+function laplace_lml(dist_y_given_f, ys, K, f_opt)
+    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
+    return _laplace_lml(f_opt, cache)
+end
+
+function _check_laplace_inputs(
+    lfx::LatentFiniteGP, ys; f_init=nothing, maxiter=100, newton_kwargs...
+)
+    fx = lfx.fx
+    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
+    @assert length(ys) == length(fx)
+    dist_y_given_f = lfx.lik
+    K = cov(fx)
+    if isnothing(f_init)
+        f_init = mean(fx)
+    end
+    return dist_y_given_f, K, (; f_init, maxiter, newton_kwargs...)
+end
+
 struct LaplaceCache{
     Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
 }
@@ -61,11 +200,13 @@ end
 
 function _newton_step(dist_y_given_f, ys, K, f)
     cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f)
+    # inner loop iteration of RW Algorithm 3.1, line 8
     fnew = K * cache.a
     return fnew, cache
 end
 
 function _laplace_lml(f, cache)
+    # inner loop iteration of RW Algorithm 3.1, line 10
     # -a' * f / 2 + loglik - sum(log.(diag(B_ch.L)))
     return -cache.a' * f / 2 + cache.loglik - sum(log.(diag(cache.B_ch.L)))
 end
@@ -90,6 +231,26 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
         end
     end
     return f, something(cache)
+end
+
+function ChainRulesCore.frule(Δargs, ::typeof(_newton_inner_loop), args...; kwargs...)
+    return _newton_inner_loop_no_gradient()
+end
+function ChainRulesCore.rrule(::typeof(_newton_inner_loop), args...; kwargs...)
+    return _newton_inner_loop_no_gradient()
+end
+function _newton_inner_loop_no_derivative()
+    # It's important that we don't simply call _newton_inner_loop and pass the
+    # resulting cache directly to _laplace_lml. This would result in the wrong
+    # gradients. Instead, in newton_inner_loop we return only f_opt, which will
+    # have the correct gradients thanks to the custom frule/rrule for
+    # newton_inner_loop. The f_opt form of laplace_lml will then explicitly
+    # call _laplace_train_intermediates, which allows the AD system to
+    # correctly compute the gradients.
+    return error(
+        "Do not try to compute the derivatives of _newton_inner_loop directly. " *
+        "Instead, call newton_inner_loop, which has the correct frule/rrule.",
+    )
 end
 
 # Currently, we have a separate function that returns only f_opt to simplify frule/rrule
@@ -164,106 +325,6 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
     return f_opt, newton_pullback
 end
 
-function laplace_lml(dist_y_given_f, ys, K, f_opt)
-    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
-    return _laplace_lml(f_opt, cache)
-end
-
-function laplace_lml(
-    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter=100, newton_kwargs...
-)
-    f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
-    return laplace_lml(dist_y_given_f, ys, K, f_opt)
-end
-
-"""
-    laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
-
-Compute the Laplace approximation to the log marginal likelihood.
-"""
-function laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
-    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
-    return laplace_lml(dist_y_given_f, ys, K; newton_kwargs...)
-end
-
-function laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
-    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; newton_kwargs...)
-    f_opt = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
-    lml = laplace_lml(dist_y_given_f, ys, K, f_opt)
-    return f_opt, lml
-end
-
-function _check_laplace_inputs(
-    lfx::LatentFiniteGP, ys; f_init=nothing, maxiter=100, newton_kwargs...
-)
-    fx = lfx.fx
-    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(fx)
-    dist_y_given_f = lfx.lik
-    K = cov(fx)
-    if isnothing(f_init)
-        f_init = mean(fx)
-    end
-    return dist_y_given_f, K, (; f_init, maxiter, newton_kwargs...)
-end
-
-function build_laplace_objective!(
-    f,
-    build_latent_gp,
-    xs,
-    ys;
-    newton_warmstart=true,
-    newton_callback=nothing,
-    newton_maxiter=100,
-)
-    initialize_f = true
-
-    function objective(args...)
-        lf = build_latent_gp(args...)
-        lfx = lf(xs)
-        ignore_derivatives() do
-            # Zygote does not like the try/catch within @info etc.
-            @debug "Objective arguments: $args"
-            # Zygote does not like in-place assignments either
-            if initialize_f
-                f .= mean(lfx.fx)
-            end
-        end
-        f_opt, lml = laplace_f_and_lml(
-            lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
-        )
-        ignore_derivatives() do
-            if newton_warmstart
-                f .= f_opt
-                initialize_f = false
-            end
-        end
-        return -lml
-    end
-
-    return objective
-end
-
-"""
-    build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
-
-Construct a closure that computes the minimisation objective for optimising
-hyperparameters of the latent GP in the Laplace approximation. The returned
-closure passes its arguments to `build_latent_gp`, which must return the
-`LatentGP` prior.
-
-# Keyword arguments
-
-- `newton_warmstart=true`: (default) begin Newton optimisation at the mode of
-  the previous call to the objective
-- `newton_callback`: called as `newton_callback(fnew, cache)` after each Newton step
-- `newton_maxiter=100`: maximum number of Newton steps.
-"""
-function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
-    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
-    return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
-end
-
 """
     laplace_f_cov(cache)
 
@@ -314,39 +375,6 @@ function laplace_steps(lfx::LatentFiniteGP, ys; newton_kwargs...)
     _ = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs..., callback=store_result!)
 
     return res_array
-end
-
-struct LaplaceApproximation{Tkw}
-    newton_kwargs::Tkw
-end
-
-LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation((; newton_kwargs...))
-
-"""
-    approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-
-Compute an approximation to the log of the marginal likelihood (also known as
-"evidence"), which can be used to optimise the hyperparameters of `lfx`.
-
-This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
-"""
-function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-    return laplace_lml(lfx, ys; la.newton_kwargs...)
-end
-
-"""
-    posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-
-Construct a Gaussian approximation `q(f)` to the posterior `p(f | y)` using the
-Laplace approximation. Solves for the mode of the posterior using Newton's
-method.
-"""
-function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-    dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
-    _, cache = _newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
-    # TODO: should we run newton_inner_loop() and _laplace_train_intermediates() explicitly?
-    f_post = ApproxPosteriorGP(la, lfx.fx, cache)
-    return f_post
 end
 
 const LaplacePosteriorGP = ApproxPosteriorGP{<:LaplaceApproximation}
