@@ -1,3 +1,9 @@
+# Implementation follows Rasmussen & Williams, Gaussian Processes for Machine
+# Learning, the MIT Press, 2006. In the following referred to as 'RW'.
+# Online text:
+# - http://www.gaussianprocess.org/gpml/chapters/RW3.pdf
+# - http://www.gaussianprocess.org/gpml/chapters/RW5.pdf
+
 struct LaplaceCache{
     Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
 }
@@ -22,6 +28,7 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
 
     ll, d_ll, d2_ll = loglik_and_derivs(dist_y_given_f, ys, f)
 
+    # inner loop iteration of RW Algorithm 3.1, lines 4-7
     W = -Diagonal(d2_ll)
     Wsqrt = sqrt(W)
     B = I + Wsqrt * K * Wsqrt
@@ -33,8 +40,12 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     return LaplaceCache(K, f, W, Wsqrt, ll, d_ll, B_ch, a)
 end
 
-# dist_y_given_f(f) = Bernoulli(logistic(f))
+"""
+    loglik_and_derivs(dist_y_given_f, ys, f)
 
+`dist_y_given_f` must be a scalar function from a Real to a Distribution object.
+`ys` and `f` are vectors of observations and latent function values, respectively.
+"""
 function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
     l(_f, _y) = logpdf(dist_y_given_f(_f), _y)
     dl(_f, _y) = ForwardDiff.derivative(__f -> l(__f, _y), _f)
@@ -130,8 +141,8 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
 
     # ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
 
-    # Re<Δf, δf> = Re<Δf, Wsqrt\inv B\inv Wsqrt δK d_loglik>
-    #            = Re<Wsqrt' B\inv' Wsqrt\inv' Δf d_loglik', δK>
+    # Re⟨Δf, δf⟩ = Re⟨Δf, Wsqrt⁻¹ B⁻¹ Wsqrt δK d_loglik⟩
+    #            = Re⟨Wsqrt' B⁻¹' Wsqrt⁻¹' Δf d_loglik', δK⟩
     #
     # ΔK = Wsqrt' * cache.B_ch' \ Wsqrt' \ Δf_opt * cache.d_loglik'
 
@@ -342,21 +353,21 @@ const LaplacePosteriorGP = ApproxPosteriorGP{<:LaplaceApproximation}
 
 function _laplace_predict_intermediates(cache, prior_at_x, xnew)
     k_x_xnew = cov(prior_at_x.f, prior_at_x.x, xnew)
-    f_mean = mean(prior_at_x.f, xnew) + k_x_xnew' * cache.d_loglik
+    f_mean = mean(prior_at_x.f, xnew) + k_x_xnew' * cache.d_loglik  # RW (3.21)
     L = cache.B_ch.L
-    v = L \ (cache.Wsqrt * k_x_xnew)
+    v = L \ (cache.Wsqrt * k_x_xnew)  # RW (3.29)
     return f_mean, v
 end
 
 function StatsBase.mean_and_var(f::LaplacePosteriorGP, x::AbstractVector)
     f_mean, v = _laplace_predict_intermediates(f.data, f.prior, x)
-    f_var = var(f.prior.f, x) - vec(sum(v .^ 2; dims=1))
+    f_var = var(f.prior.f, x) - vec(sum(v .^ 2; dims=1))  # RW (3.29) |> diag
     return f_mean, f_var
 end
 
 function StatsBase.mean_and_cov(f::LaplacePosteriorGP, x::AbstractVector)
     f_mean, v = _laplace_predict_intermediates(f.data, f.prior, x)
-    f_cov = cov(f.prior.f, x) - v' * v
+    f_cov = cov(f.prior.f, x) - v' * v  # RW (3.29)
     return f_mean, f_cov
 end
 
