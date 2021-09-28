@@ -29,9 +29,14 @@ Xgrid = -4:0.1:29  # for visualization
 X = range(0, 23.5; length=48)  # training inputs
 f(x) = 3 * sin(10 + 0.6x) + sin(0.1x) - 1  # latent function
 fs = f.(X)  # latent function values at training inputs
-const invlink = logistic  # could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
+
+lik = BernoulliLikelihood()  # has logistic invlink by default
+## could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
+
+invlink = lik.invlink
 ps = invlink.(fs)  # probabilities at the training inputs
 Y = [rand(Bernoulli(p)) for p in ps]  # observations at the training inputs
+## could do this in one call as `Y = rand(lik(fs))`
 
 function plot_data()
     plot(; xlims=extrema(Xgrid), xticks=0:6:24)
