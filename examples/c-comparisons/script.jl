@@ -65,7 +65,7 @@ function build_latent_gp(theta)
     ## We could also be explicit and define it as a function:
     ## dist_y_given_f(f) = Bernoulli(invlink(f))
 
-    jitter = 1e-8  # required for numeric stability [TODO: where to explain this better?]
+    jitter = 1e-8  # required for numeric stability
     return LatentGP(GP(kernel), dist_y_given_f, jitter)
 end;
 
