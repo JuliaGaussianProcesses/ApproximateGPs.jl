@@ -212,8 +212,8 @@ function build_laplace_objective!(
 )
     initialize_f = true
 
-    function objective(theta)
-        lf = build_latent_gp(theta)
+    function objective(args...)
+        lf = build_latent_gp(args...)
         lfx = lf(xs)
         ignore_ad() do
             # Zygote does not like the try/catch within @info etc.
@@ -242,7 +242,8 @@ end
 
 Construct a closure that computes the minimisation objective for optimising
 hyperparameters of the latent GP in the Laplace approximation. The returned
-closure passes its single argument to `build_latent_gp`.
+closure passes its arguments to `build_latent_gp`, which must return the
+`LatentGP` prior.
 
 # Keyword arguments
 
