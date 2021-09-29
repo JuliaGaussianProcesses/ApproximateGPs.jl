@@ -282,13 +282,11 @@ function ChainRulesCore.frule(
     # fdot = (√W)⁻¹ B⁻¹ √W Kdot grad_log_p_y_given_f(f)
     ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
 
-    @debug "Hit frule"
 
     return f_opt, ∂f_opt
 end
 
 function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K; kwargs...)
-    @debug "Hit rrule"
     f_opt, cache = _newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
 
     # f = K (∇log p(y|f))                               (RW 3.17)

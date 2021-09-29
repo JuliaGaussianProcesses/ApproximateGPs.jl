@@ -33,7 +33,7 @@ fs = f.(X)  # latent function values at training inputs
 lik = BernoulliLikelihood()  # has logistic invlink by default
 ## could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
 
-invlink = lik.invlink
+invlink = lik.invlink  # logistic function
 ps = invlink.(fs)  # probabilities at the training inputs
 Y = [rand(Bernoulli(p)) for p in ps]  # observations at the training inputs
 ## could do this in one call as `Y = rand(lik(fs))`
@@ -83,7 +83,7 @@ lf.f.kernel
 
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
 
-# This finds the mode of the posterior (for the given values of the
+# This finds a mode of the posterior (for the given values of the
 # hyperparameters) using iterated Newton's method (i.e. solving an optimisation
 # problem) and then constructs a Gaussian approximation to the posterior by
 # matching the curvature at the mode.
