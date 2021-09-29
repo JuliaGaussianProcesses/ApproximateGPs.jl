@@ -42,7 +42,7 @@ function optimize_elbo(
     return f_post, training_results
 end
 
-@testset "AbstractGPs API" begin
+@testset "predictions" begin
     rng = MersenneTwister(123456)
     N_cond = 5
     N_a = 6
@@ -56,18 +56,28 @@ end
     fx = f(x, noise_scale^2)
     y = rand(rng, fx)
 
-    jitter = 1e-8
+    jitter = 0.0  # not needed in Gaussian case
     lf = LatentGP(f, f -> Normal(f, noise_scale), jitter)
-    f_approx_post = posterior(LaplaceApproximation(), lf(x), y)
+    # in Gaussian case, Laplace converges to f_opt in one step; we need the
+    # second step to compute the cache at f_opt rather than f_init!
+    f_approx_post = posterior(LaplaceApproximation(; maxiter=2), lf(x), y)
 
-    a = collect(range(-1.0, 1.0; length=N_a))
-    b = randn(rng, N_b)
-    AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
-end
+    @testset "AbstractGPs API" begin
+        a = collect(range(-1.2, 1.2; length=N_a))
+        b = randn(rng, N_b)
+        AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
+    end
 
-@testset "Gaussian" begin
-    # TODO: check for convergence in one step, and agreement with exact GPR
-    # move to test/equivalences.jl?
+    @testset "equivalence to exact GPR for Gaussian likelihood" begin
+        f_exact_post = posterior(f(x, noise_scale^2), y)
+        xt = vcat(x, randn(rng, 3))  # test at training and new points
+
+        m_approx, c_approx = mean_and_cov(f_approx_post(xt))
+        m_exact, c_exact = mean_and_cov(f_exact_post(xt))
+
+        @test m_approx ≈ m_exact
+        @test c_approx ≈ c_exact
+    end
 end
 
 @testset "gradients" begin
