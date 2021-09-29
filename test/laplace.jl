@@ -49,12 +49,12 @@ end
 
 @testset "gradients" begin
     X, Y = generate_data()
-    @testset "laplace_lml" begin
+    @testset "approx_lml" begin
         Random.seed!(123)
         theta0 = rand(2)
         function objective(theta)
             lf = build_latent_gp(theta)
-            lml = laplace_lml(lf(X), Y)
+            lml = approx_lml(LaplaceApproximation(), lf(X), Y)
             return -lml
         end
         fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
@@ -133,7 +133,7 @@ end
     @testset "reference optimum" begin
         function objective(theta)
             lf = build_latent_gp(theta)
-            return -laplace_lml(lf(X), Y)
+            return -approx_lml(LaplaceApproximation(), lf(X), Y)
         end
 
         @testset "NelderMead" begin
