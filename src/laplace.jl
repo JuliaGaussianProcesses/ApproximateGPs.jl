@@ -234,12 +234,12 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
 end
 
 function ChainRulesCore.frule(Δargs, ::typeof(_newton_inner_loop), args...; kwargs...)
-    return _newton_inner_loop_no_gradient()
+    return _newton_inner_loop_no_derivatives()
 end
 function ChainRulesCore.rrule(::typeof(_newton_inner_loop), args...; kwargs...)
-    return _newton_inner_loop_no_gradient()
+    return _newton_inner_loop_no_derivatives()
 end
-function _newton_inner_loop_no_derivative()
+function _newton_inner_loop_no_derivatives()
     # It's important that we don't simply call _newton_inner_loop and pass the
     # resulting cache directly to _laplace_lml. This would result in the wrong
     # gradients. Instead, in newton_inner_loop we return only f_opt, which will
@@ -281,7 +281,6 @@ function ChainRulesCore.frule(
     # (I - K grad2_log_p_y_given_f(f)) = (I + K W) = (√W)⁻¹ (I + √W K √W) √W = (√W)⁻¹ B √W
     # fdot = (√W)⁻¹ B⁻¹ √W Kdot grad_log_p_y_given_f(f)
     ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
-
 
     return f_opt, ∂f_opt
 end
