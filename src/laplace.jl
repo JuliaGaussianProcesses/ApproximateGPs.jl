@@ -121,9 +121,7 @@ function laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
     return laplace_lml(dist_y_given_f, ys, K; newton_kwargs...)
 end
 
-function laplace_lml(
-    dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...
-)
+function laplace_lml(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
     f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
     return laplace_lml(dist_y_given_f, ys, K, f_opt)
 end
