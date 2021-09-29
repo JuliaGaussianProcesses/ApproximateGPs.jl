@@ -106,7 +106,9 @@ end
         function eval_newton_inner_loop(theta)
             k = with_lengthscale(Matern52Kernel(), exp(theta))
             K = kernelmatrix(k, xs)
-            f, cache = ApproximateGPs._newton_inner_loop(dist_y_given_f, ys, K; f_init=zero(xs), maxiter=100)
+            f, cache = ApproximateGPs._newton_inner_loop(
+                dist_y_given_f, ys, K; f_init=zero(xs), maxiter=100
+            )
             return f
         end
 
