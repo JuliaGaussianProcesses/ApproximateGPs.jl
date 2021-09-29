@@ -31,8 +31,11 @@ method.
 """
 function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     dist_y_given_f, K, newton_kwargs = _check_laplace_inputs(lfx, ys; la.newton_kwargs...)
-    _, cache = _newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
-    # TODO: should we run newton_inner_loop() and _laplace_train_intermediates() explicitly?
+    f_opt = newton_inner_loop(dist_y_given_f, ys, K; newton_kwargs...)
+    # We could call _newton_inner_loop directly and immediately use the
+    # returned cache, but this would make the posterior call
+    # non-differentiable, at only a marginal computational saving.
+    cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
     f_post = ApproxPosteriorGP(la, lfx.fx, cache)
     return f_post  # TODO return LatentGP(f_post, lfx.lik, lfx.fx.Σy)
 end
