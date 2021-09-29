@@ -101,7 +101,7 @@ end
 """
     laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
 
-Compute the mode of the posterior and the Laplace approximation to the log
+Compute a mode of the posterior and the Laplace approximation to the log
 marginal likelihood.
 """
 function laplace_f_and_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
@@ -261,7 +261,7 @@ end
 """
     newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
 
-Find the mode of `p(f | y)` using Newton's method.
+Find a mode of `p(f | y)` using Newton's method.
 """
 function newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
     f_opt, _ = _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback)
