@@ -1,7 +1,7 @@
 name = "ApproximateGPs"
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 authors = ["Ross Viljoen <ross@viljoen.co.uk>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
@@ -20,7 +20,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 AbstractGPs = "0.3, 0.4, 0.5"
-ChainRulesCore = "1"
+ChainRulesCore = "1.7"
 Distributions = "0.25"
 FastGaussQuadrature = "0.4"
 FillArrays = "0.12"

@@ -12,7 +12,6 @@ using ApproximateGPs
 using LinearAlgebra
 using Distributions
 using LogExpFunctions: logistic, softplus, invsoftplus
-#using ParameterHandling
 using Zygote
 using Optim
 
@@ -22,7 +21,7 @@ default(; legend=:outertopright, size=(700, 400))
 using Random
 Random.seed!(1);
 
-# ## Generate some training data
+# ## Generate training data
 #
 # We create a binary-labelled toy dataset:
 
@@ -30,9 +29,14 @@ Xgrid = -4:0.1:29  # for visualization
 X = range(0, 23.5; length=48)  # training inputs
 f(x) = 3 * sin(10 + 0.6x) + sin(0.1x) - 1  # latent function
 fs = f.(X)  # latent function values at training inputs
-const invlink = logistic  # could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
+
+lik = BernoulliLikelihood()  # has logistic invlink by default
+## could use other invlink, e.g. normcdf(f) = cdf(Normal(), f)
+
+invlink = lik.invlink  # logistic function
 ps = invlink.(fs)  # probabilities at the training inputs
 Y = [rand(Bernoulli(p)) for p in ps]  # observations at the training inputs
+## could do this in one call as `Y = rand(lik(fs))`
 
 function plot_data()
     plot(; xlims=extrema(Xgrid), xticks=0:6:24)
@@ -42,7 +46,7 @@ end
 
 plot_data()
 
-# ## Creating the latent GP
+# ## Create a latent GP
 # 
 # Here we write a function that creates our latent GP prior, given the
 # hyperparameter vector `theta`. Compared to a "vanilla" GP, the `LatentGP`
@@ -51,19 +55,19 @@ plot_data()
 # likelihood".
 
 function build_latent_gp(theta)
-    # `theta` is unconstrained, but kernel variance and lengthscale must be positive:
+    ## `theta` is unconstrained, but kernel variance and lengthscale must be positive:
     variance = softplus(theta[1])
     lengthscale = softplus(theta[2])
 
     kernel = variance * with_lengthscale(SqExponentialKernel(), lengthscale)
-    
-    dist_y_given_f = BernoulliLikelihood()  # has logistic invlink by default
-    # We could also be explicit and define it as a function:
-    # dist_y_given_f(f) = Bernoulli(invlink(f))
 
-    jitter = 1e-8  # required for numeric stability [TODO: where to explain this better?]
+    dist_y_given_f = BernoulliLikelihood()  # has logistic invlink by default
+    ## We could also be explicit and define it as a function:
+    ## dist_y_given_f(f) = Bernoulli(invlink(f))
+
+    jitter = 1e-8  # required for numeric stability
     return LatentGP(GP(kernel), dist_y_given_f, jitter)
-end
+end;
 
 # We define a latent GP at our initial hyperparameter values, here with
 # variance 1.0 and lengthscale 5.0:
@@ -74,9 +78,15 @@ lf = build_latent_gp(theta0)
 
 lf.f.kernel
 
-# We can now compute the posterior `p(f | y)` under the Laplace approximation:
+# We can now compute the Laplace approximation ``q(f)`` to the true posterior
+# ``p(f | y)``:
 
 f_post = posterior(LaplaceApproximation(), lf(X), Y)
+
+# This finds a mode of the posterior (for the given values of the
+# hyperparameters) using iterated Newton's method (i.e. solving an optimisation
+# problem) and then constructs a Gaussian approximation to the posterior by
+# matching the curvature at the mode.
 
 # Let's plot samples from this approximate posterior:
 
@@ -90,16 +100,19 @@ end
 p1 = plot_data()
 plot_samples!(Xgrid, f_post)
 
-# We can improve this fit by optimising the hyperparameters.
+# We can improve this fit by optimising the hyperparameters. For exact Gaussian
+# process regression, the maximization objective is the marginal likelihood.
+# Here, we can only optimise an _approximation_ to the marginal likelihood.
 
-# ## Optimise the parameters
+# ## Optimise the hyperparameters
 #
 # ApproximateGPs provides a convenience function `build_laplace_objective` that
 # constructs an objective function for optimising the hyperparameters, based on
 # the Laplace approximation to the log marginal likelihood.
-# We pass this objective to Optim.jl's LBFGS optimiser:
 
-objective = build_laplace_objective(build_latent_gp, X, Y)
+objective = build_laplace_objective(build_latent_gp, X, Y);
+
+# We pass this objective to Optim.jl's LBFGS optimiser:
 
 training_results = Optim.optimize(
     objective, θ -> only(Zygote.gradient(objective, θ)), theta0, LBFGS(); inplace=false
@@ -111,13 +124,14 @@ lf2 = build_latent_gp(training_results.minimizer)
 
 lf2.f.kernel
 
-# Finally, we need to obtain the posterior given the observations again:
+# Finally, we need to construct again the (approximate) posterior given the
+# observations for the latent GP with optimised hyperparameters:
 
 f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 
-# `f_init=objective.f` let's the Laplace approximation "warm-start" at the last
-# point of the inner-loop Newton optimisation; `objective.f` is a field on the
-# `objective` closure.
+# By passing `f_init=objective.f` we let the Laplace approximation "warm-start"
+# at the last point of the inner-loop Newton optimisation; `objective.f` is a
+# field on the `objective` closure.
 
 # Let's plot samples from the approximate posterior for the optimised hyperparameters:
 
