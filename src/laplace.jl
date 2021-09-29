@@ -11,22 +11,10 @@ end
 LaplaceApproximation(; newton_kwargs...) = LaplaceApproximation((; newton_kwargs...))
 
 """
-    approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-
-Compute an approximation to the log of the marginal likelihood (also known as
-"evidence"), which can be used to optimise the hyperparameters of `lfx`.
-
-This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
-"""
-function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
-    return laplace_lml(lfx, ys; la.newton_kwargs...)
-end
-
-"""
     posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
 
 Construct a Gaussian approximation `q(f)` to the posterior `p(f | y)` using the
-Laplace approximation. Solves for the mode of the posterior using Newton's
+Laplace approximation. Solves for a mode of the posterior using Newton's
 method.
 """
 function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
@@ -38,6 +26,18 @@ function AbstractGPs.posterior(la::LaplaceApproximation, lfx::LatentFiniteGP, ys
     cache = _laplace_train_intermediates(dist_y_given_f, ys, K, f_opt)
     f_post = ApproxPosteriorGP(la, lfx.fx, cache)
     return f_post  # TODO return LatentGP(f_post, lfx.lik, lfx.fx.Σy)
+end
+
+"""
+    approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+
+Compute an approximation to the log of the marginal likelihood (also known as
+"evidence"), which can be used to optimise the hyperparameters of `lfx`.
+
+This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
+"""
+function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+    return laplace_lml(lfx, ys; la.newton_kwargs...)
 end
 
 """
@@ -56,6 +56,7 @@ closure passes its arguments to `build_latent_gp`, which must return the
 - `newton_maxiter=100`: maximum number of Newton steps.
 """
 function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
+    # TODO assumes type of `xs` will be same as `mean(lfx.fx)`
     f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
     return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
 end
@@ -121,7 +122,7 @@ function laplace_lml(lfx::LatentFiniteGP, ys; newton_kwargs...)
 end
 
 function laplace_lml(
-    dist_y_given_f, ys, K; f_init=zeros(length(ys)), maxiter=100, newton_kwargs...
+    dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...
 )
     f_opt = newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, newton_kwargs...)
     return laplace_lml(dist_y_given_f, ys, K, f_opt)
@@ -137,7 +138,7 @@ function _check_laplace_inputs(
 )
     fx = lfx.fx
     @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(fx)
+    @assert length(ys) == length(fx)  # LaplaceApproximation currently does not support multi-latent likelihoods
     dist_y_given_f = lfx.lik
     K = cov(fx)
     if isnothing(f_init)
