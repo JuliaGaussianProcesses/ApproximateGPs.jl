@@ -81,8 +81,9 @@ end
 end
 
 @testset "gradients" begin
-    X, Y = generate_data()
     @testset "approx_lml" begin
+        X, Y = generate_data()
+
         Random.seed!(123)
         theta0 = rand(2)
         function objective(theta)
@@ -94,69 +95,87 @@ end
         ad_grad = only(Zygote.gradient(objective, theta0))
         @test ad_grad ≈ fd_grad
     end
-end
 
-@testset "chainrule" begin
-    Random.seed!(54321)
+    @testset "_newton_inner_loop derivatives not defined" begin
+        Random.seed!(54321)
 
-    xs = [0.2, 0.3, 0.7]
-    ys = [1, 1, 0]
-    L = randn(3, 3)
+        xs = [0.2, 0.3, 0.7]
+        ys = [1, 1, 0]
+        theta0 = 1.234
 
-    function newton_inner_loop_from_L(dist_y_given_f, ys, L; kwargs...)
-        K = L'L
-        return ApproximateGPs.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
-    end
-
-    function ChainRulesCore.frule(
-        (Δself, Δdist_y_given_f, Δys, ΔL),
-        ::typeof(newton_inner_loop_from_L),
-        dist_y_given_f,
-        ys,
-        L;
-        kwargs...,
-    )
-        K = L'L
-        # K̇ = L̇'L + L'L̇
-        ΔK = ΔL'L + L'ΔL
-        return frule(
-            (Δself, Δdist_y_given_f, Δys, ΔK),
-            ApproximateGPs.newton_inner_loop,
-            dist_y_given_f,
-            ys,
-            K;
-            kwargs...,
-        )
-    end
-
-    function ChainRulesCore.rrule(
-        ::typeof(newton_inner_loop_from_L), dist_y_given_f, ys, L; kwargs...
-    )
-        K = L'L
-        f_opt, newton_from_K_pullback = rrule(
-            ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
-        )
-
-        function newton_from_L_pullback(Δf_opt)
-            (∂self, ∂dist_y_given_f, ∂ys, ∂K) = newton_from_K_pullback(Δf_opt)
-            # Re⟨K̄, K̇⟩ = Re⟨K̄, L̇'L + L'L̇⟩
-            # = Re⟨K̄, L̇'L⟩ + Re⟨K̄, L'L̇⟩
-            # = Re⟨K̄L', L̇'⟩ + Re⟨LK̄, L̇⟩
-            # = Re⟨LK̄', L̇⟩ + Re⟨LK̄, L̇⟩
-            # = Re⟨LK̄' + LK̄, L̇⟩
-            # = Re⟨L̄, L̇⟩
-            # L̄ = L(K̄' + K̄)
-            ∂L = @thunk(L * (∂K' + ∂K))
-
-            return (∂self, ∂dist_y_given_f, ∂ys, ∂L)
+        function eval_newton_inner_loop(theta)
+            k = with_lengthscale(Matern52Kernel(), exp(theta))
+            K = kernelmatrix(k, xs)
+            f, cache = ApproximateGPs._newton_inner_loop(dist_y_given_f, ys, K; f_init=zero(xs), maxiter=100)
+            return f
         end
 
-        return f_opt, newton_from_L_pullback
+        eval_newton_inner_loop(theta0)  # forward pass works
+        @test_throws ErrorException Zygote.gradient(eval_newton_inner_loop, theta0)
     end
 
-    fkwargs = (; f_init=zeros(length(ys)), maxiter=100)
-    test_frule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
-    test_rrule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
+    @testset "newton_inner_loop chain rules" begin
+        Random.seed!(54321)
+
+        xs = [0.2, 0.3, 0.7]
+        ys = [1, 1, 0]
+        L = randn(3, 3)
+
+        function newton_inner_loop_from_L(dist_y_given_f, ys, L; kwargs...)
+            K = L'L
+            return ApproximateGPs.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
+        end
+
+        function ChainRulesCore.frule(
+            (Δself, Δdist_y_given_f, Δys, ΔL),
+            ::typeof(newton_inner_loop_from_L),
+            dist_y_given_f,
+            ys,
+            L;
+            kwargs...,
+        )
+            K = L'L
+            # K̇ = L̇'L + L'L̇
+            ΔK = ΔL'L + L'ΔL
+            return frule(
+                (Δself, Δdist_y_given_f, Δys, ΔK),
+                ApproximateGPs.newton_inner_loop,
+                dist_y_given_f,
+                ys,
+                K;
+                kwargs...,
+            )
+        end
+
+        function ChainRulesCore.rrule(
+            ::typeof(newton_inner_loop_from_L), dist_y_given_f, ys, L; kwargs...
+        )
+            K = L'L
+            f_opt, newton_from_K_pullback = rrule(
+                ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
+            )
+
+            function newton_from_L_pullback(Δf_opt)
+                (∂self, ∂dist_y_given_f, ∂ys, ∂K) = newton_from_K_pullback(Δf_opt)
+                # Re⟨K̄, K̇⟩ = Re⟨K̄, L̇'L + L'L̇⟩
+                # = Re⟨K̄, L̇'L⟩ + Re⟨K̄, L'L̇⟩
+                # = Re⟨K̄L', L̇'⟩ + Re⟨LK̄, L̇⟩
+                # = Re⟨LK̄', L̇⟩ + Re⟨LK̄, L̇⟩
+                # = Re⟨LK̄' + LK̄, L̇⟩
+                # = Re⟨L̄, L̇⟩
+                # L̄ = L(K̄' + K̄)
+                ∂L = @thunk(L * (∂K' + ∂K))
+
+                return (∂self, ∂dist_y_given_f, ∂ys, ∂L)
+            end
+
+            return f_opt, newton_from_L_pullback
+        end
+
+        fkwargs = (; f_init=zeros(length(ys)), maxiter=100)
+        test_frule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
+        test_rrule(newton_inner_loop_from_L, dist_y_given_f, ys, L; fkwargs)
+    end
 end
 
 @testset "optimization" begin
