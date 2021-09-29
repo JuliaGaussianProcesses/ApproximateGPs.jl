@@ -404,10 +404,17 @@ function Statistics.mean(f::LaplacePosteriorGP, x::AbstractVector)
     return mean(f.prior.f, x) + cov(f.prior.f, f.prior.x, x)' * d_loglik
 end
 
+function Statistics.var(f::LaplacePosteriorGP, x::AbstractVector)
+    return last(mean_and_var(f, x))
+end
+
 function Statistics.cov(f::LaplacePosteriorGP, x::AbstractVector)
     return last(mean_and_cov(f, x))
 end
 
-function Statistics.var(f::LaplacePosteriorGP, x::AbstractVector)
-    return last(mean_and_var(f, x))
+function Statistics.cov(f::LaplacePosteriorGP, x::AbstractVector, y::AbstractVector)
+    L = f.data.B_ch.L
+    vx = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, x))
+    vy = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, y))
+    return cov(f.prior.f, x, y) - vx' * vy
 end

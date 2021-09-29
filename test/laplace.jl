@@ -42,6 +42,29 @@ function optimize_elbo(
     return f_post, training_results
 end
 
+@testset "AbstractGPs API" begin
+    rng = MersenneTwister(123456)
+    N_cond = 5
+    N_a = 6
+    N_b = 7
+
+    # Specify prior.
+    f = GP(Matern32Kernel())
+    # Sample from prior.
+    x = collect(range(-1.0, 1.0; length=N_cond))
+    noise_scale = 0.1
+    fx = f(x, noise_scale^2)
+    y = rand(rng, fx)
+
+    jitter = 1e-8
+    lf = LatentGP(f, f -> Normal(f, noise_scale), jitter)
+    f_approx_post = posterior(LaplaceApproximation(), lf(x), y)
+
+    a = collect(range(-1.0, 1.0; length=N_a))
+    b = randn(rng, N_b)
+    AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
+end
+
 @testset "Gaussian" begin
     # TODO: check for convergence in one step, and agreement with exact GPR
     # move to test/equivalences.jl?
