@@ -1,4 +1,12 @@
-export ith_marginal, mul_dist, div_dist, moment_match, ep_approx_posterior, epsite_pdf
+struct ExpectationPropagation
+    maxiter::Int
+    epsilon::Float64
+    n_gh::Int
+end
+
+function ExpectationPropagation(; maxiter=100, epsilon=1e-6, n_gh=150)
+    return ExpectationPropagation(maxiter, epsilon, n_gh)
+end
 
 function ith_marginal(d::Union{MvNormal,MvNormalCanon}, i::Int)
     m = mean(d)
@@ -53,7 +61,8 @@ function epsite_pdf(site, f)
     return site.Z * pdf(epsite_dist(site), f)
 end
 
-function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=20)
+function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=150)
+    # TODO: combine with expected_loglik / move into GPLikelihoods
     xs, ws = gausshermite(n_points)
     fs = √2 * std(cav_i) * xs .+ mean(cav_i)
     scale = (1 / √π)
@@ -77,8 +86,8 @@ function ep_approx_posterior(prior, sites::AbstractVector)
     return mul_dist(prior, ts_dist)
 end
 
-function EPProblem(p::MvNormal, lik_evals::AbstractVector)
-    return (; p, lik_evals)
+function EPProblem(ep::ExpectationPropagation, p::MvNormal, lik_evals::AbstractVector)
+    return (; p, lik_evals, ep)
 end
 
 function EPState(q::MvNormal, sites::AbstractVector)
@@ -89,14 +98,17 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     q_fi = ith_marginal(ep_state.q, i)
     alik_i = epsite_dist(ep_state.sites[i])
     cav_i = div_dist(q_fi, alik_i)
-    qhat_i = moment_match(cav_i, ep_problem.lik_evals[i])
+    qhat_i = moment_match(cav_i, ep_problem.lik_evals[i]; n_points=ep_problem.ep.n_gh)
     new_t = div_dist(qhat_i.q, cav_i)
     return new_t
 end
 
+using Random
+
 function ep_loop_over_sites(ep_problem, ep_state)
-    # TODO: randomize order of updates
-    for i in 1:length(ep_problem.lik_evals)
+    # TODO: randomize order of updates: make configurable?
+    for i in randperm(length(ep_problem.lik_evals))
+        @info "  Inner loop iteration $i"
         new_t = ep_single_site_update(ep_problem, ep_state, i)
 
         # TODO: rank-1 update
@@ -123,11 +135,13 @@ function ep_converged(old_sites, new_sites; epsilon=1e-6)
     return mean(diff1) < epsilon && mean(diff2) < epsilon
 end
 
-function ep_outer_loop(ep_problem; maxiter)
+function ep_outer_loop(ep_problem; maxiter=ep_problem.ep.maxiter)
     ep_state = initialize_ep_state(ep_problem)
     for i in 1:maxiter
+        @info "Outer loop iteration $i"
         new_state = ep_loop_over_sites(ep_problem, ep_state)
-        if ep_converged(ep_state.sites, new_state.sites)
+        if ep_converged(ep_state.sites, new_state.sites; epsilon=ep_problem.ep.epsilon)
+            @info "converged"
             break
         else
             ep_state = new_state
@@ -136,30 +150,21 @@ function ep_outer_loop(ep_problem; maxiter)
     return ep_state
 end
 
-function create_ep_problem(dist_y_given_f, ys, K)
+function create_ep_problem(dist_y_given_f, ys, K; ep=nothing)
     f_prior = MvNormal(K)
     lik_evals = [f -> pdf(dist_y_given_f(f), y) for y in ys]
-    return EPProblem(f_prior, lik_evals)
+    return EPProblem(ep, f_prior, lik_evals)
 end
 
-function ep_inference(dist_y_given_f, ys, K; maxiter=100)
-    ep_problem = create_ep_problem(dist_y_given_f, ys, K)
-    return ep_outer_loop(ep_problem; maxiter)
-end
-
-struct ExpectationPropagation
-    maxiter::Int
-    epsilon::Float64
-end
-
-function ExpectationPropagation(; maxiter=100, epsilon=1e-6)
-    return ExpectationPropagation(maxiter, epsilon)
+function ep_inference(dist_y_given_f, ys, K; ep=nothing)
+    ep_problem = create_ep_problem(dist_y_given_f, ys, K; ep)
+    return ep_outer_loop(ep_problem)
 end
 
 function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     dist_y_given_f = lfx.lik
     K = cov(lfx.fx)
-    ep_state = ep_inference(dist_y_given_f, ys, K; maxiter=ep.maxiter)
+    ep_state = ep_inference(dist_y_given_f, ys, K; ep)
     q = ep_state.q
     return posterior(SVGP(lfx.fx, q))
 end

@@ -42,7 +42,7 @@ function test_approximation_predictions(approx)
         AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
     end
 
-    @testset "equivalence to exact GPR for Gaussian likelihood" begin
+    @testset "exact GPR equivalence for Gaussian likelihood" begin
         f_exact_post = posterior(f(x, noise_scale^2), y)
         xt = vcat(x, randn(rng, 3))  # test at training and new points
 

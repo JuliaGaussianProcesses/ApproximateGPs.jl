@@ -21,7 +21,6 @@
 end
 
 @testset "predictions" begin
-    # in Gaussian case, Expectation Propagation converges to the exact result in one inner loop
-    approx = ExpectationPropagation(; maxiter=1)
+    approx = ExpectationPropagation(; n_gh=500)
     test_approximation_predictions(approx)
 end
