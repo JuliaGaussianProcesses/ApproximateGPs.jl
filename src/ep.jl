@@ -44,7 +44,7 @@ function EPState(q::MvNormal, sites::AbstractVector)
     return (; q, sites)
 end
 
-function EPState(ep_problem::EPProblem)
+function EPState(ep_problem)
     N = length(ep_problem.lik_evals)
     # TODO- manually keep track of canonical parameters and initialize precision to 0
     sites = [(; q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
@@ -110,6 +110,7 @@ function ith_marginal(d::Union{MvNormal,MvNormalCanon}, i::Int)
     v = var(d)
     return Normal(m[i], sqrt(v[i]))
 end
+
 function mul_dist(a::NormalCanon, b::NormalCanon)
     # NormalCanon
     #     η::T       # σ^(-2) * μ
