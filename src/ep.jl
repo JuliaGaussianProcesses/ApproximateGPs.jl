@@ -147,6 +147,21 @@ function ep_inference(dist_y_given_f, ys, K; maxiter=100)
     return ep_outer_loop(ep_problem; maxiter)
 end
 
+struct ExpectationPropagation
+    maxiter::Int
+    epsilon::Float64
+end
+
+ExpectationPropagation(; maxiter=100, epsilon=1e-6) = ExpectationPropagation(maxiter, epsilon)
+
+function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
+    dist_y_given_f = lfx.lik
+    K = cov(lfx.fx)
+    ep_state = ep_inference(dist_y_given_f, ys, K; maxiter=ep.maxiter)
+    q = ep_state.q
+    return posterior(SVGP(lfx.fx, q))
+end
+
 function ep_steps(dist_y_given_f, f_prior, y; maxiter=100)
     f = mean(f_prior)
     @assert f == zero(f)  # might work with non-zero prior mean but not checked
