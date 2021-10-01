@@ -103,7 +103,7 @@ function ep_loop_over_sites(ep_problem, ep_state)
         new_sites = deepcopy(ep_state.sites)
         new_sites[i] = (; q=new_t)
         new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
-        return EPState(new_q, new_sites)
+        ep_state = EPState(new_q, new_sites)
     end
     return ep_state
 end
