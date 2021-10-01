@@ -25,16 +25,13 @@ include("test_utils.jl")
     include("expected_loglik.jl")
     println(" ")
     @info "Ran expected_loglik tests"
-    
     @testset "SVGP" begin
         include("svgp.jl")
         println(" ")
         @info "Ran svgp tests"
-    
         include("elbo.jl")
         println(" ")
         @info "Ran elbo tests"
-    
         include("equivalences.jl")
         println(" ")
         @info "Ran equivalences tests"
