@@ -28,6 +28,8 @@ export LaplaceApproximation
 export build_laplace_objective, build_laplace_objective!
 export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
 include("laplace.jl")
+
+export ExpectationPropagation
 include("ep.jl")
 
 end
