@@ -96,7 +96,7 @@ end
 
 function ep_loop_over_sites(ep_problem, ep_state)
     # TODO: randomize order of updates
-    for i=1:length(ep_problem.lik_evals)
+    for i in 1:length(ep_problem.lik_evals)
         new_t = ep_single_site_update(ep_problem, ep_state, i)
 
         # TODO: rank-1 update
@@ -111,7 +111,7 @@ end
 function initialize_ep_state(ep_problem)
     N = length(ep_problem.lik_evals)
     # TODO- manually keep track of canonical parameters and initialize precision to 0
-    sites = [(; q=NormalCanon(0.0, 1e-10)) for _=1:N]
+    sites = [(; q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
     q = ep_problem.p
     return EPState(q, sites)
 end
@@ -125,7 +125,7 @@ end
 
 function ep_outer_loop(ep_problem; maxiter)
     ep_state = initialize_ep_state(ep_problem)
-    for i=1:maxiter
+    for i in 1:maxiter
         new_state = ep_loop_over_sites(ep_problem, ep_state)
         if ep_converged(ep_state.sites, new_state.sites)
             break
@@ -152,7 +152,9 @@ struct ExpectationPropagation
     epsilon::Float64
 end
 
-ExpectationPropagation(; maxiter=100, epsilon=1e-6) = ExpectationPropagation(maxiter, epsilon)
+function ExpectationPropagation(; maxiter=100, epsilon=1e-6)
+    return ExpectationPropagation(maxiter, epsilon)
+end
 
 function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     dist_y_given_f = lfx.lik
