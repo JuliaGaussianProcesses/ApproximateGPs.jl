@@ -137,3 +137,19 @@ f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 
 p2 = plot_data()
 plot_samples!(Xgrid, f_post2)
+
+# ## Expectation Propagation
+
+# For initial hyperparameter values:
+
+f_post_ep = posterior(ExpectationPropagation(), lf(X), Y)
+
+p3 = plot_data()
+plot_samples!(Xgrid, f_post_ep)
+
+# For optimized hyperparameter values:
+
+f_post_ep2 = posterior(ExpectationPropagation(), lf2(X), Y)
+
+p4 = plot_data()
+plot_samples!(Xgrid, f_post_ep2)
