@@ -19,3 +19,9 @@
     @test mean(q_gh) ≈ mean(q_quad)
     @test std(q_gh) ≈ std(q_quad)
 end
+
+@testset "predictions" begin
+    # in Gaussian case, Expectation Propagation converges to the exact result in one inner loop
+    approx = ExpectationPropagation(; maxiter=1)
+    test_approximation_predictions(approx)
+end

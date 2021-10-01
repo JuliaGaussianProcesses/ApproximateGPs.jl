@@ -40,6 +40,8 @@ include("test_utils.jl")
     #    @info "Ran equivalences tests"
     #end
 
+    include("common_test_support.jl")
+
     @testset "Laplace" begin
         include("laplace.jl")
         println(" ")
