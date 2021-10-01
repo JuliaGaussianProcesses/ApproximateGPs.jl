@@ -8,6 +8,103 @@ function ExpectationPropagation(; maxiter=100, epsilon=1e-6, n_gh=150)
     return ExpectationPropagation(maxiter, epsilon, n_gh)
 end
 
+function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
+    ep_state = ep_inference(ep, lfx, ys)
+    # TODO: it seems a bit weird to piggyback on SVGP here...
+    return posterior(SVGP(lfx.fx, ep_state.q))
+end
+
+function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
+    fx = lfx.fx
+    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
+    @assert length(ys) == length(fx)  # ExpectationPropagation currently does not support multi-latent likelihoods
+    dist_y_given_f = lfx.lik
+    K = cov(fx)
+
+    return ep_inference(dist_y_given_f, ys, K; ep)
+end
+
+function ep_inference(dist_y_given_f, ys, K; ep=nothing)
+    ep_problem = EPProblem(dist_y_given_f, ys, K; ep)
+    ep_state = EPState(ep_problem)
+    return ep_outer_loop(ep_problem, ep_state)
+end
+
+function EPProblem(ep::ExpectationPropagation, p::MvNormal, lik_evals::AbstractVector)
+    return (; p, lik_evals, ep)
+end
+
+function EPProblem(dist_y_given_f, ys, K; ep=nothing)
+    f_prior = MvNormal(K)
+    lik_evals = [f -> pdf(dist_y_given_f(f), y) for y in ys]
+    return EPProblem(ep, f_prior, lik_evals)
+end
+
+function EPState(q::MvNormal, sites::AbstractVector)
+    return (; q, sites)
+end
+
+function EPState(ep_problem::EPProblem)
+    N = length(ep_problem.lik_evals)
+    # TODO- manually keep track of canonical parameters and initialize precision to 0
+    sites = [(; q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
+    q = ep_problem.p
+    return EPState(q, sites)
+end
+
+function ep_approx_posterior(prior, sites::AbstractVector)
+    canon_site_dists = [convert(NormalCanon, t.q) for t in sites]
+    potentials = [q.η for q in canon_site_dists]
+    precisions = [q.λ for q in canon_site_dists]
+    ts_dist = MvNormalCanon(potentials, precisions)
+    return mul_dist(prior, ts_dist)
+end
+
+function ep_outer_loop(ep_problem, ep_state; maxiter=ep_problem.ep.maxiter)
+    for i in 1:maxiter
+        @info "Outer loop iteration $i"
+        new_state = ep_loop_over_sites(ep_problem, ep_state)
+        if ep_converged(ep_state.sites, new_state.sites; epsilon=ep_problem.ep.epsilon)
+            @info "converged"
+            break
+        else
+            ep_state = new_state
+        end
+    end
+    return ep_state
+end
+
+function ep_converged(old_sites, new_sites; epsilon=1e-6)
+    # TODO improve convergence check
+    diff1 = [(t_old.q.η - t_new.q.η)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
+    diff2 = [(t_old.q.λ - t_new.q.λ)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
+    return mean(diff1) < epsilon && mean(diff2) < epsilon
+end
+
+function ep_loop_over_sites(ep_problem, ep_state)
+    # TODO: randomize order of updates: make configurable?
+    for i in randperm(length(ep_problem.lik_evals))
+        @info "  Inner loop iteration $i"
+        new_t = ep_single_site_update(ep_problem, ep_state, i)
+
+        # TODO: rank-1 update
+        new_sites = deepcopy(ep_state.sites)
+        new_sites[i] = (; q=new_t)
+        new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
+        ep_state = EPState(new_q, new_sites)
+    end
+    return ep_state
+end
+
+function ep_single_site_update(ep_problem, ep_state, i::Int)
+    q_fi = ith_marginal(ep_state.q, i)
+    alik_i = epsite_dist(ep_state.sites[i])
+    cav_i = div_dist(q_fi, alik_i)
+    qhat_i = moment_match(cav_i, ep_problem.lik_evals[i]; n_points=ep_problem.ep.n_gh)
+    new_t = div_dist(qhat_i.q, cav_i)
+    return new_t
+end
+
 function ith_marginal(d::Union{MvNormal,MvNormalCanon}, i::Int)
     m = mean(d)
     v = var(d)
@@ -76,112 +173,4 @@ function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=150
     matched_mean = m1 / m0
     matched_var = m2 / m0 - matched_mean^2
     return (; Z=matched_Z, q=Normal(matched_mean, sqrt(matched_var)))
-end
-
-function ep_approx_posterior(prior, sites::AbstractVector)
-    canon_site_dists = [convert(NormalCanon, t.q) for t in sites]
-    potentials = [q.η for q in canon_site_dists]
-    precisions = [q.λ for q in canon_site_dists]
-    ts_dist = MvNormalCanon(potentials, precisions)
-    return mul_dist(prior, ts_dist)
-end
-
-function EPProblem(ep::ExpectationPropagation, p::MvNormal, lik_evals::AbstractVector)
-    return (; p, lik_evals, ep)
-end
-
-function EPState(q::MvNormal, sites::AbstractVector)
-    return (; q, sites)
-end
-
-function ep_single_site_update(ep_problem, ep_state, i::Int)
-    q_fi = ith_marginal(ep_state.q, i)
-    alik_i = epsite_dist(ep_state.sites[i])
-    cav_i = div_dist(q_fi, alik_i)
-    qhat_i = moment_match(cav_i, ep_problem.lik_evals[i]; n_points=ep_problem.ep.n_gh)
-    new_t = div_dist(qhat_i.q, cav_i)
-    return new_t
-end
-
-using Random
-
-function ep_loop_over_sites(ep_problem, ep_state)
-    # TODO: randomize order of updates: make configurable?
-    for i in randperm(length(ep_problem.lik_evals))
-        @info "  Inner loop iteration $i"
-        new_t = ep_single_site_update(ep_problem, ep_state, i)
-
-        # TODO: rank-1 update
-        new_sites = deepcopy(ep_state.sites)
-        new_sites[i] = (; q=new_t)
-        new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
-        ep_state = EPState(new_q, new_sites)
-    end
-    return ep_state
-end
-
-function initialize_ep_state(ep_problem)
-    N = length(ep_problem.lik_evals)
-    # TODO- manually keep track of canonical parameters and initialize precision to 0
-    sites = [(; q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
-    q = ep_problem.p
-    return EPState(q, sites)
-end
-
-function ep_converged(old_sites, new_sites; epsilon=1e-6)
-    # TODO improve convergence check
-    diff1 = [(t_old.q.η - t_new.q.η)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
-    diff2 = [(t_old.q.λ - t_new.q.λ)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
-    return mean(diff1) < epsilon && mean(diff2) < epsilon
-end
-
-function ep_outer_loop(ep_problem; maxiter=ep_problem.ep.maxiter)
-    ep_state = initialize_ep_state(ep_problem)
-    for i in 1:maxiter
-        @info "Outer loop iteration $i"
-        new_state = ep_loop_over_sites(ep_problem, ep_state)
-        if ep_converged(ep_state.sites, new_state.sites; epsilon=ep_problem.ep.epsilon)
-            @info "converged"
-            break
-        else
-            ep_state = new_state
-        end
-    end
-    return ep_state
-end
-
-function create_ep_problem(dist_y_given_f, ys, K; ep=nothing)
-    f_prior = MvNormal(K)
-    lik_evals = [f -> pdf(dist_y_given_f(f), y) for y in ys]
-    return EPProblem(ep, f_prior, lik_evals)
-end
-
-function ep_inference(dist_y_given_f, ys, K; ep=nothing)
-    ep_problem = create_ep_problem(dist_y_given_f, ys, K; ep)
-    return ep_outer_loop(ep_problem)
-end
-
-function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
-    dist_y_given_f = lfx.lik
-    K = cov(lfx.fx)
-    ep_state = ep_inference(dist_y_given_f, ys, K; ep)
-    q = ep_state.q
-    return posterior(SVGP(lfx.fx, q))
-end
-
-function ep_steps(dist_y_given_f, f_prior, y; maxiter=100)
-    f = mean(f_prior)
-    @assert f == zero(f)  # might work with non-zero prior mean but not checked
-    converged = false
-    res_array = []
-    for i in 1:maxiter
-        results = ep_step!(f, dist_y_given_f, f_prior, y)
-        push!(res_array, EPResult(results))
-        if isapprox(f, results.fnew)
-            break  # converged
-        else
-            f = results.fnew
-        end
-    end
-    return res_array
 end
