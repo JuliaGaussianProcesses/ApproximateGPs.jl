@@ -87,23 +87,64 @@ end
 
 function ep_single_site_update(ep_problem, ep_state, i::Int)
     q_fi = ith_marginal(ep_state.q, i)
-    alik_i = epsite_dist(ep_state.sites[i].q)
+    alik_i = epsite_dist(ep_state.sites[i])
     cav_i = div_dist(q_fi, alik_i)
     qhat_i = moment_match(cav_i, ep_problem.lik_evals[i])
-    return new_t = div_dist(qhat_i.q, cav_i)
-    #delta_eta = 
-    #new_q = rank_one_update(ep_state.q, 
-
-    #new_q = 
-    #return EPState(new_q, new_sites)
+    new_t = div_dist(qhat_i.q, cav_i)
+    return new_t
 end
 
-function ep_step!(ep_tuple)
-    return "work in progress"
+function ep_loop_over_sites(ep_problem, ep_state)
+    # TODO: randomize order of updates
+    for i=1:length(ep_problem.lik_evals)
+        new_t = ep_single_site_update(ep_problem, ep_state, i)
+
+        # TODO: rank-1 update
+        new_sites = deepcopy(ep_state.sites)
+        new_sites[i] = (; q=new_t)
+        new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
+        return EPState(new_q, new_sites)
+    end
+    return ep_state
 end
 
-function EPResult(results)
-    return (; results)
+function initialize_ep_state(ep_problem)
+    N = length(ep_problem.lik_evals)
+    # TODO- manually keep track of canonical parameters and initialize precision to 0
+    sites = [(; q=NormalCanon(0.0, 1e-10)) for _=1:N]
+    q = ep_problem.p
+    return EPState(q, sites)
+end
+
+function ep_converged(old_sites, new_sites; epsilon=1e-6)
+    # TODO improve convergence check
+    diff1 = [(t_old.q.η - t_new.q.η)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
+    diff2 = [(t_old.q.λ - t_new.q.λ)^2 for (t_old, t_new) in zip(old_sites, new_sites)]
+    return mean(diff1) < epsilon && mean(diff2) < epsilon
+end
+
+function ep_outer_loop(ep_problem; maxiter)
+    ep_state = initialize_ep_state(ep_problem)
+    for i=1:maxiter
+        new_state = ep_loop_over_sites(ep_problem, ep_state)
+        if ep_converged(ep_state.sites, new_state.sites)
+            break
+        else
+            ep_state = new_state
+        end
+    end
+    return ep_state
+end
+
+function create_ep_problem(dist_y_given_f, ys, K)
+    f_prior = MvNormal(K)
+    lik_evals = [f -> pdf(dist_y_given_f(f), y) for y in ys]
+    return EPProblem(f_prior, lik_evals)
+end
+
+function ep_inference(dist_y_given_f, ys, K; maxiter=100)
+    ep_problem = create_ep_problem(dist_y_given_f, ys, K)
+    return ep_outer_loop(ep_problem; maxiter)
 end
 
 function ep_steps(dist_y_given_f, f_prior, y; maxiter=100)
