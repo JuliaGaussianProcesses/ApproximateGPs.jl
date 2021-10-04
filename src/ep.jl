@@ -11,7 +11,36 @@ end
 function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     ep_state = ep_inference(ep, lfx, ys)
     # TODO: it seems a bit weird to piggyback on SVGP here...
+    # should AbstractGPs provide its own "GP conditioned on f(x) ~ q(f)" rather
+    # than just "conditioned on observation under some noise" (*not* the same
+    # thing...)?
     return posterior(SVGP(lfx.fx, ep_state.q))
+end
+
+function approx_lml(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
+    # log Z_{EP} = ∑ᵢlog Z̃ᵢ - n/2 log(2π) - ½ log det(K + Σ̃) - ½ μ̃ᵀ (K + Σ̃)⁻¹ μ̃
+    # RW (3.65) RW (3.73) RW (3.74)
+    ep_state = ep_inference(ep, lfx, ys)
+
+    site_term = sum(log(site.Z) for site in ep_state.sites)
+    Stilde = Diagonal([site.q.λ for site in ep_state.sites])
+    mutilde = [site.q.μ for site in ep_state.sites]
+    Stilde_root = sqrt(Stilde)
+    # Stilde_root_times_mutilde = [site.q.η/sqrt(site.q.λ) for site in ep_state.sites]
+    Stilde_root_times_mutilde = Stilde_root * mutilde
+
+    n = length(ys)
+    #const_term = n * log2π / 2
+    const_term = 0
+
+    K = cov(lfx.fx)
+    B = I + Stilde_root * K * Stilde_root
+    L = cholesky(Symmetric(B)).L
+
+    logdet_term = sum(log.(diag(L))) - sum(log.(diag(Stilde_root)))
+    v = L \ (Stilde_root_times_mutilde)
+    maha_term = v'v
+    lml = site_term - const_term - logdet_term - maha_term
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
@@ -47,7 +76,7 @@ end
 function EPState(ep_problem)
     N = length(ep_problem.lik_evals)
     # TODO- manually keep track of canonical parameters and initialize precision to 0
-    sites = [(; q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
+    sites = [(; Z=NaN, q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
     q = ep_problem.p
     return EPState(q, sites)
 end
@@ -85,11 +114,11 @@ function ep_loop_over_sites(ep_problem, ep_state)
     # TODO: randomize order of updates: make configurable?
     for i in randperm(length(ep_problem.lik_evals))
         @info "  Inner loop iteration $i"
-        new_t = ep_single_site_update(ep_problem, ep_state, i)
+        new_site = ep_single_site_update(ep_problem, ep_state, i)
 
         # TODO: rank-1 update
         new_sites = deepcopy(ep_state.sites)
-        new_sites[i] = (; q=new_t)
+        new_sites[i] = new_site
         new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
         ep_state = EPState(new_q, new_sites)
     end
@@ -102,7 +131,7 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     cav_i = div_dist(q_fi, alik_i)
     qhat_i = moment_match(cav_i, ep_problem.lik_evals[i]; n_points=ep_problem.ep.n_gh)
     new_t = div_dist(qhat_i.q, cav_i)
-    return new_t
+    return (; Z=qhat_i.Z, q=new_t)
 end
 
 function ith_marginal(d::Union{MvNormal,MvNormalCanon}, i::Int)

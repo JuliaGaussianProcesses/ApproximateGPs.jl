@@ -12,6 +12,7 @@ using SpecialFunctions
 using ChainRulesCore
 using FillArrays
 using KLDivergences
+using IrrationalConstants: log2π
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 

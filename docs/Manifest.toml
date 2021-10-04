@@ -12,7 +12,7 @@ uuid = "99985d1d-32ba-4be9-9821-2ec096f28918"
 version = "0.5.1"
 
 [[ApproximateGPs]]
-deps = ["AbstractGPs", "ChainRulesCore", "Distributions", "FastGaussQuadrature", "FillArrays", "ForwardDiff", "GPLikelihoods", "KLDivergences", "LinearAlgebra", "Random", "Reexport", "SpecialFunctions", "Statistics", "StatsBase"]
+deps = ["AbstractGPs", "ChainRulesCore", "Distributions", "FastGaussQuadrature", "FillArrays", "ForwardDiff", "GPLikelihoods", "IrrationalConstants", "KLDivergences", "LinearAlgebra", "Random", "Reexport", "SpecialFunctions", "Statistics", "StatsBase"]
 path = ".."
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 version = "0.1.2"
