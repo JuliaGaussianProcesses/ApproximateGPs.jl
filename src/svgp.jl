@@ -101,6 +101,11 @@ variational posterior. ``K_{u, u}`` and ``K_{*, u}`` are the prior covariances
 for the inducing points and for between the test and inducing points
 respectively.
 
+`prior_sample_function` can be any function which returns exact or approximate
+samples from the prior. It must have the signature:
+
+`prior_sample_function(rng::AbstractRNG, fx::FiniteGP, num_samples::Int)`
+
 [2] - James T. Wilson and Viacheslav Borovitskiy and Alexander Terenin and Peter
 Mostowsky and Marc Peter Deisenroth. "Efficiently Sampling Functions from
 Gaussian Process Posteriors" ICML, 2020.
