@@ -124,7 +124,7 @@ function pathwise_sample(
     u = rand(rng, svgp.q, num_samples)
 
     # Jointly sample the prior at both the test points x^* and inducing inputs z
-    prior_sample = prior_sample_function(rng, f.prior(vcat(x, z), 1e-8), num_samples)
+    prior_sample = prior_sample_function(rng, f.prior(vcat(x, z)), num_samples)
 
     # Split the prior sample into f^* and f^z
     f_star = selectdim(prior_sample, 1, 1:size(x, 1))
