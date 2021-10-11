@@ -81,14 +81,15 @@ raw"""
     pathwise_sample(
         [rng::AbstractRNG,]
         f::ApproxPosteriorGP{<:SVGP},
+        x::AbstractVector,
         prior_sample_function,
         num_samples=1::Int
     )
 
-Takes a 'pathwise sample' from `f` by using Matheron's rule [2]. This works by
-taking `num_samples` (possibly approximate) samples from `f.prior` and then
-updating these prior samples with samples `u` from `f.approx.q` by Matheron's
-rule:
+Takes a 'pathwise sample' from the posterior GP `f` at `x` by using Matheron's
+rule [2]. This works by taking `num_samples` (possibly approximate) samples from
+`f.prior` and then updating these prior samples with samples `u` from
+`f.approx.q` by Matheron's rule:
 
 ```math
 f^* | u = f^* + K_{*, u} K_{u, u}^{-1} (u - f^z)
