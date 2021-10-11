@@ -77,6 +77,61 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return μ, Σ_diag
 end
 
+raw"""
+    pathwise_sample(
+        [rng::AbstractRNG,]
+        f::ApproxPosteriorGP{<:SVGP},
+        prior_sample_function,
+        num_samples=1::Int
+    )
+
+Takes a 'pathwise sample' from `f` by using Matheron's rule [2]. This works by
+taking `num_samples` (possibly approximate) samples from `f.prior` and then
+updating these prior samples with samples `u` from `f.approx.q` by Matheron's
+rule:
+
+```math
+f^* | u = f^* + K_{*, u} K_{u, u}^{-1} (u - f^z)
+```
+
+where ``f^* = f(x^*)`` and ``f^z = f(z)`` are the prior samples at the test
+points and inducing points respectively. ``u \sim q(u)`` is a sample from the
+variational posterior. ``K_{u, u}`` and ``K_{*, u}`` are the prior covariances
+for the inducing points and for between the test and inducing points
+respectively.
+
+[2] - James T. Wilson and Viacheslav Borovitskiy and Alexander Terenin and Peter
+Mostowsky and Marc Peter Deisenroth. "Efficiently Sampling Functions from
+Gaussian Process Posteriors" ICML, 2020.
+"""
+function pathwise_sample(
+    rng::AbstractRNG,
+    f::ApproxPosteriorGP{<:SVGP},
+    x::AbstractVector,
+    prior_sample_function;
+    num_samples=1::Int
+)
+    svgp = f.approx
+    z = svgp.fz.x
+    Kxu = cov(f.prior, x, z)
+    Kuu = f.data.Kuu
+    u = rand(rng, svgp.q, num_samples)
+
+    # Jointly sample the prior at both the test points x^* and inducing inputs z
+    prior_sample = prior_sample_function(rng, f.prior(vcat(x, z), 1e-8), num_samples)
+
+    # Split the prior sample into f^* and f^z
+    f_star = selectdim(prior_sample, 1, 1:size(x, 1))
+    f_z = selectdim(prior_sample, 1, size(x, 1)+1:size(prior_sample, 1))
+
+    # Apply Matheron's rule
+    return f_star + Kxu * (Kuu \ (u - f_z))
+end
+
+function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector, prior_sample_function; num_samples=1::Int)
+    pathwise_sample(Random.GLOBAL_RNG, f, x, prior_sample_function; num_samples)
+end
+
 inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
 
 _chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
