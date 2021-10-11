@@ -18,5 +18,5 @@ x_plot = sort(rand(100))
 post_samples = ApproximateGPs.pathwise_sample(ap, x_plot, rand; num_samples=n_samples)
 
 using Plots
-plot(x_plot, post_samples, label="", color=:red, linealpha=0.2)
-plot!(x_plot, ap, color=:green, label="True posterior")
+plot(x_plot, post_samples; label="", color=:red, linealpha=0.2)
+plot!(x_plot, ap; color=:green, label="True posterior")

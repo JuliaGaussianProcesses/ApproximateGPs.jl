@@ -115,7 +115,7 @@ function pathwise_sample(
     f::ApproxPosteriorGP{<:SVGP},
     x::AbstractVector,
     prior_sample_function;
-    num_samples=1::Int
+    num_samples=1::Int,
 )
     svgp = f.approx
     z = svgp.fz.x
@@ -128,14 +128,19 @@ function pathwise_sample(
 
     # Split the prior sample into f^* and f^z
     f_star = selectdim(prior_sample, 1, 1:size(x, 1))
-    f_z = selectdim(prior_sample, 1, size(x, 1)+1:size(prior_sample, 1))
+    f_z = selectdim(prior_sample, 1, (size(x, 1) + 1):size(prior_sample, 1))
 
     # Apply Matheron's rule
     return f_star + Kxu * (Kuu \ (u - f_z))
 end
 
-function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector, prior_sample_function; num_samples=1::Int)
-    pathwise_sample(Random.GLOBAL_RNG, f, x, prior_sample_function; num_samples)
+function pathwise_sample(
+    f::ApproxPosteriorGP{<:SVGP},
+    x::AbstractVector,
+    prior_sample_function;
+    num_samples=1::Int,
+)
+    return pathwise_sample(Random.GLOBAL_RNG, f, x, prior_sample_function; num_samples)
 end
 
 inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
