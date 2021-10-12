@@ -94,8 +94,14 @@ end
 function pathwise_sample(
     rng::AbstractRNG,
     f::ApproxPosteriorGP{<:SVGP},
+<<<<<<< HEAD
     prior_sample_function; # TODO: better name?
     num_samples=1::Int
+=======
+    x::AbstractVector,
+    prior_sample_function;
+    num_samples=1::Int,
+>>>>>>> 97ecfb8bde36ecbb760bcd82286633a7d5ad262e
 )
     svgp = f.approx
     z = svgp.fz.x
@@ -106,7 +112,13 @@ function pathwise_sample(
     # size(w): (L, num_samples)
     ϕ, w = prior_sample_function(rng, f.prior, input_dims, num_samples)
 
+<<<<<<< HEAD
     prior(x) = ϕ(x)*w
+=======
+    # Split the prior sample into f^* and f^z
+    f_star = selectdim(prior_sample, 1, 1:size(x, 1))
+    f_z = selectdim(prior_sample, 1, (size(x, 1) + 1):size(prior_sample, 1))
+>>>>>>> 97ecfb8bde36ecbb760bcd82286633a7d5ad262e
 
     u = rand(rng, svgp.q, num_samples)
     v = f.data.Kuu \ (u - ϕ(z)*w)
@@ -115,7 +127,17 @@ function pathwise_sample(
         return Kxu * v
     end
 
+<<<<<<< HEAD
     return PosteriorFunctionSamples(num_samples, prior, update)
+=======
+function pathwise_sample(
+    f::ApproxPosteriorGP{<:SVGP},
+    x::AbstractVector,
+    prior_sample_function;
+    num_samples=1::Int,
+)
+    return pathwise_sample(Random.GLOBAL_RNG, f, x, prior_sample_function; num_samples)
+>>>>>>> 97ecfb8bde36ecbb760bcd82286633a7d5ad262e
 end
 
 function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, prior_sample_function; num_samples=1::Int)

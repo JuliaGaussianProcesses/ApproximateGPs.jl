@@ -42,7 +42,12 @@ function_samples = ApproximateGPs.pathwise_sample(ap, sample_fn; num_samples=n_s
 y_samples = function_samples(x_plot)  # size(y_samples): (length(x_plot), n_samples)
 
 using Plots
+<<<<<<< HEAD
 plot(x_plot, y_samples, label="", color=:red, linealpha=0.2)
 plot!(x_plot, ap, color=:green, label="True posterior")
 scatter!(x, y, label="data")
 vline!(z, label="inducing points")
+=======
+plot(x_plot, post_samples; label="", color=:red, linealpha=0.2)
+plot!(x_plot, ap; color=:green, label="True posterior")
+>>>>>>> 97ecfb8bde36ecbb760bcd82286633a7d5ad262e
