@@ -77,68 +77,47 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return μ, Σ_diag
 end
 
-raw"""
-    pathwise_sample(
-        [rng::AbstractRNG,]
-        f::ApproxPosteriorGP{<:SVGP},
-        x::AbstractVector,
-        prior_sample_function,
-        num_samples=1::Int
-    )
+inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
 
-Takes a 'pathwise sample' from the posterior GP `f` at `x` by using Matheron's
-rule [2]. This works by taking `num_samples` (possibly approximate) samples from
-`f.prior` and then updating these prior samples with samples `u` from
-`f.approx.q` by Matheron's rule:
+## Pathwise posterior sampling
 
-```math
-f^* | u = f^* + K_{*, u} K_{u, u}^{-1} (u - f^z)
-```
+struct PosteriorFunctionSamples
+    num_samples
+    prior  # prior(x) returns an approx prior sample
+    update  # update(x) computes the required pathwise update
+end
 
-where ``f^* = f(x^*)`` and ``f^z = f(z)`` are the prior samples at the test
-points and inducing points respectively. ``u \sim q(u)`` is a sample from the
-variational posterior. ``K_{u, u}`` and ``K_{*, u}`` are the prior covariances
-for the inducing points and for between the test and inducing points
-respectively.
+(f::PosteriorFunctionSamples)(x) = f([x])
+(f::PosteriorFunctionSamples)(x::AbstractVector) = f.prior(x) + f.update(x)
 
-`prior_sample_function` can be any function which returns exact or approximate
-samples from the prior. It must have the signature:
-
-`prior_sample_function(rng::AbstractRNG, fx::FiniteGP, num_samples::Int)`
-
-[2] - James T. Wilson and Viacheslav Borovitskiy and Alexander Terenin and Peter
-Mostowsky and Marc Peter Deisenroth. "Efficiently Sampling Functions from
-Gaussian Process Posteriors" ICML, 2020.
-"""
+# TODO: docstrings
 function pathwise_sample(
     rng::AbstractRNG,
     f::ApproxPosteriorGP{<:SVGP},
-    x::AbstractVector,
-    prior_sample_function;
+    prior_sample_function; # TODO: better name?
     num_samples=1::Int
 )
     svgp = f.approx
     z = svgp.fz.x
-    Kxu = cov(f.prior, x, z)
-    Kuu = f.data.Kuu
+    input_dims = length(z[1])  # TODO: what's the best way of getting this?
+
+    # Each function sample returns a fixed weight sample along with a L-dimensional feature mapping ϕ
+    # ϕ: R^(N×D) -> R^(N×L)
+    # size(w): (L, num_samples)
+    ϕ, w = prior_sample_function(rng, f.prior, input_dims, num_samples)
+
+    prior(x) = ϕ(x)*w
+
     u = rand(rng, svgp.q, num_samples)
+    v = f.data.Kuu \ (u - ϕ(z)*w)
+    function update(x)
+        Kxu = cov(f.prior, x, z)
+        return Kxu * v
+    end
 
-    # Jointly sample the prior at both the test points x^* and inducing inputs z
-    prior_sample = prior_sample_function(rng, f.prior(vcat(x, z)), num_samples)
-
-    # Split the prior sample into f^* and f^z
-    f_star = selectdim(prior_sample, 1, 1:size(x, 1))
-    f_z = selectdim(prior_sample, 1, size(x, 1)+1:size(prior_sample, 1))
-
-    # Apply Matheron's rule
-    return f_star + Kxu * (Kuu \ (u - f_z))
+    return PosteriorFunctionSamples(num_samples, prior, update)
 end
 
-function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector, prior_sample_function; num_samples=1::Int)
-    pathwise_sample(Random.GLOBAL_RNG, f, x, prior_sample_function; num_samples)
+function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, prior_sample_function; num_samples=1::Int)
+    pathwise_sample(Random.GLOBAL_RNG, f, prior_sample_function; num_samples)
 end
-
-inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
-
-_chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
-_chol_cov(q::MvNormal) = cholesky(q.Σ)

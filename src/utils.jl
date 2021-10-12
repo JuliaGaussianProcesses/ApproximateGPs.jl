@@ -8,3 +8,6 @@ if VERSION < v"1.7"
         return Cholesky{T,typeof(U.data)}(U.data, 'U', 0)
     end
 end
+
+_chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
+_chol_cov(q::MvNormal) = cholesky(q.Σ)
