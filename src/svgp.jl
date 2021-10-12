@@ -95,7 +95,7 @@ function pathwise_sample(
     rng::AbstractRNG,
     f::ApproxPosteriorGP{<:SVGP},
     prior_sample_function; # TODO: better name?
-    num_samples=1::Int
+    num_samples=1::Int,
 )
     svgp = f.approx
     z = svgp.fz.x
