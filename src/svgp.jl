@@ -106,10 +106,10 @@ function pathwise_sample(
     # size(w): (L, num_samples)
     ϕ, w = prior_sample_function(rng, f.prior, input_dims, num_samples)
 
-    prior(x) = ϕ(x)*w
+    prior(x) = ϕ(x) * w
 
     u = rand(rng, svgp.q, num_samples)
-    v = f.data.Kuu \ (u - ϕ(z)*w)
+    v = f.data.Kuu \ (u - ϕ(z) * w)
     function update(x)
         Kxu = cov(f.prior, x, z)
         return Kxu * v
@@ -118,6 +118,8 @@ function pathwise_sample(
     return PosteriorFunctionSamples(num_samples, prior, update)
 end
 
-function pathwise_sample(f::ApproxPosteriorGP{<:SVGP}, prior_sample_function; num_samples=1::Int)
-    pathwise_sample(Random.GLOBAL_RNG, f, prior_sample_function; num_samples)
+function pathwise_sample(
+    f::ApproxPosteriorGP{<:SVGP}, prior_sample_function; num_samples=1::Int
+)
+    return pathwise_sample(Random.GLOBAL_RNG, f, prior_sample_function; num_samples)
 end

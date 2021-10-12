@@ -5,7 +5,6 @@ using AbstractGPs
 using Distributions
 using LinearAlgebra
 
-
 # Find the exact Titsias posterior (avoid optimisation)
 function exact_variational_posterior(fu, fx, y)
     σ² = fx.Σy[1]
@@ -16,7 +15,6 @@ function exact_variational_posterior(fu, fx, y)
     S = Symmetric(Kuu * (Σ \ Kuu))
     return MvNormal(m, S)
 end
-
 
 k = 3 * (SqExponentialKernel() ∘ ScaleTransform(10))
 gp = GP(k)
@@ -42,7 +40,7 @@ function_samples = ApproximateGPs.pathwise_sample(ap, sample_fn; num_samples=n_s
 y_samples = function_samples(x_plot)  # size(y_samples): (length(x_plot), n_samples)
 
 using Plots
-plot(x_plot, y_samples, label="", color=:red, linealpha=0.2)
-plot!(x_plot, ap, color=:green, label="True posterior")
-scatter!(x, y, label="data")
-vline!(z, label="inducing points")
+plot(x_plot, y_samples; label="", color=:red, linealpha=0.2)
+plot!(x_plot, ap; color=:green, label="True posterior")
+scatter!(x, y; label="data")
+vline!(z; label="inducing points")
