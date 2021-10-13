@@ -1,3 +1,6 @@
+# TODO: Remove this!
+# COV_EXCL_START
+
 struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
@@ -123,3 +126,6 @@ function pathwise_sample(
 )
     return pathwise_sample(Random.GLOBAL_RNG, f, prior_sample_function; num_samples)
 end
+
+# TODO: Remove this!
+# COV_EXCL_STOP

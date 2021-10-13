@@ -1,3 +1,6 @@
+# TODO: Remove this!
+# COV_EXCL_START
+
 # Not registered yet, so `add https://github.com/rossviljoen/RandomFourierFeatures.jl`
 using RandomFourierFeatures
 using ApproximateGPs
@@ -44,3 +47,6 @@ plot(x_plot, y_samples; label="", color=:red, linealpha=0.2)
 plot!(x_plot, ap; color=:green, label="True posterior")
 scatter!(x, y; label="data")
 vline!(z; label="inducing points")
+
+# TODO: Remove this!
+# COV_EXCL_STOP
