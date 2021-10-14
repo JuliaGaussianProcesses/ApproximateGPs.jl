@@ -108,7 +108,9 @@ prior(p::PosteriorFunctionSamples, x) = p.data.w'p.ϕ(x)
 update(p::PosteriorFunctionSamples, x) = vec(p.data.v'p.data.cov_z(x))
 
 function resample(p::PosteriorFunctionSamples, num_samples=p.num_samples)
-    return PosteriorFunctionSamples(num_samples, p.ϕ, p.sample_w, p.v_from_w, p.cov_z)
+    return PosteriorFunctionSamples(
+        num_samples, p.ϕ, p.data.sample_w, p.data.v_from_w, p.data.cov_z
+    )
 end
 
 function pathwise_sample(
@@ -130,6 +132,7 @@ function pathwise_sample(
 
     z = f.approx.fz.x
     ϕz = ϕ.(z)
+    # `v` is a cached term needed for the pathwise `update` - if `w` is updated, `v` must be too
     function v_from_w(w)
         u = rand(rng, f.approx.q, num_samples)
         wtϕ = Base.map(p -> w'p, ϕz)
