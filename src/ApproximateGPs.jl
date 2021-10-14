@@ -22,6 +22,7 @@ include("utils.jl")
 include("svgp.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
+include("pathwise_sampling.jl")
 
 using ForwardDiff
 
