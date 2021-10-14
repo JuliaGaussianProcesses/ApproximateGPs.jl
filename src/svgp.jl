@@ -83,48 +83,74 @@ end
 inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
 
 ## Pathwise posterior sampling
+# TODO: docstrings
 
-struct PosteriorFunctionSamples
-    num_samples
-    prior  # prior(x) returns an approx prior sample
-    update  # update(x) computes the required pathwise update
+struct PosteriorFunctionSamples{Tϕ,Tdata}
+    num_samples::Int
+    ϕ::Tϕ
+    data::Tdata
 end
 
-(f::PosteriorFunctionSamples)(x) = f([x])
-(f::PosteriorFunctionSamples)(x::AbstractVector) = f.prior(x) + f.update(x)
+function PosteriorFunctionSamples(num_samples, ϕ, sample_w, v_from_w, cov_z)
+    w = sample_w(num_samples)
+    v = v_from_w(w)
+    data = (w=w, v=v, sample_w=sample_w, v_from_w=v_from_w, cov_z=cov_z)
+    return PosteriorFunctionSamples(num_samples, ϕ, data)
+end
 
-# TODO: docstrings
+(p::PosteriorFunctionSamples)(x) = prior(p, x) + update(p, x)
+function map(p::PosteriorFunctionSamples, x::AbstractVector)
+    return map(e -> prior(p, e), x) + map(e -> update(p, e), x)
+end
+
+# x here is an *individual* input
+prior(p::PosteriorFunctionSamples, x) = p.data.w'p.ϕ(x)
+update(p::PosteriorFunctionSamples, x) = vec(p.data.v'p.data.cov_z(x))
+
+function resample(p::PosteriorFunctionSamples, num_samples=p.num_samples)
+    return PosteriorFunctionSamples(num_samples, p.ϕ, p.sample_w, p.v_from_w, p.cov_z)
+end
+
 function pathwise_sample(
     rng::AbstractRNG,
     f::ApproxPosteriorGP{<:SVGP},
-    prior_sample_function; # TODO: better name?
+    weight_space_approx,
+    input_dims,
+    feature_dims;
     num_samples=1::Int,
 )
-    svgp = f.approx
-    z = svgp.fz.x
-    input_dims = length(z[1])  # TODO: what's the best way of getting this?
-
-    # Each function sample returns a fixed weight sample along with a L-dimensional feature mapping ϕ
+    # weight_space_approx returns an L-dimensional feature mapping ϕ along with
+    # a distribution over weights p_w such that ̃f(x) = wᵀϕ(x) approximates the
+    # prior GP.
     # ϕ: R^(N×D) -> R^(N×L)
     # size(w): (L, num_samples)
-    ϕ, w = prior_sample_function(rng, f.prior, input_dims, num_samples)
+    ϕ, p_w = weight_space_approx(rng, f.prior.kernel, input_dims, feature_dims)
 
-    prior(x) = ϕ(x) * w
+    sample_w(num_samples) = rand(rng, p_w, num_samples)
 
-    u = rand(rng, svgp.q, num_samples)
-    v = f.data.Kuu \ (u - ϕ(z) * w)
-    function update(x)
-        Kxu = cov(f.prior, x, z)
-        return Kxu * v
+    z = f.approx.fz.x
+    ϕz = ϕ.(z)
+    function v_from_w(w)
+        u = rand(rng, f.approx.q, num_samples)
+        wtϕ = Base.map(p -> w'p, ϕz)
+        return f.data.Kuu \ (u - hcat(wtϕ...)')
     end
 
-    return PosteriorFunctionSamples(num_samples, prior, update)
+    cov_z(x) = cov(f.prior, z, [x])
+
+    return PosteriorFunctionSamples(num_samples, ϕ, sample_w, v_from_w, cov_z)
 end
 
 function pathwise_sample(
-    f::ApproxPosteriorGP{<:SVGP}, prior_sample_function; num_samples=1::Int
+    f::ApproxPosteriorGP{<:SVGP},
+    prior_sample_function,
+    input_dims,
+    feature_dims;
+    num_samples=1::Int,
 )
-    return pathwise_sample(Random.GLOBAL_RNG, f, prior_sample_function; num_samples)
+    return pathwise_sample(
+        Random.GLOBAL_RNG, f, prior_sample_function, input_dims, feature_dims; num_samples
+    )
 end
 
 # TODO: Remove this!
