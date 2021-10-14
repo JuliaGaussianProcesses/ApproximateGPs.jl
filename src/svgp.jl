@@ -99,7 +99,7 @@ function PosteriorFunctionSamples(num_samples, ϕ, sample_w, v_from_w, cov_z)
 end
 
 (p::PosteriorFunctionSamples)(x) = prior(p, x) + update(p, x)
-function map(p::PosteriorFunctionSamples, x::AbstractVector)
+function Base.map(p::PosteriorFunctionSamples, x::AbstractVector)
     return map(e -> prior(p, e), x) + map(e -> update(p, e), x)
 end
 
@@ -107,7 +107,7 @@ end
 prior(p::PosteriorFunctionSamples, x) = p.data.w'p.ϕ(x)
 update(p::PosteriorFunctionSamples, x) = vec(p.data.v'p.data.cov_z(x))
 
-function resample(p::PosteriorFunctionSamples, num_samples=p.num_samples)
+function resample(p::PosteriorFunctionSamples; num_samples=p.num_samples)
     return PosteriorFunctionSamples(
         num_samples, p.ϕ, p.data.sample_w, p.data.v_from_w, p.data.cov_z
     )
@@ -124,7 +124,7 @@ function pathwise_sample(
     # weight_space_approx returns an L-dimensional feature mapping ϕ along with
     # a distribution over weights p_w such that ̃f(x) = wᵀϕ(x) approximates the
     # prior GP.
-    # ϕ: R^(N×D) -> R^(N×L)
+    # ϕ: R^D -> R^L
     # size(w): (L, num_samples)
     ϕ, p_w = weight_space_approx(rng, f.prior.kernel, input_dims, feature_dims)
 
@@ -135,7 +135,7 @@ function pathwise_sample(
     # `v` is a cached term needed for the pathwise `update` - if `w` is updated, `v` must be too
     function v_from_w(w)
         u = rand(rng, f.approx.q, num_samples)
-        wtϕ = Base.map(p -> w'p, ϕz)
+        wtϕ = map(p -> w'p, ϕz)
         return f.data.Kuu \ (u - hcat(wtϕ...)')
     end
 
