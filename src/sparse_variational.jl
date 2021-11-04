@@ -1,3 +1,9 @@
+"""
+    SparseVariationalApproximation(fz::FiniteGP, q::AbstractMvNormal)
+
+Packages the prior over the pseudo-points, `fz`, and the approximate posterior at the
+pseudo-points, `q`, together into a single object.
+"""
 struct SparseVariationalApproximation{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
@@ -37,6 +43,11 @@ function AbstractGPs.posterior(
     @assert sva.fz.f === fx.f
     return posterior(sva)
 end
+
+#
+# Code below this point just implements the Internal AbstractGPs API.
+# See AbstractGPs.jl API docs for more info.
+#
 
 function Statistics.mean(
     f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
