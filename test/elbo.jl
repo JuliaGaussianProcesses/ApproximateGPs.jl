@@ -10,12 +10,12 @@
     fz = f(z)
     q_ex = exact_variational_posterior(fz, fx, y)
 
-    svgp = SVGP(fz, q_ex)
-    @test elbo(svgp, fx, y) isa Real
-    @test elbo(svgp, fx, y) ≤ logpdf(fx, y)
+    sva = StochasticVariationalApproximation(fz, q_ex)
+    @test elbo(sva, fx, y) isa Real
+    @test elbo(sva, fx, y) ≤ logpdf(fx, y)
 
     fx_bad = f(x, fill(0.1, N))
-    @test_throws ErrorException elbo(svgp, fx_bad, y)
+    @test_throws ErrorException elbo(sva, fx_bad, y)
 
     # Test that the various methods of computing expectations return the same
     # result.

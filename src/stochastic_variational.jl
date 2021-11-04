@@ -1,14 +1,14 @@
-struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+struct SparseVariationalApproximation{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
 end
 
 raw"""
-    posterior(svgp::SVGP)
+    posterior(sva::SparseVariationalApproximation)
 
 Compute the approximate posterior [1] over the process `f =
-svgp.fz.f`, given inducing inputs `z = svgp.fz.x` and a variational
-distribution over inducing points `svgp.q` (which represents ``q(u)``
+sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
+distribution over inducing points `sva.q` (which represents ``q(u)``
 where `u = f(z)`). The approximate posterior at test points ``x^*``
 where ``f^* = f(x^*)`` is then given by:
 
@@ -21,38 +21,38 @@ which can be found in closed form.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-function AbstractGPs.posterior(svgp::SVGP)
-    q, fz = svgp.q, svgp.fz
+function AbstractGPs.posterior(sva::SparseVariationalApproximation)
+    q, fz = sva.q, sva.fz
     m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
     B = Kuu.L \ S.L
     α = Kuu \ (m - mean(fz))
     data = (S=S, m=m, Kuu=Kuu, B=B, α=α)
-    return ApproxPosteriorGP(svgp, fz.f, data)
+    return ApproxPosteriorGP(sva, fz.f, data)
 end
 
-function AbstractGPs.posterior(svgp::SVGP, fx::FiniteGP, ::AbstractVector)
-    @assert svgp.fz.f === fx.f
-    return posterior(svgp)
+function AbstractGPs.posterior(sva::SparseVariationalApproximation, fx::FiniteGP, ::AbstractVector)
+    @assert sva.fz.f === fx.f
+    return posterior(sva)
 end
 
-function Statistics.mean(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
+function Statistics.mean(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
 
-function Statistics.cov(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
+function Statistics.cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
 end
 
-function Statistics.var(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
+function Statistics.var(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
 end
 
-function Statistics.cov(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector, y::AbstractVector)
+function Statistics.cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector, y::AbstractVector)
     B = f.data.B
     Cxu = cov(f.prior, x, inducing_points(f))
     Cuy = cov(f.prior, inducing_points(f), y)
@@ -61,7 +61,7 @@ function Statistics.cov(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector, y::Abst
     return cov(f.prior, x, y) - (E * D) + (E * B * B' * D)
 end
 
-function StatsBase.mean_and_cov(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
+function StatsBase.mean_and_cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α
@@ -69,7 +69,7 @@ function StatsBase.mean_and_cov(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return μ, Σ
 end
 
-function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
+function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α
@@ -77,7 +77,7 @@ function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return μ, Σ_diag
 end
 
-inducing_points(f::ApproxPosteriorGP{<:SVGP}) = f.approx.fz.x
+inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.approx.fz.x
 
 _chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
 _chol_cov(q::MvNormal) = cholesky(q.Σ)

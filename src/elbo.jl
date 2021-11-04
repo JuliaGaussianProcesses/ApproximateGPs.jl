@@ -1,5 +1,5 @@
 """
-    elbo(svgp::SVGP, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
+    elbo(svgp::SparseVariationalApproximation, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
 svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
@@ -20,53 +20,53 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP,
+    sva::SparseVariationalApproximation,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
     quadrature=DefaultQuadrature(),
 )
-    @assert svgp.fz.f === fx.f
-    return _elbo(quadrature, svgp, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
+    @assert sva.fz.f === fx.f
+    return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
-function AbstractGPs.elbo(::SVGP, ::FiniteGP, ::AbstractVector; kwargs...)
+function AbstractGPs.elbo(::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...)
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
     )
 end
 
 """
-    elbo(svgp, ::SVGP, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=DefaultQuadrature())
+    elbo(svgp, ::SparseVariationalApproximation, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=DefaultQuadrature())
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    svgp::SVGP,
+    sva::SparseVariationalApproximation,
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
     quadrature=DefaultQuadrature(),
 )
-    @assert svgp.fz.f === lfx.fx.f
-    return _elbo(quadrature, svgp, lfx.fx, y, lfx.lik, num_data)
+    @assert sva.fz.f === lfx.fx.f
+    return _elbo(quadrature, sva, lfx.fx, y, lfx.lik, num_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
     quadrature::QuadratureMethod,
-    svgp::SVGP,
+    sva::SparseVariationalApproximation,
     fx::FiniteGP,
     y::AbstractVector,
     lik,
     num_data::Integer,
 )
-    @assert svgp.fz.f === fx.f
-    post = posterior(svgp)
+    @assert sva.fz.f === fx.f
+    post = posterior(sva)
     q_f = marginals(post(fx.x))
     variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
-    kl_term = KL(svgp.q, svgp.fz)
+    kl_term = KL(sva.q, sva.fz)
 
     n_batch = length(y)
     scale = num_data / n_batch
