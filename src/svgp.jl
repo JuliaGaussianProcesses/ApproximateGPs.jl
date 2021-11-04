@@ -1,3 +1,9 @@
+"""
+    SVGP(fz::FiniteGP, q::AbstractMvNormal)
+
+Packages the prior over the pseudo-points, `fz`, and the approximate posterior at the
+pseudo-points, `q`, together into a single object.
+"""
 struct SVGP{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
