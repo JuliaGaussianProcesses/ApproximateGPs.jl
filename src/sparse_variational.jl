@@ -31,28 +31,40 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation)
     return ApproxPosteriorGP(sva, fz.f, data)
 end
 
-function AbstractGPs.posterior(sva::SparseVariationalApproximation, fx::FiniteGP, ::AbstractVector)
+function AbstractGPs.posterior(
+    sva::SparseVariationalApproximation, fx::FiniteGP, ::AbstractVector
+)
     @assert sva.fz.f === fx.f
     return posterior(sva)
 end
 
-function Statistics.mean(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
+function Statistics.mean(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
 
-function Statistics.cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
+function Statistics.cov(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
 end
 
-function Statistics.var(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
+function Statistics.var(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
 end
 
-function Statistics.cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector, y::AbstractVector)
+function Statistics.cov(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation},
+    x::AbstractVector,
+    y::AbstractVector,
+)
     B = f.data.B
     Cxu = cov(f.prior, x, inducing_points(f))
     Cuy = cov(f.prior, inducing_points(f), y)
@@ -61,7 +73,9 @@ function Statistics.cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, 
     return cov(f.prior, x, y) - (E * D) + (E * B * B' * D)
 end
 
-function StatsBase.mean_and_cov(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
+function StatsBase.mean_and_cov(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α
@@ -69,7 +83,9 @@ function StatsBase.mean_and_cov(f::ApproxPosteriorGP{<:SparseVariationalApproxim
     return μ, Σ
 end
 
-function StatsBase.mean_and_var(f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector)
+function StatsBase.mean_and_var(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
     μ = Cux' * f.data.α

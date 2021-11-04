@@ -31,7 +31,8 @@
         @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol = 1e-10
 
-        @test elbo(SparseVariationalApproximation(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol = 1e-6
+        @test elbo(SparseVariationalApproximation(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol =
+            1e-6
     end
 
     @testset "optimised posterior" begin

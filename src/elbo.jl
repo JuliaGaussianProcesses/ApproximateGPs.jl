@@ -30,7 +30,9 @@ function AbstractGPs.elbo(
     return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
-function AbstractGPs.elbo(::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...)
+function AbstractGPs.elbo(
+    ::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
+)
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
     )
