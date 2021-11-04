@@ -36,6 +36,11 @@ function AbstractGPs.posterior(svgp::SVGP, fx::FiniteGP, ::AbstractVector)
     return posterior(svgp)
 end
 
+#
+# Code below this point just implements the Internal AbstractGPs API.
+# See AbstractGPs.jl API docs for more info.
+#
+
 function Statistics.mean(f::ApproxPosteriorGP{<:SVGP}, x::AbstractVector)
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
