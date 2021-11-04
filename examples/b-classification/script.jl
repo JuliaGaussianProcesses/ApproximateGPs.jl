@@ -105,10 +105,10 @@ unpack = ParameterHandling.value ∘ unflatten;
 # Now, we define a function to build everything needed for an SVGP model from
 # the constrained parameters. The two necessary components are the `LatentGP`
 # which we are trying to approximate and the
-# `StochasticVariationalApproximation` struct. This struct takes as arguments
-# the inducing points as a `FiniteGP`, `fz`, and the variational posterior
-# distribution `q`. These elements can then be passed to the loss function (the
-# `elbo`) along with the data `x` and `y`.
+# `SparseVariationalApproximation` struct. This struct takes as arguments
+# the inducing points `fz`, and the variational posterior distribution `q`.
+# These elements can then be passed to the loss function (the `elbo`) along with
+# the data `x` and `y`.
 
 lik = BernoulliLikelihood()
 jitter = 1e-3  # added to aid numerical stability
@@ -118,7 +118,7 @@ function build_SVGP(params::NamedTuple)
     f = LatentGP(GP(kernel), lik, jitter)
     q = MvNormal(params.m, params.A)
     fz = f(params.z).fx
-    return StochasticVariationalApproximation(fz, q), f
+    return SparseVariationalApproximation(fz, q), f
 end
 
 function loss(params::NamedTuple)

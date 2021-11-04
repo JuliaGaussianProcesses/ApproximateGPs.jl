@@ -18,7 +18,7 @@ using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A
 export SparseVariationalApproximation, DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
-include("stochastic_variational.jl")
+include("sparse_variational.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
 

@@ -84,7 +84,7 @@ lik_noise = 0.3
 jitter = 1e-5;
 
 # Next, we define some useful functions on the model - creating the prior GP
-# under the model, as well as the `StochasticVariationalApproximation` struct
+# under the model, as well as the `SparseVariationalApproximation` struct
 # needed to create the posterior approximation and to compute the ELBO.
 
 function prior(m::SVGPModel)
@@ -104,7 +104,7 @@ function make_approx(m::SVGPModel, prior)
     S = PDMat(Cholesky(LowerTriangular(m.A)))
     q = MvNormal(m.m, S)
     fz = prior(m.z, jitter)
-    return StochasticVariationalApproximation(fz, q)
+    return SparseVariationalApproximation(fz, q)
 end;
 
 # Create the approximate posterior GP under the model.
@@ -123,7 +123,7 @@ function (m::SVGPModel)(x)
     return post(x)
 end;
 
-# Return the loss given data - for the StochasticVariationalApproximation, the
+# Return the loss given data - for the SparseVariationalApproximation, the
 # loss used is the negative ELBO (also known as the Variational Free Energy).
 # `num_data` is required for minibatching used below.
 

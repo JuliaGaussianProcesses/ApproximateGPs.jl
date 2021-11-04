@@ -10,7 +10,7 @@
     fz = f(z)
     q_ex = exact_variational_posterior(fz, fx, y)
 
-    sva = StochasticVariationalApproximation(fz, q_ex)
+    sva = SparseVariationalApproximation(fz, q_ex)
     @test elbo(sva, fx, y) isa Real
     @test elbo(sva, fx, y) ≤ logpdf(fx, y)
 
