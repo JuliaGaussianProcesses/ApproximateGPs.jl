@@ -33,6 +33,6 @@
     approx_naive = SparseVariationalApproximation(fz, q)
     f_approx_post_naive = posterior(approx_naive)
     @test mean(f_approx_post, a) ≈ mean(f_approx_post_naive, a)
-    @test cov(f_approx_post, a, b) ≈ cov(f_approx_post_naive, a ,b)
+    @test cov(f_approx_post, a, b) ≈ cov(f_approx_post_naive, a, b)
     @test elbo(approx, fx, y) ≈ elbo(approx_naive, fx, y)
 end

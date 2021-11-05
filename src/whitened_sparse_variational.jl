@@ -4,9 +4,8 @@
 Packages the prior over the pseudo-points `fz`, and the approximate posterior at the
 pseudo-points, which is `mean(fz) + cholesky(cov(fz)).U' * ε`, `ε ∼ q_ε`.
 """
-struct WhitenedSparseVariationalApproximation{
-    Tfz<:FiniteGP,Tq_ε<:AbstractMvNormal,
-} <: AbstractSparseVariationalApproximation
+struct WhitenedSparseVariationalApproximation{Tfz<:FiniteGP,Tq_ε<:AbstractMvNormal} <:
+       AbstractSparseVariationalApproximation
     fz::Tfz
     q_ε::Tq_ε
 end
