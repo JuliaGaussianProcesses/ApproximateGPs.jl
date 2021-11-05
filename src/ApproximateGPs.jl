@@ -15,7 +15,8 @@ using KLDivergences
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 
-export SparseVariationalApproximation, DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+export SparseVariationalApproximation
+export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
 include("sparse_variational.jl")
@@ -28,5 +29,7 @@ export LaplaceApproximation
 export build_laplace_objective, build_laplace_objective!
 export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
 include("laplace.jl")
+
+include("deprecations.jl")
 
 end
