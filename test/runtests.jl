@@ -25,8 +25,8 @@ include("test_utils.jl")
     println(" ")
     @info "Ran expected_loglik tests"
 
-    @testset "SVGP" begin
-        include("svgp.jl")
+    @testset "SparseVariationalApproximation" begin
+        include("sparse_variational.jl")
         println(" ")
         @info "Ran svgp tests"
 

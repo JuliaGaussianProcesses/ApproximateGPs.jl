@@ -23,7 +23,7 @@
 
         gpr_post = posterior(fx, y) # Exact GP regression
         vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
-        svgp_post = posterior(SVGP(fz, q_ex)) # Hensman (2013) exact posterior
+        svgp_post = posterior(SparseVariationalApproximation(fz, q_ex)) # Hensman (2013) exact posterior
 
         @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol = 1e-10
@@ -31,7 +31,8 @@
         @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol = 1e-10
         @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol = 1e-10
 
-        @test elbo(SVGP(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol = 1e-6
+        @test elbo(SparseVariationalApproximation(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol =
+            1e-6
     end
 
     @testset "optimised posterior" begin
@@ -55,7 +56,7 @@
 
             S = PDMat(Cholesky(LowerTriangular(m.A)))
             q = MvNormal(m.m, S)
-            return SVGP(fz, q), fx
+            return SparseVariationalApproximation(fz, q), fx
         end
 
         m, A = zeros(N), Matrix{Float64}(I, N, N) # initialise the variational parameters
