@@ -123,7 +123,7 @@ function (m::SVGPModel)(x)
     return post(x)
 end;
 
-# Return the loss given data - for the SparseVariationalApproximation, the
+# Return the loss given data - for the SVGP model as constructed using `SparseVariationalApproximation`, the
 # loss used is the negative ELBO (also known as the Variational Free Energy).
 # `num_data` is required for minibatching used below.
 

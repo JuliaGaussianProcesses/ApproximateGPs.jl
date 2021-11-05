@@ -11,7 +11,7 @@
     @testset "exact posterior" begin
         # There is a closed form optimal solution for the variational posterior
         # q(u) (e.g. # https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/
-        # equations (11) & (12)). The SparseVariationalApproximation posterior with this optimal q(u)
+        # equations (11) & (12)). The SVGP posterior with this optimal q(u)
         # should therefore be equivalent to the sparse GP (Titsias) posterior
         # and exact GP regression (when z == x).
 
