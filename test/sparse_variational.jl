@@ -11,7 +11,7 @@
     fx = f(x, 1e-15)
     y = rand(rng, fx)
 
-    q = exact_variational_posterior(fx, fx, y)
+    q = optimal_variational_posterior(fx, fx, y)
     f_approx_post = posterior(SparseVariationalApproximation(fx, q))
 
     a = collect(range(-1.0, 1.0; length=N_a))

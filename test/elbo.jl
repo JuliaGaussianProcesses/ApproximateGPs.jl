@@ -8,7 +8,7 @@
     f = GP(kernel)
     fx = f(x, 0.1)
     fz = f(z)
-    q_ex = exact_variational_posterior(fz, fx, y)
+    q_ex = optimal_variational_posterior(fz, fx, y)
 
     sva = SparseVariationalApproximation(fz, q_ex)
     @test elbo(sva, fx, y) isa Real

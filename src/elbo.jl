@@ -1,5 +1,11 @@
 """
-    elbo(svgp::SparseVariationalApproximation, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
+    elbo(
+        sva::AbstractSparseVariationalApproximation,
+        fx::FiniteGP,
+        y::AbstractVector{<:Real};
+        num_data=length(y),
+        quadrature=DefaultQuadrature(),
+    )
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
 svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
@@ -20,7 +26,7 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
@@ -31,7 +37,7 @@ function AbstractGPs.elbo(
 end
 
 function AbstractGPs.elbo(
-    ::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
+    ::AbstractSparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
 )
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
@@ -39,12 +45,18 @@ function AbstractGPs.elbo(
 end
 
 """
-    elbo(svgp, ::SparseVariationalApproximation, lfx::LatentFiniteGP, y::AbstractVector; num_data=length(y), quadrature=DefaultQuadrature())
+    elbo(
+        sva::AbstractSparseVariationalApproximation,
+        lfx::LatentFiniteGP,
+        y::AbstractVector;
+        num_data=length(y),
+        quadrature=DefaultQuadrature(),
+    )
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
@@ -57,7 +69,7 @@ end
 # Compute the common elements of the ELBO
 function _elbo(
     quadrature::QuadratureMethod,
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     fx::FiniteGP,
     y::AbstractVector,
     lik,
@@ -68,9 +80,14 @@ function _elbo(
     q_f = marginals(post(fx.x))
     variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
-    kl_term = KL(sva.q, sva.fz)
-
     n_batch = length(y)
     scale = num_data / n_batch
-    return sum(variational_exp) * scale - kl_term
+    return sum(variational_exp) * scale - kl_term(sva, post)
+end
+
+kl_term(sva::SparseVariationalApproximation, post) = KL(sva.q, sva.fz)
+
+function kl_term(sva::WhitenedSparseVariationalApproximation, post)
+    m_ε = mean(sva.q_ε)
+    return (tr(cov(sva.q_ε)) + m_ε'm_ε - length(m_ε) - logdet(post.data.C_ε)) / 2
 end

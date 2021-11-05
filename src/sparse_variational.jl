@@ -1,10 +1,14 @@
+abstract type AbstractSparseVariationalApproximation end
+
 """
     SparseVariationalApproximation(fz::FiniteGP, q::AbstractMvNormal)
 
 Packages the prior over the pseudo-points, `fz`, and the approximate posterior at the
 pseudo-points, `q`, together into a single object.
 """
-struct SparseVariationalApproximation{Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+struct SparseVariationalApproximation{
+    Tfz<:FiniteGP,Tq<:AbstractMvNormal
+} <: AbstractSparseVariationalApproximation
     fz::Tfz
     q::Tq
 end

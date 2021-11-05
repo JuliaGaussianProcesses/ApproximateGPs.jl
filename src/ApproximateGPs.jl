@@ -13,13 +13,23 @@ using ChainRulesCore
 using FillArrays
 using KLDivergences
 
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    At_A,
+    diag_At_A,
+    Xt_A_X,
+    Xt_A_Y,
+    diag_Xt_A_X
 
-export SparseVariationalApproximation
+export SparseVariationalApproximation, WhitenedSparseVariationalApproximation
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
 include("sparse_variational.jl")
+include("whitened_sparse_variational.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
 

@@ -25,19 +25,21 @@ include("test_utils.jl")
     println(" ")
     @info "Ran expected_loglik tests"
 
-    @testset "SparseVariationalApproximation" begin
-        include("sparse_variational.jl")
-        println(" ")
-        @info "Ran svgp tests"
+    include("sparse_variational.jl")
+    println(" ")
+    @info "Ran svgp tests"
 
-        include("elbo.jl")
-        println(" ")
-        @info "Ran elbo tests"
+    include("whitened_sparse_variational.jl")
+    println(" ")
+    @info "Ran whitened_sparse_variational tests"
 
-        include("equivalences.jl")
-        println(" ")
-        @info "Ran equivalences tests"
-    end
+    include("elbo.jl")
+    println(" ")
+    @info "Ran elbo tests"
+
+    include("equivalences.jl")
+    println(" ")
+    @info "Ran equivalences tests"
 
     @testset "Laplace" begin
         include("laplace.jl")

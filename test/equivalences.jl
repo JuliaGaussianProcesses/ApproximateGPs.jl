@@ -19,7 +19,7 @@
         f = GP(kernel)
         fx = f(x, lik_noise)
         fz = f(z)
-        q_ex = exact_variational_posterior(fz, fx, y)
+        q_ex = optimal_variational_posterior(fz, fx, y)
 
         gpr_post = posterior(fx, y) # Exact GP regression
         vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
