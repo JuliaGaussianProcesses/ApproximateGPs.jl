@@ -36,7 +36,7 @@ q = MvNormal(zeros(length(z)), I)
 Finally, we pass our `q` along with the inputs `f(z)` to obtain an approximate posterior GP:
 ```julia
 fz = f(z, 1e-6)  # 'observe' the process at z with some jitter for numerical stability 
-approx = SVGP(fz, q)  # Instantiate everything needed for the svgp approximation
+approx = SparseVariationalApproximation(fz, q)  # Instantiate everything needed for the svgp approximation
 
 svgp_posterior = posterior(approx)  # Create the approximate posterior
 ```
@@ -47,3 +47,17 @@ The approximate posterior constructed above will be a very poor approximation, s
 elbo(SVGP(fz, q), fx, y)
 ```
 A detailed example of how to carry out such optimisation is given in [Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
+
+## An Improved Parametrisation
+
+`WhitenedSparseVariationalApproximation(fz, q_ε)` has precisely the same API as
+`SparseVariationalApproximation(fz, q)`, but the approximation posterior is parametrised
+slightly differently.
+In particular,
+```julia
+Cuu = cholesky(cov(fz))
+mean(q) ≈ mean(fz) + Cuu.U' * mean(q_ε)
+cov(q) ≈ Cuu.U' * cov(q_ε) * Cuu.U
+```
+This parametrisation should typically be preferred -- inference tends to converge more
+quickly, and fewer operations are required to compute the elbo and the posterior statistics.
