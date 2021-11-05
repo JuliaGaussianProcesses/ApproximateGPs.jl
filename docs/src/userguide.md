@@ -28,7 +28,7 @@ To construct a sparse approximation to the exact posterior, we first need to sel
 M = 15  # The number of inducing points
 z = x[1:M]
 ```
-The inducing inputs `z` imply some latent function values `u = f(z)`, sometimes called pseudo-points. The stochastic variational Gaussian process (SVGP) approximation is defined by a variational distribution `q(u)` over the pseudo-points. In the case of GP regression, the optimal form for `q(u)` is a multivariate Gaussian, which is the only form of `q` currently supported by this package.
+The inducing inputs `z` imply some latent function values `u = f(z)`, sometimes called pseudo-points. The `SparseVariationalApproximation` specifies a distribution `q(u)` over the pseudo-points. In the case of GP regression, the optimal form for `q(u)` is a multivariate Gaussian, which is the only form of `q` currently supported by this package.
 ```julia
 using Distributions, LinearAlgebra
 q = MvNormal(zeros(length(z)), I)
@@ -36,15 +36,15 @@ q = MvNormal(zeros(length(z)), I)
 Finally, we pass our `q` along with the inputs `f(z)` to obtain an approximate posterior GP:
 ```julia
 fz = f(z, 1e-6)  # 'observe' the process at z with some jitter for numerical stability 
-approx = SparseVariationalApproximation(fz, q)  # Instantiate everything needed for the svgp approximation
+approx = SparseVariationalApproximation(fz, q)  # Instantiate everything needed for the approximation
 
-svgp_posterior = posterior(approx)  # Create the approximate posterior
+sva_posterior = posterior(approx)  # Create the approximate posterior
 ```
 
 ## The Evidence Lower Bound (ELBO)
 The approximate posterior constructed above will be a very poor approximation, since `q` was simply chosen to have zero mean and covariance `I`. A measure of the quality of the approximation is given by the ELBO. Optimising this term with respect to the parameters of `q` and the inducing input locations `z` will improve the approximation.
 ```julia
-elbo(SVGP(fz, q), fx, y)
+elbo(SparseVariationalApproximation(fz, q), fx, y)
 ```
 A detailed example of how to carry out such optimisation is given in [Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
 
