@@ -15,8 +15,8 @@ pseudo-points, `q`, together into a single object.
 """
 function SparseVariationalApproximation(
     ::Parametrisation, fz::Tfz, q::Tq
-) where {Parametrisation, Tfz<:FiniteGP, Tq<:AbstractMvNormal}
-    return SparseVariationalApproximation{Parametrisation, Tfz, Tq}(fz, q)
+) where {Parametrisation,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+    return SparseVariationalApproximation{Parametrisation,Tfz,Tq}(fz, q)
 end
 
 """
@@ -129,12 +129,9 @@ function StatsBase.mean_and_var(
     return μ, Σ_diag
 end
 
-
-
 #
 # NonCentred parametrisation.
 #
-
 
 raw"""
     posterior(sva::SparseVariationalApproximation{NonCentred})
@@ -217,8 +214,6 @@ function StatsBase.mean_and_var(
     Σ = var(f.prior, x) - diag_At_A(A) + diag_Xt_A_X(f.data.C_ε, A)
     return μ, Σ
 end
-
-
 
 #
 # Misc utility.
