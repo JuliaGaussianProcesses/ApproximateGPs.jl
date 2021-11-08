@@ -142,7 +142,7 @@ raw"""
 Compute the approximate posterior [1] over the process `f =
 sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
 distribution over inducing points `sva.q` (which represents ``q(ε)``
-where `ε = cholesky(cov(fz)).U' * (f(z) - mean(f(z)))`). The approximate posterior at test
+where `ε = cholesky(cov(fz)).U' \ (f(z) - mean(f(z)))`). The approximate posterior at test
 points ``x^*`` where ``f^* = f(x^*)`` is then given by:
 
 ```math
