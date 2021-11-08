@@ -67,3 +67,7 @@ approximation constructor:
 SparseVariationalApproximation(Centred(), fz, q)
 SparseVariationalApproximation(NonCentred(), fz, q)
 ```
+
+For a discussion around these two parametrisations, see e.g. [^Gorinova]
+
+[^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)

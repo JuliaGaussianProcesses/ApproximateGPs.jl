@@ -1,4 +1,4 @@
-"""
+raw"""
     Centred()
 
 Used in conjunction with `SparseVariationalApproximation`.
@@ -9,7 +9,7 @@ See also [`NonCentred`](@ref).
 """
 struct Centred end
 
-"""
+raw"""
     NonCentred()
 
 Used in conjunction with `SparseVariationalApproximation`.
@@ -26,7 +26,7 @@ struct SparseVariationalApproximation{Parametrisation,Tfz<:FiniteGP,Tq<:Abstract
     q::Tq
 end
 
-"""
+raw"""
     SparseVariationalApproximation(::Parametrisation, fz::FiniteGP, q::AbstractMvNormal)
 
 Produce a `SparseVariationalApproximation{Parametrisation}`, which packages the prior over
