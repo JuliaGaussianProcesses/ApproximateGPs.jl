@@ -24,12 +24,11 @@ using AbstractGPs:
     Xt_A_Y,
     diag_Xt_A_X
 
-export SparseVariationalApproximation, WhitenedSparseVariationalApproximation
+export SparseVariationalApproximation, Centred, NonCentred
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
 include("sparse_variational.jl")
-include("whitened_sparse_variational.jl")
 include("expected_loglik.jl")
 include("elbo.jl")
 

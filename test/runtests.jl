@@ -4,7 +4,7 @@ using ApproximateGPs
 using Flux
 using IterTools
 using AbstractGPs
-using AbstractGPs: LatentFiniteGP
+using AbstractGPs: LatentFiniteGP, TestUtils
 using Distributions
 using LogExpFunctions: logistic
 using LinearAlgebra
@@ -21,29 +21,25 @@ const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
-    include("expected_loglik.jl")
-    println(" ")
-    @info "Ran expected_loglik tests"
+    # include("expected_loglik.jl")
+    # println(" ")
+    # @info "Ran expected_loglik tests"
 
     include("sparse_variational.jl")
     println(" ")
     @info "Ran svgp tests"
 
-    include("whitened_sparse_variational.jl")
-    println(" ")
-    @info "Ran whitened_sparse_variational tests"
-
     include("elbo.jl")
     println(" ")
     @info "Ran elbo tests"
 
-    include("equivalences.jl")
-    println(" ")
-    @info "Ran equivalences tests"
+    # include("equivalences.jl")
+    # println(" ")
+    # @info "Ran equivalences tests"
 
-    @testset "Laplace" begin
-        include("laplace.jl")
-        println(" ")
-        @info "Ran laplace tests"
-    end
+    # @testset "Laplace" begin
+    #     include("laplace.jl")
+    #     println(" ")
+    #     @info "Ran laplace tests"
+    # end
 end

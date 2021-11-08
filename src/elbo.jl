@@ -1,6 +1,6 @@
 """
     elbo(
-        sva::AbstractSparseVariationalApproximation,
+        sva::SparseVariationalApproximation,
         fx::FiniteGP,
         y::AbstractVector{<:Real};
         num_data=length(y),
@@ -26,7 +26,7 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    sva::AbstractSparseVariationalApproximation,
+    sva::SparseVariationalApproximation,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
@@ -37,7 +37,7 @@ function AbstractGPs.elbo(
 end
 
 function AbstractGPs.elbo(
-    ::AbstractSparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
+    ::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
 )
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
@@ -46,7 +46,7 @@ end
 
 """
     elbo(
-        sva::AbstractSparseVariationalApproximation,
+        sva::SparseVariationalApproximation,
         lfx::LatentFiniteGP,
         y::AbstractVector;
         num_data=length(y),
@@ -56,7 +56,7 @@ end
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    sva::AbstractSparseVariationalApproximation,
+    sva::SparseVariationalApproximation,
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
@@ -69,7 +69,7 @@ end
 # Compute the common elements of the ELBO
 function _elbo(
     quadrature::QuadratureMethod,
-    sva::AbstractSparseVariationalApproximation,
+    sva::SparseVariationalApproximation,
     fx::FiniteGP,
     y::AbstractVector,
     lik,
@@ -85,9 +85,9 @@ function _elbo(
     return sum(variational_exp) * scale - kl_term(sva, post)
 end
 
-kl_term(sva::SparseVariationalApproximation, post) = KL(sva.q, sva.fz)
+kl_term(sva::SparseVariationalApproximation{Centred}, post) = KL(sva.q, sva.fz)
 
-function kl_term(sva::WhitenedSparseVariationalApproximation, post)
-    m_ε = mean(sva.q_ε)
-    return (tr(cov(sva.q_ε)) + m_ε'm_ε - length(m_ε) - logdet(post.data.C_ε)) / 2
+function kl_term(sva::SparseVariationalApproximation{NonCentred}, post)
+    m_ε = mean(sva.q)
+    return (tr(cov(sva.q)) + m_ε'm_ε - length(m_ε) - logdet(post.data.C_ε)) / 2
 end
