@@ -1,6 +1,7 @@
 @testset "svgp" begin
     rng = MersenneTwister(123456)
     N_cond = 5
+    M = 4
     N_a = 6
     N_b = 7
 
@@ -13,7 +14,7 @@
     y = rand(rng, fx)
 
     # Specify inducing variables.
-    z = randn(5)
+    z = range(-1.0, 1.0; length=M)
     fz = f(z, 1e-6)
 
     # Construct approximate posterior.
