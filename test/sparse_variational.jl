@@ -1,4 +1,4 @@
-@testset "svgp" begin
+@testset "sparse_variational" begin
     rng = MersenneTwister(123456)
     N_cond = 5
     M = 4
@@ -10,7 +10,7 @@
 
     # Sample from prior.
     x = collect(range(-1.0, 1.0; length=N_cond))
-    fx = f(x, 1e-15)
+    fx = f(x, 1e-3)
     y = rand(rng, fx)
 
     # Specify inducing variables.
