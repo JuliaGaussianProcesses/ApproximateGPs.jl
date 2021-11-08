@@ -1,5 +1,24 @@
-# Parametrisations.
+"""
+    Centred()
+
+Used in conjunction with `SparseVariationalApproximation`.
+States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
+directly as the approximate posterior over the pseudo-points.
+
+See also [`NonCentred`](@ref).
+"""
 struct Centred end
+
+"""
+    NonCentred()
+
+Used in conjunction with `SparseVariationalApproximation`.
+States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
+as the approximate posterior over `cholesky(cov(u)).L \ (u - mean(u))`, where `u` are the
+pseudo-points.
+
+See also [`Centred`](@ref).
+"""
 struct NonCentred end
 
 struct SparseVariationalApproximation{Parametrisation,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
@@ -10,8 +29,12 @@ end
 """
     SparseVariationalApproximation(::Parametrisation, fz::FiniteGP, q::AbstractMvNormal)
 
-Packages the prior over the pseudo-points, `fz`, and the approximate posterior at the
-pseudo-points, `q`, together into a single object.
+Produce a `SparseVariationalApproximation{Parametrisation}`, which packages the prior over
+the pseudo-points, `fz`, and the approximate posterior at the pseudo-points, `q`, together
+into a single object.
+
+The `Parametrisation` determines the precise manner in which `q` and `fz` are interpreted.
+Existing parametrisations include [`Centred`](@ref) and [`NonCentred`](@ref).
 """
 function SparseVariationalApproximation(
     ::Parametrisation, fz::Tfz, q::Tq
@@ -70,7 +93,7 @@ function AbstractGPs.posterior(
 end
 
 #
-# Code below this point just implements the Internal AbstractGPs API.
+# Various methods implementing the Internal AbstractGPs API.
 # See AbstractGPs.jl API docs for more info.
 #
 
@@ -158,7 +181,7 @@ function AbstractGPs.posterior(approx::SparseVariationalApproximation{NonCentred
 end
 
 #
-# Code below this point just implements the Internal AbstractGPs API.
+# Various methods implementing the Internal AbstractGPs API.
 # See AbstractGPs.jl API docs for more info.
 #
 
