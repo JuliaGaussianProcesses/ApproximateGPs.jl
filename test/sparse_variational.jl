@@ -31,11 +31,11 @@
         # Construct optimal approximate posterior.
         q = optimal_variational_posterior(fz, fx, y)
         Cuu = cholesky(Symmetric(cov(fz)))
-        q_ε = MvNormal(Cuu.U' \ (mean(q) - mean(fz)), Symmetric((Cuu.U' \ cov(q)) / Cuu.U))
+        q_ε = MvNormal(Cuu.L \ (mean(q) - mean(fz)), Symmetric((Cuu.L \ cov(q)) / Cuu.U))
 
         # Check that q_ε has been properly constructed.
-        @test mean(q) ≈ mean(fz) + Cuu.U' * mean(q_ε)
-        @test cov(q) ≈ Cuu.U' * cov(q_ε) * Cuu.U
+        @test mean(q) ≈ mean(fz) + Cuu.L * mean(q_ε)
+        @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
 
         # Construct equivalent approximate posteriors.
         approx_non_centred = SparseVariationalApproximation(NonCentred(), fz, q_ε)
