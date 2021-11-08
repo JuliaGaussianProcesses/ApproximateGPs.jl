@@ -48,16 +48,22 @@ elbo(SparseVariationalApproximation(fz, q), fx, y)
 ```
 A detailed example of how to carry out such optimisation is given in [Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
 
-## An Improved Parametrisation
+# Available Parametrisations
 
-`WhitenedSparseVariationalApproximation(fz, q_ε)` has precisely the same API as
-`SparseVariationalApproximation(fz, q)`, but the approximation posterior is parametrised
-slightly differently.
-In particular,
+Two parametrisations of `q(u)` are presently available: centred and non-centred.
+The centred parametrisation expresses `q(u)` directly in terms of its mean and covariance.
+The non-centred parametrisation instead parametrises the mean and covariance of
+`ε := cholesky(cov(u)).U' \ (u - mean(u))`.
+
+The choice of parametrisation can have a substantial impact on the time it takes for ELBO
+optimisation to converge, and which parametrisation is better in a particular situation is
+not generally obvious.
+That being said, the non-centred parametrisation is often superior, so it is the default --
+it is what is used in all of the examples above.
+
+If you require a particular parametrisation, simply use the 3-argument version of the
+approximation constructor:
 ```julia
-Cuu = cholesky(cov(fz))
-mean(q) ≈ mean(fz) + Cuu.U' * mean(q_ε)
-cov(q) ≈ Cuu.U' * cov(q_ε) * Cuu.U
+SparseVariationalApproximation(Centred(), fz, q)
+SparseVariationalApproximation(NonCentred(), fz, q)
 ```
-This parametrisation should typically be preferred -- inference tends to converge more
-quickly, and fewer operations are required to compute the elbo and the posterior statistics.
