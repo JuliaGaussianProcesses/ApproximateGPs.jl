@@ -5,7 +5,11 @@ Used in conjunction with `SparseVariationalApproximation`.
 States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
 directly as the approximate posterior over the pseudo-points.
 
+This is also known as the "unwhitened" parametrisation [1].
+
 See also [`NonCentred`](@ref).
+
+[1] - https://en.wikipedia.org/wiki/Whitening_transformation
 """
 struct Centred end
 
@@ -17,7 +21,11 @@ States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be i
 as the approximate posterior over `cholesky(cov(u)).L \ (u - mean(u))`, where `u` are the
 pseudo-points.
 
+This is also known as the "whitened" parametrisation [1].
+
 See also [`Centred`](@ref).
+
+[1] - https://en.wikipedia.org/wiki/Whitening_transformation
 """
 struct NonCentred end
 
