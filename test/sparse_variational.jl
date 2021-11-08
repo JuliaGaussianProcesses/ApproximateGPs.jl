@@ -42,6 +42,13 @@
         f_approx_post_non_centred = posterior(approx_non_centred)
         TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_non_centred, a, b)
 
+        # Unit-test kl_term.
+        @test isapprox(
+            ApproximateGPs.kl_term(approx_non_centred, f_approx_post_non_centred),
+            ApproximateGPs.kl_term(approx_centred, f_approx_post_centred);
+            rtol=1e-5,
+        )
+
         # Verify that the non-centred approximate posterior agrees with centred.
         @test mean(f_approx_post_non_centred, a) ≈ mean(f_approx_post_centred, a)
         @test cov(f_approx_post_non_centred, a, b) ≈ cov(f_approx_post_centred, a, b)
