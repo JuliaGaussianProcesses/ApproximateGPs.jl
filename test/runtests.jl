@@ -21,6 +21,10 @@ const PKGDIR = dirname(dirname(pathof(ApproximateGPs)))
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
+    include("latent_gp.jl")
+    println(" ")
+    @info "Ran latent_gp tests"
+
     include("expected_loglik.jl")
     println(" ")
     @info "Ran expected_loglik tests"
