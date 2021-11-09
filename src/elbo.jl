@@ -68,7 +68,7 @@ function _elbo(
     q_f = marginals(post(fx.x))
     variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
-    kl_term = KL(sva.q, sva.fz)
+    kl_term = kldivergence(sva.q, sva.fz)
 
     n_batch = length(y)
     scale = num_data / n_batch
