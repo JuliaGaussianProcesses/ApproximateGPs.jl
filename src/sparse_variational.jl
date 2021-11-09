@@ -106,7 +106,6 @@ end
 
 inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.approx.fz.x
 
-
 """
     elbo(svgp::SparseVariationalApproximation, fx::FiniteGP, y::AbstractVector{<:Real}; num_data=length(y), quadrature=DefaultQuadrature())
 
