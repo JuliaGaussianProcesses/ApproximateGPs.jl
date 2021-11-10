@@ -16,4 +16,5 @@
             @test C.L == L
             @test C.U == L'
         end
+    end
 end

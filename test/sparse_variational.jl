@@ -42,7 +42,7 @@
         lf = LatentGP(f, GaussianLikelihood(0.1), 1e-18)
         lfx = lf(x)
 
-        @test elbo(sva, lfx, y) ≈ elbo(sva, fx, y) atol=1e-10
+        @test elbo(sva, lfx, y) ≈ elbo(sva, fx, y) atol = 1e-10
     end
 
     @testset "equivalences" begin
