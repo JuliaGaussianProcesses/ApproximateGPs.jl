@@ -39,10 +39,10 @@
     end
 
     @test ApproximateGPs.expected_loglik(
-        MonteCarlo(), zeros(5), q_f, GaussianLikelihood()
+        MonteCarlo(), zeros(10), q_f, GaussianLikelihood()
     ) isa Real
     @test ApproximateGPs.expected_loglik(
-        GaussHermite(), zeros(5), q_f, GaussianLikelihood()
+        GaussHermite(), zeros(10), q_f, GaussianLikelihood()
     ) isa Real
     @test ApproximateGPs._default_quadrature(θ -> Normal(0, θ)) isa GaussHermite
 end
