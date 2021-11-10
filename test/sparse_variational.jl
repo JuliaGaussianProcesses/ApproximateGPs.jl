@@ -13,7 +13,7 @@
         y = rand(rng, fx)
 
         q = exact_variational_posterior(fx, fx, y)
-        f_approx_post = posterior(SparseVariationalApproximation(fx, q))
+        f_approx_post = posterior(SparseVariationalApproximation(fx, q), fx, y)
 
         a = collect(range(-1.0, 1.0; length=N_a))
         b = randn(rng, N_b)
