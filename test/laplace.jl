@@ -159,6 +159,7 @@
                 f_opt, newton_from_K_pullback = rrule(
                     ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
                 )
+
                 function newton_from_L_pullback(Δf_opt)
                     (∂self, ∂dist_y_given_f, ∂ys, ∂K) = newton_from_K_pullback(Δf_opt)
                     # Re⟨K̄, K̇⟩ = Re⟨K̄, L̇'L + L'L̇⟩
