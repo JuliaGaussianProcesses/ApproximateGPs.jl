@@ -19,9 +19,8 @@ export SparseVariationalApproximation
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
-include("sparse_variational.jl")
 include("expected_loglik.jl")
-include("elbo.jl")
+include("sparse_variational.jl")
 
 using ForwardDiff
 
