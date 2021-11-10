@@ -13,7 +13,7 @@
         y = rand(rng, fx)
 
         q = exact_variational_posterior(fx, fx, y)
-        f_approx_post = posterior(SparseVariationalApproximation(fx, q))
+        f_approx_post = posterior(SparseVariationalApproximation(fx, q), fx, y)
 
         a = collect(range(-1.0, 1.0; length=N_a))
         b = randn(rng, N_b)
@@ -38,6 +38,11 @@
 
         fx_bad = f(x, fill(0.1, N))
         @test_throws ErrorException elbo(sva, fx_bad, y)
+
+        lf = LatentGP(f, GaussianLikelihood(0.1), 1e-18)
+        lfx = lf(x)
+
+        @test elbo(sva, lfx, y) ≈ elbo(sva, fx, y) atol = 1e-10
     end
 
     @testset "equivalences" begin
