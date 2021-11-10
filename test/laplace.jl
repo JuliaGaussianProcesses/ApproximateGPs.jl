@@ -28,7 +28,7 @@
         optim_options;
         newton_warmstart=true,
         newton_callback=nothing,
-        )
+    )
         objective = build_laplace_objective(
             build_latent_gp, xs, ys; newton_warmstart, newton_callback
         )
@@ -66,7 +66,9 @@
         @testset "AbstractGPs API" begin
             a = collect(range(-1.2, 1.2; length=N_a))
             b = randn(rng, N_b)
-            AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
+            AbstractGPs.TestUtils.test_internal_abstractgps_interface(
+                rng, f_approx_post, a, b
+            )
         end
 
         @testset "equivalence to exact GPR for Gaussian likelihood" begin
@@ -136,7 +138,7 @@
                 ys,
                 L;
                 kwargs...,
-                )
+            )
                 K = L'L
                 # K̇ = L̇'L + L'L̇
                 ΔK = ΔL'L + L'ΔL
@@ -152,12 +154,11 @@
 
             function ChainRulesCore.rrule(
                 ::typeof(newton_inner_loop_from_L), dist_y_given_f, ys, L; kwargs...
-                    )
+            )
                 K = L'L
                 f_opt, newton_from_K_pullback = rrule(
                     ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
-                        )
-
+                )
                 function newton_from_L_pullback(Δf_opt)
                     (∂self, ∂dist_y_given_f, ∂ys, ∂K) = newton_from_K_pullback(Δf_opt)
                     # Re⟨K̄, K̇⟩ = Re⟨K̄, L̇'L + L'L̇⟩
@@ -204,7 +205,9 @@
                 expected_thetahat = [7.709076337653239, 1.51820292019697]
 
                 objective_grad(θ) = only(Zygote.gradient(objective, θ))
-                res = Optim.optimize(objective, objective_grad, theta0, LBFGS(); inplace=false)
+                res = Optim.optimize(
+                    objective, objective_grad, theta0, LBFGS(); inplace=false
+                )
                 #@info res
 
                 @test res.minimizer ≈ expected_thetahat
@@ -212,7 +215,9 @@
         end
 
         @testset "warmstart vs coldstart" begin
-            args = (build_latent_gp, theta0, X, Y, LBFGS(), Optim.Options(; iterations=1000))
+            args = (
+                build_latent_gp, theta0, X, Y, LBFGS(), Optim.Options(; iterations=1000)
+            )
 
             n_newton_coldstart = 0
             count_coldstart!(_, _) = (n_newton_coldstart += 1)
