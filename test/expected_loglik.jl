@@ -37,4 +37,12 @@
         results = map(m -> ApproximateGPs.expected_loglik(m, y, q_f, lik), methods)
         @test all(x -> isapprox(x, results[end]; atol=1e-6, rtol=1e-3), results)
     end
+
+    @test ApproximateGPs.expected_loglik(
+        MonteCarlo(), zeros(10), q_f, GaussianLikelihood()
+    ) isa Real
+    @test ApproximateGPs.expected_loglik(
+        GaussHermite(), zeros(10), q_f, GaussianLikelihood()
+    ) isa Real
+    @test ApproximateGPs._default_quadrature(θ -> Normal(0, θ)) isa GaussHermite
 end
