@@ -72,7 +72,7 @@
         f = GP(kernel)
         fx = f(x, 0.1)
         fz = f(z)
-        q_ex = exact_variational_posterior(fz, fx, y)
+        q_ex = optimal_variational_posterior(fz, fx, y)
 
         sva = SparseVariationalApproximation(fz, q_ex)
         @test elbo(sva, fx, y) isa Real
@@ -108,11 +108,11 @@
             f = GP(kernel)
             fx = f(x, lik_noise)
             fz = f(z)
-            q_ex = exact_variational_posterior(fz, fx, y)
+            q_ex = optimal_variational_posterior(fz, fx, y)
 
             gpr_post = posterior(fx, y) # Exact GP regression
             vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
-            svgp_post = posterior(SparseVariationalApproximation(fz, q_ex)) # Hensman (2013) exact posterior
+            svgp_post = posterior(SparseVariationalApproximation(Centred(), fz, q_ex)) # Hensman (2013) exact posterior
 
             @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
             @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol = 1e-10
@@ -122,7 +122,7 @@
 
             @test(
                 isapprox(
-                    elbo(SparseVariationalApproximation(fz, q_ex), fx, y),
+                    elbo(SparseVariationalApproximation(Centred(), fz, q_ex), fx, y),
                     logpdf(fx, y);
                     atol=1e-6,
                 )
