@@ -154,7 +154,7 @@
             end
 
             # initialise the variational parameters
-            m, A = zeros(N), Matrix{Float64}(I, N, N) 
+            m, A = zeros(N), Matrix{Float64}(I, N, N)
             svgp_model = SVGPModel(copy(k_init), copy(z), m, A)
             function svgp_loss(x, y)
                 approx, fx = construct_parts(svgp_model, x)
