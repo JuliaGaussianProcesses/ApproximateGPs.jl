@@ -24,7 +24,7 @@ using AbstractGPs:
     Xt_A_Y,
     diag_Xt_A_X
 
-export SparseVariationalApproximation, Centred, NonCentred
+export SparseVariationalApproximation, Centered, NonCentered
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")

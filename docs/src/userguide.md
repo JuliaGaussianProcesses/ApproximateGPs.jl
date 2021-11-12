@@ -48,26 +48,26 @@ elbo(SparseVariationalApproximation(fz, q), fx, y)
 ```
 A detailed example of how to carry out such optimisation is given in [Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
 
-# Available Parametrisations
+# Available Parametrizations
 
-Two parametrisations of `q(u)` are presently available: centred and non-centred.
-The centred parametrisation expresses `q(u)` directly in terms of its mean and covariance.
-The non-centred parametrisation instead parametrises the mean and covariance of
+Two Parametrizations of `q(u)` are presently available: Centered and non-Centered.
+The Centered Parametrization expresses `q(u)` directly in terms of its mean and covariance.
+The non-Centered Parametrization instead parametrises the mean and covariance of
 `ε := cholesky(cov(u)).U' \ (u - mean(u))`.
 
-The choice of parametrisation can have a substantial impact on the time it takes for ELBO
-optimisation to converge, and which parametrisation is better in a particular situation is
+The choice of Parametrization can have a substantial impact on the time it takes for ELBO
+optimisation to converge, and which Parametrization is better in a particular situation is
 not generally obvious.
-That being said, the non-centred parametrisation is often superior, so it is the default --
+That being said, the non-Centered Parametrization is often superior, so it is the default --
 it is what is used in all of the examples above.
 
-If you require a particular parametrisation, simply use the 3-argument version of the
+If you require a particular Parametrization, simply use the 3-argument version of the
 approximation constructor:
 ```julia
-SparseVariationalApproximation(Centred(), fz, q)
-SparseVariationalApproximation(NonCentred(), fz, q)
+SparseVariationalApproximation(Centered(), fz, q)
+SparseVariationalApproximation(NonCentered(), fz, q)
 ```
 
-For a discussion around these two parametrisations, see e.g. [^Gorinova]
+For a discussion around these two Parametrizations, see e.g. [^Gorinova]
 
 [^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)

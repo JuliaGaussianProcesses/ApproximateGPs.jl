@@ -1,53 +1,53 @@
 raw"""
-    Centred()
+    Centered()
 
 Used in conjunction with `SparseVariationalApproximation`.
 States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
 directly as the approximate posterior over the pseudo-points.
 
-This is also known as the "unwhitened" parametrisation [1].
+This is also known as the "unwhitened" Parametrization [1].
 
-See also [`NonCentred`](@ref).
+See also [`NonCentered`](@ref).
 
 [1] - https://en.wikipedia.org/wiki/Whitening_transformation
 """
-struct Centred end
+struct Centered end
 
 raw"""
-    NonCentred()
+    NonCentered()
 
 Used in conjunction with `SparseVariationalApproximation`.
 States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
 as the approximate posterior over `cholesky(cov(u)).L \ (u - mean(u))`, where `u` are the
 pseudo-points.
 
-This is also known as the "whitened" parametrisation [1].
+This is also known as the "whitened" Parametrization [1].
 
-See also [`Centred`](@ref).
+See also [`Centered`](@ref).
 
 [1] - https://en.wikipedia.org/wiki/Whitening_transformation
 """
-struct NonCentred end
+struct NonCentered end
 
-struct SparseVariationalApproximation{Parametrisation,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
     fz::Tfz
     q::Tq
 end
 
 raw"""
-    SparseVariationalApproximation(::Parametrisation, fz::FiniteGP, q::AbstractMvNormal)
+    SparseVariationalApproximation(::Parametrization, fz::FiniteGP, q::AbstractMvNormal)
 
-Produce a `SparseVariationalApproximation{Parametrisation}`, which packages the prior over
+Produce a `SparseVariationalApproximation{Parametrization}`, which packages the prior over
 the pseudo-points, `fz`, and the approximate posterior at the pseudo-points, `q`, together
 into a single object.
 
-The `Parametrisation` determines the precise manner in which `q` and `fz` are interpreted.
-Existing parametrisations include [`Centred`](@ref) and [`NonCentred`](@ref).
+The `Parametrization` determines the precise manner in which `q` and `fz` are interpreted.
+Existing Parametrizations include [`Centered`](@ref) and [`NonCentered`](@ref).
 """
 function SparseVariationalApproximation(
-    ::Parametrisation, fz::Tfz, q::Tq
-) where {Parametrisation,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
-    return SparseVariationalApproximation{Parametrisation,Tfz,Tq}(fz, q)
+    ::Parametrization, fz::Tfz, q::Tq
+) where {Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+    return SparseVariationalApproximation{Parametrization,Tfz,Tq}(fz, q)
 end
 
 """
@@ -58,15 +58,15 @@ pseudo-points, which is `mean(fz) + cholesky(cov(fz)).U' * ε`, `ε ∼ q`.
 
 Shorthand for
 ```julia
-SparseVariationalApproximation(NonCentred(), fz, q)
+SparseVariationalApproximation(NonCentered(), fz, q)
 ```
 """
 function SparseVariationalApproximation(fz::FiniteGP, q::AbstractMvNormal)
-    return SparseVariationalApproximation(NonCentred(), fz, q)
+    return SparseVariationalApproximation(NonCentered(), fz, q)
 end
 
 raw"""
-    posterior(sva::SparseVariationalApproximation{Centred})
+    posterior(sva::SparseVariationalApproximation{Centered})
 
 Compute the approximate posterior [1] over the process `f =
 sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
@@ -83,7 +83,7 @@ which can be found in closed form.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centred})
+function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centered})
     q, fz = sva.q, sva.fz
     m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
@@ -106,13 +106,13 @@ end
 #
 
 function Statistics.mean(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
 )
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
 )
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
@@ -120,7 +120,7 @@ function Statistics.cov(
 end
 
 function Statistics.var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
 )
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
@@ -128,7 +128,7 @@ function Statistics.var(
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}},
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}},
     x::AbstractVector,
     y::AbstractVector,
 )
@@ -141,7 +141,7 @@ function Statistics.cov(
 end
 
 function StatsBase.mean_and_cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
 )
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
@@ -151,7 +151,7 @@ function StatsBase.mean_and_cov(
 end
 
 function StatsBase.mean_and_var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
 )
     Cux = cov(f.prior, inducing_points(f), x)
     D = f.data.Kuu.L \ Cux
@@ -161,11 +161,11 @@ function StatsBase.mean_and_var(
 end
 
 #
-# NonCentred parametrisation.
+# NonCentered Parametrization.
 #
 
 raw"""
-    posterior(sva::SparseVariationalApproximation{NonCentred})
+    posterior(sva::SparseVariationalApproximation{NonCentered})
 
 Compute the approximate posterior [1] over the process `f =
 sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
@@ -182,7 +182,7 @@ which can be found in closed form.
 variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
-function AbstractGPs.posterior(approx::SparseVariationalApproximation{NonCentred})
+function AbstractGPs.posterior(approx::SparseVariationalApproximation{NonCentered})
     fz = approx.fz
     data = (Cuu=_chol_cov(fz), C_ε=_chol_cov(approx.q))
     return ApproxPosteriorGP(approx, fz.f, data)
@@ -199,27 +199,27 @@ end
 _A(f, x) = f.data.Cuu.U' \ cov(f.prior, inducing_points(f), x)
 
 function Statistics.mean(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
 )
     return mean(f.prior, x) + _A(f, x)' * mean(f.approx.q)
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
 )
     A = _A(f, x)
     return cov(f.prior, x) - At_A(A) + Xt_A_X(f.data.C_ε, A)
 end
 
 function Statistics.var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
 )
     A = _A(f, x)
     return var(f.prior, x) - diag_At_A(A) + diag_Xt_A_X(f.data.C_ε, A)
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}},
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}},
     x::AbstractVector,
     y::AbstractVector,
 )
@@ -229,7 +229,7 @@ function Statistics.cov(
 end
 
 function StatsBase.mean_and_cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
 )
     A = _A(f, x)
     μ = mean(f.prior, x) + A' * mean(f.approx.q)
@@ -238,7 +238,7 @@ function StatsBase.mean_and_cov(
 end
 
 function StatsBase.mean_and_var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentred}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
 )
     A = _A(f, x)
     μ = mean(f.prior, x) + A' * mean(f.approx.q)
@@ -344,9 +344,9 @@ function _elbo(
     return sum(variational_exp) * scale - kl_term(sva, post)
 end
 
-kl_term(sva::SparseVariationalApproximation{Centred}, post) = KL(sva.q, sva.fz)
+kl_term(sva::SparseVariationalApproximation{Centered}, post) = KL(sva.q, sva.fz)
 
-function kl_term(sva::SparseVariationalApproximation{NonCentred}, post)
+function kl_term(sva::SparseVariationalApproximation{NonCentered}, post)
     m_ε = mean(sva.q)
     return (tr(cov(sva.q)) + m_ε'm_ε - length(m_ε) - logdet(post.data.C_ε)) / 2
 end

@@ -19,16 +19,16 @@
         fz = f(z, 1e-6)
 
         # Construct approximate posterior.
-        q_centred = optimal_variational_posterior(fz, fx, y)
-        approx_centred = SparseVariationalApproximation(Centred(), fz, q_centred)
-        f_approx_post_centred = posterior(approx_centred)
+        q_Centered = optimal_variational_posterior(fz, fx, y)
+        approx_Centered = SparseVariationalApproximation(Centered(), fz, q_Centered)
+        f_approx_post_Centered = posterior(approx_Centered)
 
         # Check that approximate posterior is self-consistent.
         a = collect(range(-1.0, 1.0; length=N_a))
         b = randn(rng, N_b)
-        TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_centred, a, b)
+        TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
 
-        @testset "noncentred" begin
+        @testset "nonCentered" begin
 
             # Construct optimal approximate posterior.
             q = optimal_variational_posterior(fz, fx, y)
@@ -42,23 +42,23 @@
             @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
 
             # Construct equivalent approximate posteriors.
-            approx_non_centred = SparseVariationalApproximation(NonCentred(), fz, q_ε)
-            f_approx_post_non_centred = posterior(approx_non_centred)
+            approx_non_Centered = SparseVariationalApproximation(NonCentered(), fz, q_ε)
+            f_approx_post_non_Centered = posterior(approx_non_Centered)
             TestUtils.test_internal_abstractgps_interface(
-                rng, f_approx_post_non_centred, a, b
+                rng, f_approx_post_non_Centered, a, b
             )
 
             # Unit-test kl_term.
             @test isapprox(
-                ApproximateGPs.kl_term(approx_non_centred, f_approx_post_non_centred),
-                ApproximateGPs.kl_term(approx_centred, f_approx_post_centred);
+                ApproximateGPs.kl_term(approx_non_Centered, f_approx_post_non_Centered),
+                ApproximateGPs.kl_term(approx_Centered, f_approx_post_Centered);
                 rtol=1e-5,
             )
 
-            # Verify that the non-centred approximate posterior agrees with centred.
-            @test mean(f_approx_post_non_centred, a) ≈ mean(f_approx_post_centred, a)
-            @test cov(f_approx_post_non_centred, a, b) ≈ cov(f_approx_post_centred, a, b)
-            @test elbo(approx_non_centred, fx, y) ≈ elbo(approx_centred, fx, y)
+            # Verify that the non-Centered approximate posterior agrees with Centered.
+            @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
+            @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
+            @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)
         end
     end
 
@@ -112,7 +112,7 @@
 
             gpr_post = posterior(fx, y) # Exact GP regression
             vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
-            svgp_post = posterior(SparseVariationalApproximation(Centred(), fz, q_ex)) # Hensman (2013) exact posterior
+            svgp_post = posterior(SparseVariationalApproximation(Centered(), fz, q_ex)) # Hensman (2013) exact posterior
 
             @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
             @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol = 1e-10
@@ -122,7 +122,7 @@
 
             @test(
                 isapprox(
-                    elbo(SparseVariationalApproximation(Centred(), fz, q_ex), fx, y),
+                    elbo(SparseVariationalApproximation(Centered(), fz, q_ex), fx, y),
                     logpdf(fx, y);
                     atol=1e-6,
                 )
