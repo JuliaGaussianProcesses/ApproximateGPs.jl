@@ -28,7 +28,7 @@
         b = randn(rng, N_b)
         TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
 
-        @testset "nonCentered" begin
+        @testset "NonCentered" begin
 
             # Construct optimal approximate posterior.
             q = optimal_variational_posterior(fz, fx, y)
@@ -55,7 +55,7 @@
                 rtol=1e-5,
             )
 
-            # Verify that the non-Centered approximate posterior agrees with Centered.
+            # Verify that the non-centered approximate posterior agrees with centered.
             @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
             @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
             @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)

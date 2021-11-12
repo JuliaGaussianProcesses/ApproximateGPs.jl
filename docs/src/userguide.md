@@ -50,24 +50,24 @@ A detailed example of how to carry out such optimisation is given in [Regression
 
 # Available Parametrizations
 
-Two Parametrizations of `q(u)` are presently available: Centered and non-Centered.
-The Centered Parametrization expresses `q(u)` directly in terms of its mean and covariance.
-The non-Centered Parametrization instead parametrises the mean and covariance of
+Two parametrizations of `q(u)` are presently available: `Centered` and `NonCentered`.
+The `Centered` parametrization expresses `q(u)` directly in terms of its mean and covariance.
+The `NonCentered` parametrization instead parametrizes the mean and covariance of
 `ε := cholesky(cov(u)).U' \ (u - mean(u))`.
 
-The choice of Parametrization can have a substantial impact on the time it takes for ELBO
-optimisation to converge, and which Parametrization is better in a particular situation is
+The choice of parametrization can have a substantial impact on the time it takes for ELBO
+optimisation to converge, and which parametrization is better in a particular situation is
 not generally obvious.
-That being said, the non-Centered Parametrization is often superior, so it is the default --
+That being said, the `NonCentered` parametrization is often superior, so it is the default --
 it is what is used in all of the examples above.
 
-If you require a particular Parametrization, simply use the 3-argument version of the
+If you require a particular parametrization, simply use the 3-argument version of the
 approximation constructor:
 ```julia
 SparseVariationalApproximation(Centered(), fz, q)
 SparseVariationalApproximation(NonCentered(), fz, q)
 ```
 
-For a discussion around these two Parametrizations, see e.g. [^Gorinova]
+For a discussion around these two parametrizations, see e.g. [^Gorinova]
 
 [^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)

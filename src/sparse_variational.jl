@@ -5,7 +5,7 @@ Used in conjunction with `SparseVariationalApproximation`.
 States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be interpreted
 directly as the approximate posterior over the pseudo-points.
 
-This is also known as the "unwhitened" Parametrization [1].
+This is also known as the "unwhitened" parametrization [1].
 
 See also [`NonCentered`](@ref).
 
@@ -21,7 +21,7 @@ States that the `q` field of [`SparseVariationalApproximation`](@ref) is to be i
 as the approximate posterior over `cholesky(cov(u)).L \ (u - mean(u))`, where `u` are the
 pseudo-points.
 
-This is also known as the "whitened" Parametrization [1].
+This is also known as the "whitened" parametrization [1].
 
 See also [`Centered`](@ref).
 
@@ -42,7 +42,7 @@ the pseudo-points, `fz`, and the approximate posterior at the pseudo-points, `q`
 into a single object.
 
 The `Parametrization` determines the precise manner in which `q` and `fz` are interpreted.
-Existing Parametrizations include [`Centered`](@ref) and [`NonCentered`](@ref).
+Existing parametrizations include [`Centered`](@ref) and [`NonCentered`](@ref).
 """
 function SparseVariationalApproximation(
     ::Parametrization, fz::Tfz, q::Tq
