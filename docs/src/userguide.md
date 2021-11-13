@@ -28,7 +28,7 @@ To construct a sparse approximation to the exact posterior, we first need to sel
 M = 15  # The number of inducing points
 z = x[1:M]
 ```
-The inducing inputs `z` imply some latent function values `u = f(z)`, sometimes called pseudo-points. The `SparseVariationalApproximation` specifies a distribution `q(u)` over the pseudo-points. In the case of GP regression, the optimal form for `q(u)` is a multivariate Gaussian, which is the only form of `q` currently supported by this package.
+The inducing inputs `z` imply some latent function values `u = f(z)`, sometimes called pseudo-points. The [`SparseVariationalApproximation`](@ref) specifies a distribution `q(u)` over the pseudo-points. In the case of GP regression, the optimal form for `q(u)` is a multivariate Gaussian, which is the only form of `q` currently supported by this package.
 ```julia
 using Distributions, LinearAlgebra
 q = MvNormal(zeros(length(z)), I)
@@ -50,15 +50,16 @@ A detailed example of how to carry out such optimisation is given in [Regression
 
 # Available Parametrizations
 
-Two parametrizations of `q(u)` are presently available: `Centered` and `NonCentered`.
+Two parametrizations of `q(u)` are presently available: [`Centered`](@ref) and [`NonCentered`](@ref).
 The `Centered` parametrization expresses `q(u)` directly in terms of its mean and covariance.
 The `NonCentered` parametrization instead parametrizes the mean and covariance of
 `ε := cholesky(cov(u)).U' \ (u - mean(u))`.
+These parametrizations are also known respectively as "Unwhitened" and "Whitened".
 
 The choice of parametrization can have a substantial impact on the time it takes for ELBO
 optimisation to converge, and which parametrization is better in a particular situation is
 not generally obvious.
-That being said, the `NonCentered` parametrization is often superior, so it is the default --
+That being said, the `NonCentered` parametrization often converges in fewer iterations, so it is the default --
 it is what is used in all of the examples above.
 
 If you require a particular parametrization, simply use the 3-argument version of the
