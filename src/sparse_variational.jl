@@ -35,7 +35,9 @@ struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:Abstract
 end
 
 raw"""
-    SparseVariationalApproximation(::Parametrization, fz::FiniteGP, q::AbstractMvNormal)
+    SparseVariationalApproximation(
+        ::Parametrization, fz::FiniteGP, q::AbstractMvNormal
+    ) where {Parametrization}
 
 Produce a `SparseVariationalApproximation{Parametrization}`, which packages the prior over
 the pseudo-points, `fz`, and the approximate posterior at the pseudo-points, `q`, together
