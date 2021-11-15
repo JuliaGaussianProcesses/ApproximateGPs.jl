@@ -34,7 +34,7 @@ struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:Abstract
     q::Tq
 end
 
-raw"""
+@doc raw"""
     SparseVariationalApproximation(
         ::Parametrization, fz::FiniteGP, q::AbstractMvNormal
     ) where {Parametrization}
@@ -67,7 +67,7 @@ function SparseVariationalApproximation(fz::FiniteGP, q::AbstractMvNormal)
     return SparseVariationalApproximation(NonCentered(), fz, q)
 end
 
-raw"""
+@doc raw"""
     posterior(sva::SparseVariationalApproximation{Centered})
 
 Compute the approximate posterior [1] over the process `f =
@@ -166,7 +166,7 @@ end
 # NonCentered Parametrization.
 #
 
-raw"""
+@doc raw"""
     posterior(sva::SparseVariationalApproximation{NonCentered})
 
 Compute the approximate posterior [1] over the process `f =
