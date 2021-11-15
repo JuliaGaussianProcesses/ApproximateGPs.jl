@@ -1,4 +1,4 @@
-raw"""
+@doc raw"""
     Centered()
 
 Used in conjunction with `SparseVariationalApproximation`.
@@ -13,7 +13,7 @@ See also [`NonCentered`](@ref).
 """
 struct Centered end
 
-raw"""
+@doc raw"""
     NonCentered()
 
 Used in conjunction with `SparseVariationalApproximation`.
