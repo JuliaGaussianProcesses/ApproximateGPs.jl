@@ -300,8 +300,9 @@ function AbstractGPs.elbo(
     ::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
 )
     return error(
-        "The observation noise fx.Σy must be homoscedastic.\n To avoid this error, ",
-        "construct fx using: f = GP(kernel); fx = f(x, σ²)",
+        "The observation noise fx.Σy must be homoscedastic.\n",
+        "To avoid this error, construct fx using: f = GP(kernel); fx = f(x, σ²)",
+        ", where σ² is a positive Real.",
     )
 end
 

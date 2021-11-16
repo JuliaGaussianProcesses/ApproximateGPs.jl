@@ -57,7 +57,7 @@ The `NonCentered` parametrization instead parametrizes the mean and covariance o
 These parametrizations are also known respectively as "Unwhitened" and "Whitened".
 
 The choice of parametrization can have a substantial impact on the time it takes for ELBO
-optimisation to converge, and which parametrization is better in a particular situation is
+optimization to converge, and which parametrization is better in a particular situation is
 not generally obvious.
 That being said, the `NonCentered` parametrization often converges in fewer iterations, so it is the default --
 it is what is used in all of the examples above.
