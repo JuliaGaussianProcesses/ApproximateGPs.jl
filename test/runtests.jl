@@ -4,7 +4,7 @@ using ApproximateGPs
 using Flux
 using IterTools
 using AbstractGPs
-using AbstractGPs: LatentFiniteGP
+using AbstractGPs: LatentFiniteGP, TestUtils
 using Distributions
 using LogExpFunctions: logistic
 using LinearAlgebra

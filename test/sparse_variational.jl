@@ -2,22 +2,64 @@
     @testset "AbstractGPs interface" begin
         rng = MersenneTwister(123456)
         N_cond = 5
+        M = 4
         N_a = 6
         N_b = 7
 
         # Specify prior.
         f = GP(Matern32Kernel())
+
         # Sample from prior.
         x = collect(range(-1.0, 1.0; length=N_cond))
-        fx = f(x, 1e-15)
+        fx = f(x, 1e-3)
         y = rand(rng, fx)
 
-        q = exact_variational_posterior(fx, fx, y)
-        f_approx_post = posterior(SparseVariationalApproximation(fx, q), fx, y)
+        # Specify inducing variables.
+        z = range(-1.0, 1.0; length=M)
+        fz = f(z, 1e-6)
 
+        # Construct approximate posterior.
+        q_Centered = optimal_variational_posterior(fz, fx, y)
+        approx_Centered = SparseVariationalApproximation(Centered(), fz, q_Centered)
+        f_approx_post_Centered = posterior(approx_Centered)
+
+        # Check that approximate posterior is self-consistent.
         a = collect(range(-1.0, 1.0; length=N_a))
         b = randn(rng, N_b)
-        AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post, a, b)
+        TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
+
+        @testset "NonCentered" begin
+
+            # Construct optimal approximate posterior.
+            q = optimal_variational_posterior(fz, fx, y)
+            Cuu = cholesky(Symmetric(cov(fz)))
+            q_ε = MvNormal(
+                Cuu.L \ (mean(q) - mean(fz)), Symmetric((Cuu.L \ cov(q)) / Cuu.U)
+            )
+
+            # Check that q_ε has been properly constructed.
+            @test mean(q) ≈ mean(fz) + Cuu.L * mean(q_ε)
+            @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
+
+            # Construct equivalent approximate posteriors.
+            approx_non_Centered = SparseVariationalApproximation(NonCentered(), fz, q_ε)
+            f_approx_post_non_Centered = posterior(approx_non_Centered)
+            TestUtils.test_internal_abstractgps_interface(
+                rng, f_approx_post_non_Centered, a, b
+            )
+
+            # Unit-test kl_term.
+            @test isapprox(
+                ApproximateGPs.kl_term(approx_non_Centered, f_approx_post_non_Centered),
+                ApproximateGPs.kl_term(approx_Centered, f_approx_post_Centered);
+                rtol=1e-5,
+            )
+
+            # Verify that the non-centered approximate posterior agrees with centered.
+            @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
+            @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
+            @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)
+        end
     end
 
     @testset "elbo" begin
@@ -30,7 +72,7 @@
         f = GP(kernel)
         fx = f(x, 0.1)
         fz = f(z)
-        q_ex = exact_variational_posterior(fz, fx, y)
+        q_ex = optimal_variational_posterior(fz, fx, y)
 
         sva = SparseVariationalApproximation(fz, q_ex)
         @test elbo(sva, fx, y) isa Real
@@ -66,11 +108,11 @@
             f = GP(kernel)
             fx = f(x, lik_noise)
             fz = f(z)
-            q_ex = exact_variational_posterior(fz, fx, y)
+            q_ex = optimal_variational_posterior(fz, fx, y)
 
             gpr_post = posterior(fx, y) # Exact GP regression
             vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior
-            svgp_post = posterior(SparseVariationalApproximation(fz, q_ex)) # Hensman (2013) exact posterior
+            svgp_post = posterior(SparseVariationalApproximation(Centered(), fz, q_ex)) # Hensman (2013) exact posterior
 
             @test mean(gpr_post, x) ≈ mean(svgp_post, x) atol = 1e-10
             @test cov(gpr_post, x) ≈ cov(svgp_post, x) atol = 1e-10
@@ -78,8 +120,13 @@
             @test mean(vfe_post, x) ≈ mean(svgp_post, x) atol = 1e-10
             @test cov(vfe_post, x) ≈ cov(svgp_post, x) atol = 1e-10
 
-            @test elbo(SparseVariationalApproximation(fz, q_ex), fx, y) ≈ logpdf(fx, y) atol =
-                1e-6
+            @test(
+                isapprox(
+                    elbo(SparseVariationalApproximation(Centered(), fz, q_ex), fx, y),
+                    logpdf(fx, y);
+                    atol=1e-6,
+                )
+            )
         end
 
         @testset "optimised posterior" begin
@@ -106,7 +153,8 @@
                 return SparseVariationalApproximation(fz, q), fx
             end
 
-            m, A = zeros(N), Matrix{Float64}(I, N, N) # initialise the variational parameters
+            # initialise the variational parameters
+            m, A = zeros(N), Matrix{Float64}(I, N, N)
             svgp_model = SVGPModel(copy(k_init), copy(z), m, A)
             function svgp_loss(x, y)
                 approx, fx = construct_parts(svgp_model, x)
