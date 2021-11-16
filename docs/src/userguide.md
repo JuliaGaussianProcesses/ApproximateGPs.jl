@@ -69,6 +69,8 @@ SparseVariationalApproximation(Centered(), fz, q)
 SparseVariationalApproximation(NonCentered(), fz, q)
 ```
 
-For a discussion around these two parametrizations, see e.g. [^Gorinova]
+For a general discussion around these two parametrizations, see e.g. [^Gorinova].
+For a GP-specific discussion, see e.g. section 3.4 of [^Paciorek].
 
 [^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)
+[^Paciorek]: [Paciorek, Christopher Joseph. Nonstationary Gaussian processes for regression and spatial modelling. Diss. Carnegie Mellon University, 2003.](https://www.stat.berkeley.edu/~paciorek/diss/paciorek-thesis.pdf)
