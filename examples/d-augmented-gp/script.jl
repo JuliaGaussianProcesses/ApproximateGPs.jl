@@ -153,11 +153,12 @@ function augmented_elbo(
 
     n_batch = length(y)
     scale = num_data / n_batch
-    # We ignore the KL divergence regarding the augmented variables as it does
-    # not depend on the kernel parameters
+
     return sum(variational_exp) * scale - Zygote.@ignore(kl_term(lik, qω)) -
            ApproximateGPs.kl_term(sva, post)
 end
+# We ignored the gradient of the KL divergence with respect to the augmented
+# variables as it does not depend on the kernel parameters
 
 function kl_term(::BernoulliLikelihood{<:LogisticLink}, qω::AbstractVector{<:PolyaGamma})
     sum(qω) do q
@@ -177,12 +178,13 @@ end
 function loss(params::NamedTuple)
     fz, lf = build_fz_lf(params)
     fx = lf(x)
-    # We ignore this part as it involves inplace operations
-    # and does not contribute to the final elbo
     Zygote.@ignore cavi!(fz, x, y, m, S, qω; niter=1)
     augsvgp = SparseVariationalApproximation(Centered(), fz, MvNormal(m, Symmetric(S)))
     return -augmented_elbo(augsvgp, fx, y, qω)
 end
+
+# We ignore the `cavi!` part as it involves inplace operations
+# and does not contribute to the final elbo
 
 function build_fz_lf(params::NamedTuple)
     kernel = params.k.var * (Matern32Kernel() ∘ ScaleTransform(params.k.precision))
