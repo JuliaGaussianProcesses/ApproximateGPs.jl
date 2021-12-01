@@ -75,7 +75,7 @@ function expected_loglik(
     # size(fs): (length(y), n_points)
     fs = √2 * std.(q_f) .* xs' .+ mean.(q_f)
     lls = loglikelihood.(lik.(fs), y)
-    return sum((1 / √π) * lls * ws)
+    return (1 / √π) * mapreduce(dot, +, eachrow(lls), ws)
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
