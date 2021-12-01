@@ -155,13 +155,14 @@ function augmented_elbo(
     scale = num_data / n_batch
     # We ignore the KL divergence regarding the augmented variables as it does
     # not depend on the kernel parameters
-    return sum(variational_exp) * scale - Zygote.@ignore(kl_term(lik, qω)) - ApproximateGPs.kl_term(sva, post)
+    return sum(variational_exp) * scale - Zygote.@ignore(kl_term(lik, qω)) -
+           ApproximateGPs.kl_term(sva, post)
 end
 
 function kl_term(::BernoulliLikelihood{<:LogisticLink}, qω::AbstractVector{<:PolyaGamma})
     sum(qω) do q
         c = q.c
-        - abs2(c) * mean(q) + 2log(cosh(c / 2))
+        -abs2(c) * mean(q) + 2log(cosh(c / 2))
     end
 end
 
@@ -205,7 +206,9 @@ opt = optimize(
 # And we can now compare with the optimal result we obtained earlier
 θ_opt = unpack(opt.minimizer)
 fz_opt, lf_opt = build_fz_lf(θ_opt)
-post_svgp_hpopt = posterior(SparseVariationalApproximation(Centered(), fz_opt, MvNormal(m, S)))
+post_svgp_hpopt = posterior(
+    SparseVariationalApproximation(Centered(), fz_opt, MvNormal(m, S))
+)
 
 pf = scatter(x, y; legend=false, xlabel="x", ylabel="f")
 plot!(x_true, f_true; seriescolor="red", label="True latent")
