@@ -40,7 +40,7 @@ function approx_lml(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     logdet_term = sum(log.(diag(L))) - sum(log.(diag(Stilde_root)))
     v = L \ (Stilde_root_times_mutilde)
     maha_term = v'v
-    lml = site_term - const_term - logdet_term - maha_term
+    return lml = site_term - const_term - logdet_term - maha_term
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
