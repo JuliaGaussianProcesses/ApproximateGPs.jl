@@ -64,9 +64,7 @@ include("test_utils.jl")
     println(" ")
     @info "Ran laplace tests"
 
-    @testset "EP" begin
-        include("ep.jl")
-        println(" ")
-        @info "Ran ep tests"
-    end
+    include("ep.jl")
+    println(" ")
+    @info "Ran ep tests"
 end
