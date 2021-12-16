@@ -15,14 +15,23 @@ using FillArrays: Fill
 using KLDivergences: KL
 using IrrationalConstants: log2π
 
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    At_A,
+    diag_At_A,
+    Xt_A_X,
+    Xt_A_Y,
+    diag_Xt_A_X
 
-export SVGP, DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+export SparseVariationalApproximation, Centered, NonCentered
+export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("utils.jl")
-include("svgp.jl")
 include("expected_loglik.jl")
-include("elbo.jl")
+include("sparse_variational.jl")
 
 import ForwardDiff
 
@@ -35,5 +44,7 @@ using Random: randperm
 
 export ExpectationPropagation
 include("ep.jl")
+
+include("deprecations.jl")
 
 end
