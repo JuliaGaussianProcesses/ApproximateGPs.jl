@@ -18,29 +18,77 @@ function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, 
 end
 
 function approx_lml(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
-    # log Z_{EP} = ∑ᵢlog Z̃ᵢ - n/2 log(2π) - ½ log det(K + Σ̃) - ½ μ̃ᵀ (K + Σ̃)⁻¹ μ̃
+    # 𝒩 (a,A)𝒩 (b,B) = Z⁻¹ 𝒩 (c,C)
+    # log Z_{EP} = ∑ᵢlog Z̃ᵢ + log Z⁻¹
+    # log Z⁻¹ = - n/2 log(2π) - ½ log det(S) - ½ mᵀ S⁻¹ m
+    # S = A + B = Σ̃ + K
+    # m = a - b = μ̃ - μ₀
+    # 
     # RW (3.65) RW (3.73) RW (3.74)
     ep_state = ep_inference(ep, lfx, ys)
 
-    site_term = sum(log(site.Z) for site in ep_state.sites)
-    Stilde = Diagonal([site.q.λ for site in ep_state.sites])
-    mutilde = [site.q.μ for site in ep_state.sites]
-    Stilde_root = sqrt(Stilde)
-    # Stilde_root_times_mutilde = [site.q.η/sqrt(site.q.λ) for site in ep_state.sites]
-    Stilde_root_times_mutilde = Stilde_root * mutilde
+    site_term = sum(site.log_Ztilde for site in ep_state.sites)
+    m = [mean(site.q) for site in ep_state.sites] - mean(lfx.fx)
+    Σ̃ = Diagonal([var(site.q) for site in ep_state.sites])
+
+    #N = length(ys)
+    #cavμ = zeros(N)
+    #cavσ² = zeros(N)
+    #μ̃ = zeros(N)
+    #σ̃² = zeros(N)
+    #logZ = 0
+    #for i=1:N
+    #    site_data = ep_single_site_update(ep_state.ep_problem, ep_state, i)
+    #    μ̃[i] = mean(site_data.q)
+    #    σ̃²[i] = var(site_data.q)
+    #    cavμ[i] = mean(site_data.cav)
+    #    cavσ²[i] = var(site_data.cav)
+    #    logZ += log(site_data.Z)
+    #end
+    #m = μ̃
+    #Σ̃ = Diagonal(σ̃²)
+    #site_term = logZ
+
+    # log Z⁻¹ = - n/2 log(2π) - ½ log det(S) - ½ mᵀ S⁻¹ m
+    K = cov(lfx.fx)
+    S = K + Σ̃
+    #Stilde_root = sqrt(Stilde)
+    ## Stilde_root_times_mutilde = [site.q.η/sqrt(site.q.λ) for site in ep_state.sites]
+    #Stilde_root_times_mutilde = Stilde_root * mutilde
 
     n = length(ys)
-    #const_term = n * log2π / 2
-    const_term = 0
+    const_term = n * log2π / 2
+    #const_term = 0
 
-    K = cov(lfx.fx)
-    B = I + Stilde_root * K * Stilde_root
-    L = cholesky(Symmetric(B)).L
+    #B = I + Stilde_root * K * Stilde_root
+    #L = cholesky(Symmetric(B)).L
+    L = cholesky(S).L
 
-    logdet_term = sum(log.(diag(L))) - sum(log.(diag(Stilde_root)))
-    v = L \ (Stilde_root_times_mutilde)
-    maha_term = v'v
-    return lml = site_term - const_term - logdet_term - maha_term
+    logdet_term = sum(log.(diag(L))) #- sum(log.(diag(Stilde_root)))
+    #v = L \ (Stilde_root_times_mutilde)
+    v = L \ m
+    maha_term = v'v/2
+    @info "approx_lml"
+    @show site_term
+    @show -const_term
+    @show -logdet_term
+    @show 0.5logdet(S)
+    @show -maha_term
+    @show 0.5m' * (S \ m)
+    lml = site_term - const_term - logdet_term - maha_term
+end
+
+function _log_Z_tilde()
+        mu_tilde = ga_approx.v/ga_approx.tau # μ̃ᵢ
+        mu_cav = cav_params.v/cav_params.tau # μ₋ᵢ 
+        sigma2_sigma2tilde = 1/cav_params.tau + 1/ga_approx.tau # σ₋ᵢ² + σ̃ᵢ²
+
+    #logdet_term = sum(log.(diag(L))) - sum(log.(diag(Stilde_root)))
+    #v = L \ (Stilde_root_times_mutilde)
+    #maha_term = v'v
+    #return lml = site_term - const_term - logdet_term - maha_term
+        return sum((log(Z_hat) + 0.5*log2π + 0.5*log(sigma2_sigma2tilde)
+                         + 0.5*((mu_cav - mu_tilde)^2) / (sigma2_sigma2tilde)))
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
@@ -69,16 +117,16 @@ function EPProblem(dist_y_given_f, ys, K; ep=nothing)
     return EPProblem(ep, f_prior, lik_evals)
 end
 
-function EPState(q::MvNormal, sites::AbstractVector)
-    return (; q, sites)
+function EPState(ep_problem, q::MvNormal, sites::AbstractVector)
+    return (; ep_problem, q, sites)
 end
 
 function EPState(ep_problem)
     N = length(ep_problem.lik_evals)
     # TODO- manually keep track of canonical parameters and initialize precision to 0
-    sites = [(; Z=NaN, q=NormalCanon(0.0, 1e-10)) for _ in 1:N]
+    sites = [(; Z=NaN, log_Ztilde=NaN, q=NormalCanon(0.0, 1e-10), cav=NormalCanon(0.0, 1.0)) for _ in 1:N]
     q = ep_problem.p
-    return EPState(q, sites)
+    return EPState(ep_problem, q, sites)
 end
 
 function ep_approx_posterior(prior, sites::AbstractVector)
@@ -120,7 +168,7 @@ function ep_loop_over_sites(ep_problem, ep_state)
         new_sites = deepcopy(ep_state.sites)
         new_sites[i] = new_site
         new_q = meanform(ep_approx_posterior(ep_problem.p, new_sites))
-        ep_state = EPState(new_q, new_sites)
+        ep_state = EPState(ep_problem, new_q, new_sites)
     end
     return ep_state
 end
@@ -130,8 +178,12 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     alik_i = epsite_dist(ep_state.sites[i])
     cav_i = div_dist(q_fi, alik_i)
     qhat_i = moment_match(cav_i, ep_problem.lik_evals[i]; n_points=ep_problem.ep.n_gh)
+    Zhat = qhat_i.Z
     new_t = div_dist(qhat_i.q, cav_i)
-    return (; Z=qhat_i.Z, q=new_t)
+    var_sum = var(cav_i) + var(new_t)
+    Ztilde = Zhat * sqrt(2π) * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2/(2var_sum))
+    log_Ztilde = log(Zhat) + log2π/2 + log(var_sum)/2 + (mean(cav_i) - mean(new_t))^2/(2var_sum)
+    return (; Z=Ztilde, log_Ztilde=log_Ztilde, q=new_t, cav=cav_i)  # cav_i only required by approx_lml test
 end
 
 function ith_marginal(d::Union{MvNormal,MvNormalCanon}, i::Int)
