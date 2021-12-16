@@ -67,7 +67,7 @@ function approx_lml(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     logdet_term = sum(log.(diag(L))) #- sum(log.(diag(Stilde_root)))
     #v = L \ (Stilde_root_times_mutilde)
     v = L \ m
-    maha_term = v'v/2
+    maha_term = v'v / 2
     @info "approx_lml"
     @show site_term
     @show -const_term
@@ -79,16 +79,20 @@ function approx_lml(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
 end
 
 function _log_Z_tilde()
-        mu_tilde = ga_approx.v/ga_approx.tau # μ̃ᵢ
-        mu_cav = cav_params.v/cav_params.tau # μ₋ᵢ 
-        sigma2_sigma2tilde = 1/cav_params.tau + 1/ga_approx.tau # σ₋ᵢ² + σ̃ᵢ²
+    mu_tilde = ga_approx.v / ga_approx.tau # μ̃ᵢ
+    mu_cav = cav_params.v / cav_params.tau # μ₋ᵢ 
+    sigma2_sigma2tilde = 1 / cav_params.tau + 1 / ga_approx.tau # σ₋ᵢ² + σ̃ᵢ²
 
     #logdet_term = sum(log.(diag(L))) - sum(log.(diag(Stilde_root)))
     #v = L \ (Stilde_root_times_mutilde)
     #maha_term = v'v
     #return lml = site_term - const_term - logdet_term - maha_term
-        return sum((log(Z_hat) + 0.5*log2π + 0.5*log(sigma2_sigma2tilde)
-                         + 0.5*((mu_cav - mu_tilde)^2) / (sigma2_sigma2tilde)))
+    return sum((
+        log(Z_hat) +
+        0.5 * log2π +
+        0.5 * log(sigma2_sigma2tilde) +
+        0.5 * ((mu_cav - mu_tilde)^2) / (sigma2_sigma2tilde)
+    ))
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
@@ -124,7 +128,10 @@ end
 function EPState(ep_problem)
     N = length(ep_problem.lik_evals)
     # TODO- manually keep track of canonical parameters and initialize precision to 0
-    sites = [(; Z=NaN, log_Ztilde=NaN, q=NormalCanon(0.0, 1e-10), cav=NormalCanon(0.0, 1.0)) for _ in 1:N]
+    sites = [
+        (; Z=NaN, log_Ztilde=NaN, q=NormalCanon(0.0, 1e-10), cav=NormalCanon(0.0, 1.0)) for
+        _ in 1:N
+    ]
     q = ep_problem.p
     return EPState(ep_problem, q, sites)
 end
@@ -181,8 +188,13 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     Zhat = qhat_i.Z
     new_t = div_dist(qhat_i.q, cav_i)
     var_sum = var(cav_i) + var(new_t)
-    Ztilde = Zhat * sqrt(2π) * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2/(2var_sum))
-    log_Ztilde = log(Zhat) + log2π/2 + log(var_sum)/2 + (mean(cav_i) - mean(new_t))^2/(2var_sum)
+    Ztilde =
+        Zhat * sqrt(2π) * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2 / (2var_sum))
+    log_Ztilde =
+        log(Zhat) +
+        log2π / 2 +
+        log(var_sum) / 2 +
+        (mean(cav_i) - mean(new_t))^2 / (2var_sum)
     return (; Z=Ztilde, log_Ztilde=log_Ztilde, q=new_t, cav=cav_i)  # cav_i only required by approx_lml test
 end
 

@@ -27,7 +27,7 @@ end
 
 @testset "approx_lml" begin
     k = 2SqExponentialKernel()
-    x = [0., 1., 1.3]
+    x = [0.0, 1.0, 1.3]
     y = [0, 1, 0]
 
     ep = ExpectationPropagation()
@@ -47,7 +47,7 @@ end
         cavσ² = zeros(N)
         μ̃ = zeros(N)
         σ̃² = zeros(N)
-        for i=1:N
+        for i in 1:N
             site_data = ApproximateGPs.ep_single_site_update(ep_problem, ep_state, i)
             μ̃[i] = mean(site_data.q)
             σ̃²[i] = var(site_data.q)
@@ -55,19 +55,19 @@ end
             cavσ²[i] = var(site_data.cav)
         end
         Σ̃ = Diagonal(σ̃²)
-        term1 = -0.5logdet(K+Σ̃)
-        term2 = - 0.5μ̃' * ((K+Σ̃) \ μ̃)
-        term3 = sum(@. log(Φ((y * cavμ)/√(1 + cavσ²))))
+        term1 = -0.5logdet(K + Σ̃)
+        term2 = -0.5μ̃' * ((K + Σ̃) \ μ̃)
+        term3 = sum(@. log(Φ((y * cavμ) / √(1 + cavσ²))))
         term4 = 0.5sum(@. log(cavσ² + σ̃²))
-        term5 = sum(@. (cavμ - μ̃)^2/(cavσ² + σ̃²))/2
+        term5 = sum(@. (cavμ - μ̃)^2 / (cavσ² + σ̃²)) / 2
         @info "probit RW"
         @show term1
         @show term2
         @show term3
         @show term4
         @show term5
-        @show term3+term5+term4
-        return term1 + term2  + term3 + term4 + term5
+        @show term3 + term5 + term4
+        return term1 + term2 + term3 + term4 + term5
     end
     @show ep_probit_lml(ep, lfx, y)
     @show approx_lml(ep, lfx, y)
