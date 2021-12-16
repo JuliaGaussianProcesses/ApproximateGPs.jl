@@ -10,7 +10,7 @@ using StatsBase
 using FastGaussQuadrature: gausshermite
 #using SpecialFunctions
 using ChainRulesCore: ignore_derivatives, NoTangent
-import ChainRulesCore
+using ChainRulesCore: ChainRulesCore
 using FillArrays: Fill
 using KLDivergences: KL
 using IrrationalConstants: log2π
@@ -33,7 +33,7 @@ include("utils.jl")
 include("expected_loglik.jl")
 include("sparse_variational.jl")
 
-import ForwardDiff
+using ForwardDiff: ForwardDiff
 
 export LaplaceApproximation
 export build_laplace_objective, build_laplace_objective!
