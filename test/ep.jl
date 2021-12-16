@@ -22,7 +22,7 @@
     end
 
     @testset "predictions" begin
-        approx = ExpectationPropagation(; n_gh=500)
+        approx = ApproximateGPs.ExpectationPropagation(; n_gh=500)
         test_approximation_predictions(approx)
     end
 end

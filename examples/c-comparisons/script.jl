@@ -138,18 +138,27 @@ f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
 p2 = plot_data()
 plot_samples!(Xgrid, f_post2)
 
-# ## Expectation Propagation
+# ## Expectation Propagation (EP)
+#
+# !!! warning
+#     The EP implementation is currently just an experimental prototype and may
+#     not work for your use-case. Any help welcome!
 
 # For initial hyperparameter values:
 
-f_post_ep = posterior(ExpectationPropagation(), lf(X), Y)
+f_post_ep = posterior(ApproximateGPs.ExpectationPropagation(), lf(X), Y)
 
 p3 = plot_data()
 plot_samples!(Xgrid, f_post_ep)
 
 # For optimized hyperparameter values:
+#
+# !!! warning
+#     The approximate (log) marginal likelihood for EP has not yet been
+#     implemented. Here we re-use the optimized hyperparameters from the
+#     Laplace approximation for illustration purposes.
 
-f_post_ep2 = posterior(ExpectationPropagation(), lf2(X), Y)
+f_post_ep2 = posterior(ApproximateGPs.ExpectationPropagation(), lf2(X), Y)
 
 p4 = plot_data()
 plot_samples!(Xgrid, f_post_ep2)

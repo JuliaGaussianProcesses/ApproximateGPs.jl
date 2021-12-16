@@ -42,7 +42,7 @@ include("laplace.jl")
 
 using Random: randperm
 
-export ExpectationPropagation
+#export ExpectationPropagation  # still too experimental
 include("ep.jl")
 
 include("deprecations.jl")
