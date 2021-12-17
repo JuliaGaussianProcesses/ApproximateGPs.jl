@@ -14,7 +14,7 @@ function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, 
     # should AbstractGPs provide its own "GP conditioned on f(x) ~ q(f)" rather
     # than just "conditioned on observation under some noise" (*not* the same
     # thing...)?
-    return posterior(SVGP(lfx.fx, ep_state.q))
+    return posterior(SparseVariationalApproximation(Centered(), lfx.fx, ep_state.q))
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
