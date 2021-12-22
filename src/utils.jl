@@ -11,3 +11,5 @@ end
 
 _chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
 _chol_cov(q::MvNormal) = cholesky(q.Σ)
+
+_cov(q::MvNormal) = q.Σ
