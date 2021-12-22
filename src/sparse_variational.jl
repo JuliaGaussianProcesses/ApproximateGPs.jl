@@ -230,7 +230,6 @@ function StatsBase.mean_and_var(
     return μ, Σ_diag
 end
 
-
 #
 # Misc utility.
 #
@@ -337,6 +336,6 @@ function prior_kl(sva::SparseVariationalApproximation{NonCentered})
     C_ε = _cov(sva.q)
     # trace_term = tr(C_ε)  # does not work due to PDMat / Zygote issues
     L = chol_lower(_chol_cov(sva.q))
-    trace_term = sum(L.^2)
+    trace_term = sum(L .^ 2)
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
 end
