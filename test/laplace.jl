@@ -96,7 +96,7 @@
             end
             fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
             ad_grad = only(Zygote.gradient(objective, theta0))
-            @test ad_grad ≈ fd_grad
+            @test ad_grad ≈ fd_grad rtol = 1e-6
         end
 
         @testset "_newton_inner_loop derivatives not defined" begin
