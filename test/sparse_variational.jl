@@ -48,10 +48,10 @@
                 rng, f_approx_post_non_Centered, a, b
             )
 
-            # Unit-test kl_term.
+            # Unit-test kl term.
             @test isapprox(
-                ApproximateGPs.kl_term(approx_non_Centered, f_approx_post_non_Centered),
-                ApproximateGPs.kl_term(approx_Centered, f_approx_post_Centered);
+                ApproximateGPs._prior_kl(approx_non_Centered, f_approx_post_non_Centered),
+                ApproximateGPs._prior_kl(approx_Centered, f_approx_post_Centered);
                 rtol=1e-5,
             )
 

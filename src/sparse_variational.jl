@@ -326,12 +326,12 @@ function _elbo(
 
     n_batch = length(y)
     scale = num_data / n_batch
-    return sum(variational_exp) * scale - prior_kl(sva)
+    return sum(variational_exp) * scale - _prior_kl(sva)
 end
 
-prior_kl(sva::SparseVariationalApproximation{Centered}) = KL(sva.q, sva.fz)
+_prior_kl(sva::SparseVariationalApproximation{Centered}) = KL(sva.q, sva.fz)
 
-function prior_kl(sva::SparseVariationalApproximation{NonCentered})
+function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     m_ε = mean(sva.q)
     C_ε = _cov(sva.q)
     # trace_term = tr(C_ε)  # does not work due to PDMat / Zygote issues
