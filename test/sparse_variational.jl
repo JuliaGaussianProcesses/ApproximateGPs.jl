@@ -26,7 +26,10 @@
         # Check that approximate posterior is self-consistent.
         a = collect(range(-1.0, 1.0; length=N_a))
         b = randn(rng, N_b)
-        TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
+
+        @testset "AbstractGPs interface - Centered" begin
+            TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
+        end
 
         @testset "NonCentered" begin
 
@@ -37,28 +40,31 @@
                 Cuu.L \ (mean(q) - mean(fz)), Symmetric((Cuu.L \ cov(q)) / Cuu.U)
             )
 
-            # Check that q_ε has been properly constructed.
-            @test mean(q) ≈ mean(fz) + Cuu.L * mean(q_ε)
-            @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
+            @testset "Check that q_ε has been properly constructed" begin
+                @test mean(q) ≈ mean(fz) + Cuu.L * mean(q_ε)
+                @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
+            end
 
             # Construct equivalent approximate posteriors.
             approx_non_Centered = SparseVariationalApproximation(NonCentered(), fz, q_ε)
             f_approx_post_non_Centered = posterior(approx_non_Centered)
-            TestUtils.test_internal_abstractgps_interface(
-                rng, f_approx_post_non_Centered, a, b
-            )
 
-            # Unit-test kl term.
-            @test isapprox(
-                ApproximateGPs._prior_kl(approx_non_Centered, f_approx_post_non_Centered),
-                ApproximateGPs._prior_kl(approx_Centered, f_approx_post_Centered);
-                rtol=1e-5,
-            )
+            @testset "AbstractGPs interface - NonCentered" begin
+                TestUtils.test_internal_abstractgps_interface(
+                    rng, f_approx_post_non_Centered, a, b
+                )
+            end
 
-            # Verify that the non-centered approximate posterior agrees with centered.
-            @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
-            @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
-            @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)
+            @testset "Verify that the non-centered approximate posterior agrees with centered" begin
+                @test isapprox(
+                    ApproximateGPs._prior_kl(approx_non_Centered, f_approx_post_non_Centered),
+                    ApproximateGPs._prior_kl(approx_Centered, f_approx_post_Centered);
+                    rtol=1e-5,
+                )
+                @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
+                @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
+                @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)
+            end
         end
     end
 
@@ -87,7 +93,7 @@
         @test elbo(sva, lfx, y) ≈ elbo(sva, fx, y) atol = 1e-10
     end
 
-    @testset "equivalences" begin
+    @testset "GPR/VFE equivalences" begin
         rng, N = MersenneTwister(654321), 20
         x = rand(rng, N) * 10
         y = sin.(x) + 0.9 * cos.(x * 1.6) + 0.4 * rand(rng, N)
