@@ -209,7 +209,7 @@ function Statistics.cov(
     B = f.data.B
     Ax = _A(f, x)
     Ay = _A(f, y)
-    return cov(f.prior, x, y) - Ax'Ay + Xt_A_Y(Ax, B * B', Ay)
+    return cov(f.prior, x, y) - Ax'Ay + Ax' * B * B' * Ay
 end
 
 function StatsBase.mean_and_cov(
