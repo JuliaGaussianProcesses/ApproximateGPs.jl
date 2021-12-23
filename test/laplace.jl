@@ -185,7 +185,7 @@
 
     @testset "optimization" begin
         X, Y = generate_data()
-        theta0 = [0.0, 1.0]
+        theta0 = [5.0, 1.0]
 
         @testset "reference optimum" begin
             function objective(theta)
