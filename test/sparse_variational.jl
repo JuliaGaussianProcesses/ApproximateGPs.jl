@@ -62,7 +62,8 @@
                     rtol=1e-5,
                 )
                 @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
-                @test cov(f_approx_post_non_Centered, a, b) ≈ cov(f_approx_post_Centered, a, b)
+                @test cov(f_approx_post_non_Centered, a, b) ≈
+                    cov(f_approx_post_Centered, a, b)
                 @test elbo(approx_non_Centered, fx, y) ≈ elbo(approx_Centered, fx, y)
             end
         end
