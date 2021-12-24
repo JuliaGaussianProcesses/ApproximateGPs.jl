@@ -204,7 +204,7 @@
                 res = Optim.optimize(objective, theta0, NelderMead())
                 #@info res
 
-                @test res.minimizer ≈ expected_thetahat
+                @test res.minimizer ≈ expected_thetahat rtol = 1e-4
             end
 
             @testset "gradient-based" begin
