@@ -1,12 +1,17 @@
 @testset "laplace" begin
     function generate_data()
-        Random.seed!(1)
         X = range(0, 23.5; length=48)
-        fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
-        # invlink = normcdf
-        invlink = logistic
-        ps = invlink.(fs)
-        Y = [rand(Bernoulli(p)) for p in ps]
+        # The random number generator changed in 1.6->1.7. The following vector was generated in Julia 1.6.
+        # The generating code below is only kept for illustrative purposes.
+        #! format: off
+        Y = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+        #! format: on
+        # Random.seed!(1)
+        # fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
+        # # invlink = normcdf
+        # invlink = logistic
+        # ps = invlink.(fs)
+        # Y = [rand(Bernoulli(p)) for p in ps]
         return X, Y
     end
 
@@ -96,7 +101,7 @@
             end
             fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
             ad_grad = only(Zygote.gradient(objective, theta0))
-            @test ad_grad ≈ fd_grad
+            @test ad_grad ≈ fd_grad rtol = 1e-6
         end
 
         @testset "_newton_inner_loop derivatives not defined" begin
@@ -185,7 +190,7 @@
 
     @testset "optimization" begin
         X, Y = generate_data()
-        theta0 = [0.0, 1.0]
+        theta0 = [5.0, 1.0]
 
         @testset "reference optimum" begin
             function objective(theta)
@@ -199,7 +204,7 @@
                 res = Optim.optimize(objective, theta0, NelderMead())
                 #@info res
 
-                @test res.minimizer ≈ expected_thetahat
+                @test res.minimizer ≈ expected_thetahat rtol = 1e-4
             end
 
             @testset "gradient-based" begin
