@@ -72,10 +72,9 @@ function expected_loglik(
     # using a reparameterisation by change of variable
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
-    # size(fs): (length(y), n_points)
-    fs = √2 * std.(q_f) .* xs' .+ mean.(q_f)
+    fs = sqrt(2) * std.(q_f) .* xs' .+ mean.(q_f)
     lls = loglikelihood.(lik.(fs), y)
-    return sum((1 / √π) * lls * ws)
+    return sum(lls * ws) / sqrt(π)
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
