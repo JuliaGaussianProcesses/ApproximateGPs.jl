@@ -1,4 +1,4 @@
-using PDMats: chol_lower
+using PDMats: chol_lower, chol_upper
 
 @doc raw"""
     Centered()
@@ -151,7 +151,7 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{NonCentered})
     q, fz = sva.q, sva.fz
     m = mean(q)
     Kuu = _chol_cov(fz)
-    α = chol_lower(Kuu) \ m
+    α = chol_lower(Kuu)' \ m
     Sv = _chol_cov(q)
     B = chol_lower(Sv)
     data = (Kuu=Kuu, B=B, α=α)
