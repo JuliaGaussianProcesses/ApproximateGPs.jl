@@ -90,7 +90,8 @@ Statistics. PMLR, 2015.
 function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centered})
     # m* = K*u Kuu⁻¹ (mean(q) - mean(fz))
     #    = K*u α
-    # α = Kuu⁻¹ (m - mean(fz))
+    # Centered: α = Kuu⁻¹ (m - mean(fz))
+    # [NonCentered: α = Lk⁻ᵀ m]
     # V** = K** - K*u (Kuu⁻¹ - Kuu⁻¹ cov(q) Kuu⁻¹) Ku*
     #     = K** - K*u (Kuu⁻¹ - Kuu⁻¹ cov(q) Kuu⁻¹) Ku*
     #     = K** - (K*u Lk⁻ᵀ) (Lk⁻¹ Ku*) + (K*u Lk⁻ᵀ) Lk⁻¹ cov(q) Lk⁻ᵀ (Lk⁻¹ Ku*)
@@ -98,7 +99,8 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centered})
     #     = K** - A'A + A' Lk⁻¹ Lq Lqᵀ Lk⁻ᵀ A
     #     = K** - A'A + A' B B' A
     # A = Lk⁻¹ Ku*
-    # B = Lk⁻¹ Lq
+    # Centered: B = Lk⁻¹ Lq
+    # [NonCentered: B = Lq]
     q, fz = sva.q, sva.fz
     m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
@@ -138,16 +140,17 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{NonCentered})
     #    = K*u Lk⁻ᵀ mean(q)
     #    = K*u α
     # NonCentered: α = Lk⁻ᵀ m
-    # Centered: α = Kuu⁻¹ (m - mean(fz))
+    # [Centered: α = Kuu⁻¹ (m - mean(fz))]
     # V** = K** - K*u (Kuu⁻¹ - Kuu⁻¹ Lk cov(q) Lkᵀ Kuu⁻¹) Ku*
     #     = K** - K*u (Kuu⁻¹ - (Lk Lkᵀ)⁻¹ Lk cov(q) Lkᵀ (Lk Lkᵀ)⁻¹) Ku*
     #     = K** - K*u (Kuu⁻¹ - Lk⁻ᵀ Lk⁻¹ Lk cov(q) Lkᵀ Lk⁻ᵀ Lk⁻¹) Ku*
     #     = K** - K*u (Kuu⁻¹ - Lk⁻ᵀ cov(q) Lk⁻¹) Ku*
     #     = K** - (K*u Lk⁻ᵀ) (Lk⁻¹ Ku*) - (K*u Lk⁻ᵀ) Lq Lqᵀ (Lk⁻¹ Ku*)
     #     = K** - A'A - (K*u Lk⁻ᵀ) Lq Lqᵀ (Lk⁻¹ Ku*)
+    #     = K** - A'A - A' B B' A
     # A = Lk⁻¹ Ku*
     # NonCentered: B = Lq
-    # Centered: B = Lk⁻¹ Lq
+    # [Centered: B = Lk⁻¹ Lq]
     q, fz = sva.q, sva.fz
     m = mean(q)
     Kuu = _chol_cov(fz)
@@ -176,9 +179,7 @@ function Statistics.mean(
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
 
-# Produces a matrix that is consistently referred to as A in this file. A more descriptive
-# name is, unfortunately, not obvious. It's just an intermediate quantity that happens to
-# get used a lot.
+# A = Lk⁻¹ Ku* is the projection matrix used in computing the predictive variance of the SparseVariationalApproximation posterior.
 function _A_and_Cux(f, x)
     Cux = cov(f.prior, inducing_points(f), x)
     A = chol_lower(f.data.Kuu) \ Cux
