@@ -12,7 +12,7 @@ using SpecialFunctions
 using ChainRulesCore
 using FillArrays
 using KLDivergences
-using PDMats: chol_lower, chol_upper
+using PDMats: chol_lower
 
 using AbstractGPs:
     AbstractGP,
