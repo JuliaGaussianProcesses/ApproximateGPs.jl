@@ -180,13 +180,13 @@ function Statistics.mean(
 end
 
 # A = Lk⁻¹ Ku* is the projection matrix used in computing the predictive variance of the SparseVariationalApproximation posterior.
-function _A_and_Cux(f, x)
-    Cux = cov(f.prior, inducing_points(f), x)
-    A = chol_lower(f.data.Kuu) \ Cux
-    return A, Cux
+function _A_and_Kuf(f, x)
+    Kuf = cov(f.prior, inducing_points(f), x)
+    A = chol_lower(f.data.Kuu) \ Kuf
+    return A, Kuf
 end
 
-_A(f, x) = first(_A_and_Cux(f, x))
+_A(f, x) = first(_A_and_Kuf(f, x))
 
 function Statistics.cov(
     f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
@@ -216,8 +216,8 @@ end
 function StatsBase.mean_and_cov(
     f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
-    A, Cux = _A_and_Cux(f, x)
-    μ = mean(f.prior, x) + Cux' * f.data.α
+    A, Kuf = _A_and_Kuf(f, x)
+    μ = mean(f.prior, x) + Kuf' * f.data.α
     Σ = cov(f.prior, x) - At_A(A) + At_A(f.data.B' * A)
     return μ, Σ
 end
@@ -225,8 +225,8 @@ end
 function StatsBase.mean_and_var(
     f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
-    A, Cux = _A_and_Cux(f, x)
-    μ = mean(f.prior, x) + Cux' * f.data.α
+    A, Kuf = _A_and_Kuf(f, x)
+    μ = mean(f.prior, x) + Kuf' * f.data.α
     Σ_diag = var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
     return μ, Σ_diag
 end
