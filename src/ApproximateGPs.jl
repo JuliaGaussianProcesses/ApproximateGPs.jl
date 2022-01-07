@@ -12,6 +12,7 @@ using SpecialFunctions
 using ChainRulesCore
 using FillArrays
 using KLDivergences
+using PDMats: chol_lower, chol_upper
 
 using AbstractGPs:
     AbstractGP,
@@ -19,10 +20,7 @@ using AbstractGPs:
     LatentFiniteGP,
     ApproxPosteriorGP,
     At_A,
-    diag_At_A,
-    Xt_A_X,
-    Xt_A_Y,
-    diag_Xt_A_X
+    diag_At_A
 
 export SparseVariationalApproximation, Centered, NonCentered
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo

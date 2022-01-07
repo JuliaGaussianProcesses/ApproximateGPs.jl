@@ -1,5 +1,3 @@
-using PDMats: chol_lower, chol_upper
-
 @doc raw"""
     Centered()
 
