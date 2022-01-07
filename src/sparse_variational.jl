@@ -202,17 +202,6 @@ function Statistics.var(
     return var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
 end
 
-function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation},
-    x::AbstractVector,
-    y::AbstractVector,
-)
-    B = f.data.B
-    Ax = _A(f, x)
-    Ay = _A(f, y)
-    return cov(f.prior, x, y) - Ax'Ay + Ax' * B * B' * Ay
-end
-
 function StatsBase.mean_and_cov(
     f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
@@ -229,6 +218,17 @@ function StatsBase.mean_and_var(
     μ = mean(f.prior, x) + Kuf' * f.data.α
     Σ_diag = var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
     return μ, Σ_diag
+end
+
+function Statistics.cov(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation},
+    x::AbstractVector,
+    y::AbstractVector,
+)
+    B = f.data.B
+    Ax = _A(f, x)
+    Ay = _A(f, y)
+    return cov(f.prior, x, y) - Ax'Ay + Ax' * B * B' * Ay
 end
 
 #
@@ -321,8 +321,9 @@ function _elbo(
     num_data::Integer,
 )
     @assert sva.fz.f === fx.f
-    post = posterior(sva)
-    q_f = marginals(post(fx.x))
+
+    f_post = posterior(sva)
+    q_f = marginals(f_post(fx.x))
     variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
     n_batch = length(y)
@@ -335,8 +336,10 @@ _prior_kl(sva::SparseVariationalApproximation{Centered}) = KL(sva.q, sva.fz)
 function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     m_ε = mean(sva.q)
     C_ε = _cov(sva.q)
+
     # trace_term = tr(C_ε)  # does not work due to PDMat / Zygote issues
     L = chol_lower(_chol_cov(sva.q))
-    trace_term = sum(L .^ 2)
+    trace_term = sum(L .^ 2)  # TODO remove AD workaround
+
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
 end
