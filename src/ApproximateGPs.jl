@@ -14,19 +14,14 @@ using FillArrays
 using KLDivergences
 using PDMats: chol_lower
 
-using AbstractGPs:
-    AbstractGP,
-    FiniteGP,
-    LatentFiniteGP,
-    ApproxPosteriorGP,
-    At_A,
-    diag_At_A
-
-export SparseVariationalApproximation, Centered, NonCentered
-export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 
 include("utils.jl")
+
+export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 include("expected_loglik.jl")
+
+export SparseVariationalApproximation, Centered, NonCentered
 include("sparse_variational.jl")
 
 using ForwardDiff
