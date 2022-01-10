@@ -254,7 +254,7 @@
         lf = build_latent_gp(theta0)
         lfx = lf(X)
 
-        res_array = laplace_steps(lfx, Y)
+        res_array = ApproximateGPs.laplace_steps(lfx, Y)
         res = res_array[end]
         @test res.q isa MvNormal
     end
