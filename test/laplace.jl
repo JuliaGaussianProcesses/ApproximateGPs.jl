@@ -246,4 +246,16 @@
             @test res_cold.minimizer ≈ res_warm.minimizer
         end
     end
+
+    @testset "laplace_steps" begin
+        X, Y = generate_data()
+        Random.seed!(123)
+        theta0 = rand(2)
+        lf = build_latent_gp(theta0)
+        lfx = lf(X)
+
+        res_array = ApproximateGPs.laplace_steps(lfx, Y)
+        res = res_array[end]
+        @test res.q isa MvNormal
+    end
 end

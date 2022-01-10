@@ -348,7 +348,7 @@ function LaplaceResult(fnew, cache)
     q = MvNormal(f, AbstractGPs._symmetric(f_cov))
     lml_approx = _laplace_lml(f, cache)
 
-    return (; fnew, f_cov, q, lml_approx, cache...)
+    return (; fnew, f_cov, q, lml_approx, cache)
 end
 
 """
