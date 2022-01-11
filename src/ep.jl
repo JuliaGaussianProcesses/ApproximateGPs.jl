@@ -19,8 +19,11 @@ end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     fx = lfx.fx
-    mean(fx) == zero(mean(fx)) || error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
-    length(ys) == length(fx) || error("ExpectationPropagation currently does not support multi-latent likelihoods; please open an issue on GitHub")
+    mean(fx) == zero(mean(fx)) ||
+        error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
+    length(ys) == length(fx) || error(
+        "ExpectationPropagation currently does not support multi-latent likelihoods; please open an issue on GitHub",
+    )
     dist_y_given_f = lfx.lik
     K = cov(fx)
 
