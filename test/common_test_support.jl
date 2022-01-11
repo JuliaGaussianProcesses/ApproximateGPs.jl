@@ -10,7 +10,7 @@ function generate_data()
     # # invlink = normcdf
     # invlink = logistic
     # ps = invlink.(fs)
-    # Y = [rand(Bernoulli(p)) for p in ps]
+    # Y = @. rand(Bernoulli(ps))
     return X, Y
 end
 
