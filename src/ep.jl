@@ -113,8 +113,7 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     Zhat = qhat_i.Z
     new_t = div_dist(qhat_i.q, cav_i)
     var_sum = var(cav_i) + var(new_t)
-    Ztilde =
-        Zhat * sqrt2π * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2 / (2var_sum))
+    Ztilde = Zhat * sqrt2π * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2 / (2var_sum))
     log_Ztilde =
         log(Zhat) +
         log2π / 2 +
