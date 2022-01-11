@@ -13,7 +13,7 @@ using ChainRulesCore: ignore_derivatives, NoTangent
 using ChainRulesCore: ChainRulesCore
 using FillArrays: Fill
 using KLDivergences: KL
-using IrrationalConstants: log2π, sqrttwoπ
+using IrrationalConstants: log2π, sqrt2π
 using PDMats: chol_lower
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
