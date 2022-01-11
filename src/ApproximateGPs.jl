@@ -13,6 +13,7 @@ using ChainRulesCore
 using FillArrays
 using KLDivergences
 using PDMats: chol_lower
+using IrrationalConstants
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 

@@ -45,4 +45,18 @@
         GaussHermite(), zeros(10), q_f, GaussianLikelihood()
     ) isa Real
     @test ApproximateGPs._default_quadrature(θ -> Normal(0, θ)) isa GaussHermite
+
+    @testset "testing Zygote compatibility with GaussHermite" begin # see issue #82
+        N = 10
+        gh = GaussHermite(12)
+        μ = randn(rng, N)
+        σ = rand(rng, N)
+        for lik in likelihoods_to_test
+            y = rand.(rng, lik.(rand.(Normal.(μ, σ))))
+            g = only(Zygote.gradient(μ) do x
+                ApproximateGPs.expected_loglik(gh, y, Normal.(x, σ), lik)
+            end)
+            @test all(isfinite, g)
+        end
+    end
 end
