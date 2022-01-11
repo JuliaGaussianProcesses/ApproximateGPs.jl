@@ -62,7 +62,7 @@ function ep_approx_posterior(prior, sites::AbstractVector)
     canon_site_dists = [convert(NormalCanon, t.q) for t in sites]
     potentials = [q.η for q in canon_site_dists]
     precisions = [q.λ for q in canon_site_dists]
-    ts_dist = MvNormalCanon(potentials, precisions)
+    ts_dist = MvNormalCanon(potentials, Diagonal(precisions))
     return mul_dist(prior, ts_dist)
 end
 
@@ -111,7 +111,7 @@ function ep_single_site_update(ep_problem, ep_state, i::Int)
     new_t = div_dist(qhat_i.q, cav_i)
     var_sum = var(cav_i) + var(new_t)
     Ztilde =
-        Zhat * sqrt(2π) * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2 / (2var_sum))
+        Zhat * sqrttwoπ * sqrt(var_sum) * exp((mean(cav_i) - mean(new_t))^2 / (2var_sum))
     log_Ztilde =
         log(Zhat) +
         log2π / 2 +

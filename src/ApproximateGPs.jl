@@ -8,7 +8,7 @@ using LinearAlgebra
 using Statistics
 using StatsBase
 using FastGaussQuadrature: gausshermite
-#using SpecialFunctions
+using SpecialFunctions: loggamma
 using ChainRulesCore: ignore_derivatives, NoTangent
 using ChainRulesCore: ChainRulesCore
 using FillArrays: Fill
