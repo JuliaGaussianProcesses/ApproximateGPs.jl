@@ -1,11 +1,16 @@
 function generate_data()
-    Random.seed!(1)
     X = range(0, 23.5; length=48)
-    fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
-    # invlink = normcdf
-    invlink = logistic
-    ps = invlink.(fs)
-    Y = [rand(Bernoulli(p)) for p in ps]
+    # The random number generator changed in 1.6->1.7. The following vector was generated in Julia 1.6.
+    # The generating code below is only kept for illustrative purposes.
+    #! format: off
+    Y = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+    #! format: on
+    # Random.seed!(1)
+    # fs = @. 3 * sin(10 + 0.6X) + sin(0.1X) - 1
+    # # invlink = normcdf
+    # invlink = logistic
+    # ps = invlink.(fs)
+    # Y = [rand(Bernoulli(p)) for p in ps]
     return X, Y
 end
 

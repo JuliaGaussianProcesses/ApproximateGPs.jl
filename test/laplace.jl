@@ -43,7 +43,7 @@
             end
             fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
             ad_grad = only(Zygote.gradient(objective, theta0))
-            @test ad_grad ≈ fd_grad
+            @test ad_grad ≈ fd_grad rtol = 1e-6
         end
 
         @testset "_newton_inner_loop derivatives not defined" begin
@@ -132,7 +132,7 @@
 
     @testset "optimization" begin
         X, Y = generate_data()
-        theta0 = [0.0, 1.0]
+        theta0 = [5.0, 1.0]
 
         @testset "reference optimum" begin
             function objective(theta)
@@ -146,7 +146,7 @@
                 res = Optim.optimize(objective, theta0, NelderMead())
                 #@info res
 
-                @test res.minimizer ≈ expected_thetahat
+                @test res.minimizer ≈ expected_thetahat rtol = 1e-4
             end
 
             @testset "gradient-based" begin
@@ -187,5 +187,17 @@
             @test n_newton_coldstart - n_newton_warmstart > 100
             @test res_cold.minimizer ≈ res_warm.minimizer
         end
+    end
+
+    @testset "laplace_steps" begin
+        X, Y = generate_data()
+        Random.seed!(123)
+        theta0 = rand(2)
+        lf = build_latent_gp(theta0)
+        lfx = lf(X)
+
+        res_array = ApproximateGPs.laplace_steps(lfx, Y)
+        res = res_array[end]
+        @test res.q isa MvNormal
     end
 end
