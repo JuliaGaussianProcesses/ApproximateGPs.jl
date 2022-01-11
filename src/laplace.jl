@@ -135,8 +135,11 @@ function _check_laplace_inputs(
     lfx::LatentFiniteGP, ys; f_init=nothing, maxiter=100, newton_kwargs...
 )
     fx = lfx.fx
-    mean(fx) == zero(mean(fx)) || error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
-    length(ys) == length(fx) || error("LaplaceApproximation currently does not support multi-latent likelihoods; please open an issue on GitHub")
+    mean(fx) == zero(mean(fx)) ||
+        error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
+    length(ys) == length(fx) || error(
+        "LaplaceApproximation currently does not support multi-latent likelihoods; please open an issue on GitHub",
+    )
     dist_y_given_f = lfx.lik
     K = cov(fx)
     if isnothing(f_init)
