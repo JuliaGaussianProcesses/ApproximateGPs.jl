@@ -56,7 +56,7 @@ end
     SparseVariationalApproximation(fz::FiniteGP, q::AbstractMvNormal)
 
 Packages the prior over the pseudo-points `fz`, and the approximate posterior at the
-pseudo-points, which is `mean(fz) + cholesky(cov(fz)).U' * ε`, `ε ∼ q`.
+pseudo-points, which is `mean(fz) + cholesky(cov(fz)).L * ε`, `ε ∼ q`.
 
 Shorthand for
 ```julia
@@ -86,12 +86,76 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centered})
+    # m* = K*u Kuu⁻¹ (mean(q) - mean(fz))
+    #    = K*u α
+    # Centered: α = Kuu⁻¹ (m - mean(fz))
+    # [NonCentered: α = Lk⁻ᵀ m]
+    # V** = K** - K*u (Kuu⁻¹ - Kuu⁻¹ cov(q) Kuu⁻¹) Ku*
+    #     = K** - K*u (Kuu⁻¹ - Kuu⁻¹ cov(q) Kuu⁻¹) Ku*
+    #     = K** - (K*u Lk⁻ᵀ) (Lk⁻¹ Ku*) + (K*u Lk⁻ᵀ) Lk⁻¹ cov(q) Lk⁻ᵀ (Lk⁻¹ Ku*)
+    #     = K** - A'A + A' Lk⁻¹ cov(q) Lk⁻ᵀ A
+    #     = K** - A'A + A' Lk⁻¹ Lq Lqᵀ Lk⁻ᵀ A
+    #     = K** - A'A + A' B B' A
+    # A = Lk⁻¹ Ku*
+    # Centered: B = Lk⁻¹ Lq
+    # [NonCentered: B = Lq]
     q, fz = sva.q, sva.fz
     m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
-    B = Kuu.L \ S.L
+    B = chol_lower(Kuu) \ chol_lower(S)
     α = Kuu \ (m - mean(fz))
-    data = (S=S, m=m, Kuu=Kuu, B=B, α=α)
+    data = (Kuu=Kuu, B=B, α=α)
+    return ApproxPosteriorGP(sva, fz.f, data)
+end
+
+#
+# NonCentered Parametrization.
+#
+
+@doc raw"""
+    posterior(sva::SparseVariationalApproximation{NonCentered})
+
+Compute the approximate posterior [1] over the process `f =
+sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
+distribution over inducing points `sva.q` (which represents ``q(ε)``
+where `ε = cholesky(cov(fz)).L \ (f(z) - mean(f(z)))`). The approximate posterior at test
+points ``x^*`` where ``f^* = f(x^*)`` is then given by:
+
+```math
+q(f^*) = \int p(f | ε) q(ε) du
+```
+which can be found in closed form.
+
+[1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
+variational Gaussian process classification." Artificial Intelligence and
+Statistics. PMLR, 2015.
+"""
+function AbstractGPs.posterior(sva::SparseVariationalApproximation{NonCentered})
+    # u = Lk v + mean(fz), v ~ q
+    # m* = K*u Kuu⁻¹ Lk (mean(u) - mean(fz))
+    #    = K*u (Lk Lkᵀ)⁻¹ Lk mean(q)
+    #    = K*u Lk⁻ᵀ Lk⁻¹ Lk mean(q)
+    #    = K*u Lk⁻ᵀ mean(q)
+    #    = K*u α
+    # NonCentered: α = Lk⁻ᵀ m
+    # [Centered: α = Kuu⁻¹ (m - mean(fz))]
+    # V** = K** - K*u (Kuu⁻¹ - Kuu⁻¹ Lk cov(q) Lkᵀ Kuu⁻¹) Ku*
+    #     = K** - K*u (Kuu⁻¹ - (Lk Lkᵀ)⁻¹ Lk cov(q) Lkᵀ (Lk Lkᵀ)⁻¹) Ku*
+    #     = K** - K*u (Kuu⁻¹ - Lk⁻ᵀ Lk⁻¹ Lk cov(q) Lkᵀ Lk⁻ᵀ Lk⁻¹) Ku*
+    #     = K** - K*u (Kuu⁻¹ - Lk⁻ᵀ cov(q) Lk⁻¹) Ku*
+    #     = K** - (K*u Lk⁻ᵀ) (Lk⁻¹ Ku*) - (K*u Lk⁻ᵀ) Lq Lqᵀ (Lk⁻¹ Ku*)
+    #     = K** - A'A - (K*u Lk⁻ᵀ) Lq Lqᵀ (Lk⁻¹ Ku*)
+    #     = K** - A'A - A' B B' A
+    # A = Lk⁻¹ Ku*
+    # NonCentered: B = Lq
+    # [Centered: B = Lk⁻¹ Lq]
+    q, fz = sva.q, sva.fz
+    m = mean(q)
+    Kuu = _chol_cov(fz)
+    α = chol_lower(Kuu)' \ m
+    Sv = _chol_cov(q)
+    B = chol_lower(Sv)
+    data = (Kuu=Kuu, B=B, α=α)
     return ApproxPosteriorGP(sva, fz.f, data)
 end
 
@@ -108,144 +172,61 @@ end
 #
 
 function Statistics.mean(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
 
+# A = Lk⁻¹ Ku* is the projection matrix used in computing the predictive variance of the SparseVariationalApproximation posterior.
+function _A_and_Kuf(f, x)
+    Kuf = cov(f.prior, inducing_points(f), x)
+    A = chol_lower(f.data.Kuu) \ Kuf
+    return A, Kuf
+end
+
+_A(f, x) = first(_A_and_Kuf(f, x))
+
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
-    Cux = cov(f.prior, inducing_points(f), x)
-    D = f.data.Kuu.L \ Cux
-    return cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
+    A = _A(f, x)
+    return cov(f.prior, x) - At_A(A) + At_A(f.data.B' * A)
 end
 
 function Statistics.var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
 )
-    Cux = cov(f.prior, inducing_points(f), x)
-    D = f.data.Kuu.L \ Cux
-    return var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
+    A = _A(f, x)
+    return var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
+end
+
+function StatsBase.mean_and_cov(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
+    A, Kuf = _A_and_Kuf(f, x)
+    μ = mean(f.prior, x) + Kuf' * f.data.α
+    Σ = cov(f.prior, x) - At_A(A) + At_A(f.data.B' * A)
+    return μ, Σ
+end
+
+function StatsBase.mean_and_var(
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+)
+    A, Kuf = _A_and_Kuf(f, x)
+    μ = mean(f.prior, x) + Kuf' * f.data.α
+    Σ_diag = var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
+    return μ, Σ_diag
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}},
+    f::ApproxPosteriorGP{<:SparseVariationalApproximation},
     x::AbstractVector,
     y::AbstractVector,
 )
     B = f.data.B
-    Cxu = cov(f.prior, x, inducing_points(f))
-    Cuy = cov(f.prior, inducing_points(f), y)
-    D = f.data.Kuu.L \ Cuy
-    E = Cxu / f.data.Kuu.L'
-    return cov(f.prior, x, y) - (E * D) + (E * B * B' * D)
-end
-
-function StatsBase.mean_and_cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
-)
-    Cux = cov(f.prior, inducing_points(f), x)
-    D = f.data.Kuu.L \ Cux
-    μ = Cux' * f.data.α
-    Σ = cov(f.prior, x) - At_A(D) + At_A(f.data.B' * D)
-    return μ, Σ
-end
-
-function StatsBase.mean_and_var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}, x::AbstractVector
-)
-    Cux = cov(f.prior, inducing_points(f), x)
-    D = f.data.Kuu.L \ Cux
-    μ = Cux' * f.data.α
-    Σ_diag = var(f.prior, x) - diag_At_A(D) + diag_At_A(f.data.B' * D)
-    return μ, Σ_diag
-end
-
-#
-# NonCentered Parametrization.
-#
-
-@doc raw"""
-    posterior(sva::SparseVariationalApproximation{NonCentered})
-
-Compute the approximate posterior [1] over the process `f =
-sva.fz.f`, given inducing inputs `z = sva.fz.x` and a variational
-distribution over inducing points `sva.q` (which represents ``q(ε)``
-where `ε = cholesky(cov(fz)).U' \ (f(z) - mean(f(z)))`). The approximate posterior at test
-points ``x^*`` where ``f^* = f(x^*)`` is then given by:
-
-```math
-q(f^*) = \int p(f | ε) q(ε) du
-```
-which can be found in closed form.
-
-[1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
-variational Gaussian process classification." Artificial Intelligence and
-Statistics. PMLR, 2015.
-"""
-function AbstractGPs.posterior(approx::SparseVariationalApproximation{NonCentered})
-    fz = approx.fz
-    data = (Cuu=_chol_cov(fz), C_ε=_chol_cov(approx.q))
-    return ApproxPosteriorGP(approx, fz.f, data)
-end
-
-#
-# Various methods implementing the Internal AbstractGPs API.
-# See AbstractGPs.jl API docs for more info.
-#
-
-# Produces a matrix that is consistently referred to as A in this file. A more descriptive
-# name is, unfortunately, not obvious. It's just an intermediate quantity that happens to
-# get used a lot.
-_A(f, x) = f.data.Cuu.U' \ cov(f.prior, inducing_points(f), x)
-
-function Statistics.mean(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
-)
-    return mean(f.prior, x) + _A(f, x)' * mean(f.approx.q)
-end
-
-function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
-)
-    A = _A(f, x)
-    return cov(f.prior, x) - At_A(A) + Xt_A_X(f.data.C_ε, A)
-end
-
-function Statistics.var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
-)
-    A = _A(f, x)
-    return var(f.prior, x) - diag_At_A(A) + diag_Xt_A_X(f.data.C_ε, A)
-end
-
-function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}},
-    x::AbstractVector,
-    y::AbstractVector,
-)
     Ax = _A(f, x)
     Ay = _A(f, y)
-    return cov(f.prior, x, y) - Ax'Ay + Xt_A_Y(Ax, f.data.C_ε, Ay)
-end
-
-function StatsBase.mean_and_cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
-)
-    A = _A(f, x)
-    μ = mean(f.prior, x) + A' * mean(f.approx.q)
-    Σ = cov(f.prior, x) - At_A(A) + Xt_A_X(f.data.C_ε, A)
-    return μ, Σ
-end
-
-function StatsBase.mean_and_var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}}, x::AbstractVector
-)
-    A = _A(f, x)
-    μ = mean(f.prior, x) + A' * mean(f.approx.q)
-    Σ = var(f.prior, x) - diag_At_A(A) + diag_Xt_A_X(f.data.C_ε, A)
-    return μ, Σ
+    return cov(f.prior, x, y) - Ax'Ay + Ax' * B * B' * Ay
 end
 
 #
@@ -338,18 +319,25 @@ function _elbo(
     num_data::Integer,
 )
     @assert sva.fz.f === fx.f
-    post = posterior(sva)
-    q_f = marginals(post(fx.x))
+
+    f_post = posterior(sva)
+    q_f = marginals(f_post(fx.x))
     variational_exp = expected_loglik(quadrature, y, q_f, lik)
 
     n_batch = length(y)
     scale = num_data / n_batch
-    return sum(variational_exp) * scale - kl_term(sva, post)
+    return sum(variational_exp) * scale - _prior_kl(sva)
 end
 
-kl_term(sva::SparseVariationalApproximation{Centered}, post) = kldivergence(sva.q, sva.fz)
+_prior_kl(sva::SparseVariationalApproximation{Centered}) = kldivergence(sva.q, sva.fz)
 
-function kl_term(sva::SparseVariationalApproximation{NonCentered}, post)
+function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     m_ε = mean(sva.q)
-    return (tr(cov(sva.q)) + m_ε'm_ε - length(m_ε) - logdet(post.data.C_ε)) / 2
+    C_ε = _cov(sva.q)
+
+    # trace_term = tr(C_ε)  # does not work due to PDMat / Zygote issues
+    L = chol_lower(_chol_cov(sva.q))
+    trace_term = sum(L .^ 2)  # TODO remove AD workaround
+
+    return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
 end

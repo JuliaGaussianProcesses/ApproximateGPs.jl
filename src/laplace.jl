@@ -216,7 +216,7 @@ end
 function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=nothing)
     @assert maxiter >= 1
     f = f_init
-    cache = nothing
+    local cache
     for i in 1:maxiter
         @debug "  - Newton iteration $i: f[1:3]=$(f[1:3])"
         fnew, cache = _newton_step(dist_y_given_f, ys, K, f)
@@ -232,7 +232,7 @@ function _newton_inner_loop(dist_y_given_f, ys, K; f_init, maxiter, callback=not
             f = fnew
         end
     end
-    return f, something(cache)
+    return f, cache
 end
 
 function ChainRulesCore.frule(Δargs, ::typeof(_newton_inner_loop), args...; kwargs...)
@@ -348,7 +348,7 @@ function LaplaceResult(fnew, cache)
     q = MvNormal(f, AbstractGPs._symmetric(f_cov))
     lml_approx = _laplace_lml(f, cache)
 
-    return (; fnew, f_cov, q, lml_approx, cache...)
+    return (; fnew, f_cov, q, lml_approx, cache)
 end
 
 """
