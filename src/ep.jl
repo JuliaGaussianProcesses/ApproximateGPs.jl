@@ -10,17 +10,17 @@ end
 
 function AbstractGPs.posterior(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     ep_state = ep_inference(ep, lfx, ys)
-    # TODO: it seems a bit weird to piggyback on SVGP here...
-    # should AbstractGPs provide its own "GP conditioned on f(x) ~ q(f)" rather
-    # than just "conditioned on observation under some noise" (*not* the same
-    # thing...)?
+    # NOTE: here we simply piggyback on the SparseVariationalApproximation.
+    # Should AbstractGPs provide its own "GP conditioned on f(x) ~ q(f)" rather
+    # than just "conditioned on observation under some noise" (which is *not*
+    # the same thing...)?
     return posterior(SparseVariationalApproximation(Centered(), lfx.fx, ep_state.q))
 end
 
 function ep_inference(ep::ExpectationPropagation, lfx::LatentFiniteGP, ys)
     fx = lfx.fx
-    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(fx)  # ExpectationPropagation currently does not support multi-latent likelihoods
+    mean(fx) == zero(mean(fx)) || error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
+    length(ys) == length(fx) || error("ExpectationPropagation currently does not support multi-latent likelihoods; please open an issue on GitHub")
     dist_y_given_f = lfx.lik
     K = cov(fx)
 
