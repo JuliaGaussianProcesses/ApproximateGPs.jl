@@ -53,9 +53,11 @@
         σ = rand(rng, N)
         for lik in likelihoods_to_test
             y = rand.(rng, lik.(rand.(Normal.(μ, σ))))
-            g = only(Zygote.gradient(μ) do x
-                ApproximateGPs.expected_loglik(gh, y, Normal.(x, σ), lik)
-            end)
+            g = only(
+                Zygote.gradient(μ) do x
+                    ApproximateGPs.expected_loglik(gh, y, Normal.(x, σ), lik)
+                end,
+            )
             @test all(isfinite, g)
         end
     end

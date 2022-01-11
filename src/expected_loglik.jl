@@ -73,7 +73,8 @@ function expected_loglik(
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
-    return sum(Broadcast.instantiate(
+    return sum(
+        Broadcast.instantiate(
             Broadcast.broadcasted(q_f, y) do q, y
                 μ = mean(q)
                 σ = std(q)
@@ -81,10 +82,11 @@ function expected_loglik(
                     Broadcast.broadcasted(xs, ws) do x, w
                         f = sqrt2 * σ * x + μ
                         loglikelihood(lik(f), y) * w
-                    end
+                    end,
                 ))
-            end
-        )) * invsqrtπ
+            end,
+        ),
+    ) * invsqrtπ
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
