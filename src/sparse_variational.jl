@@ -329,7 +329,7 @@ function _elbo(
     return sum(variational_exp) * scale - _prior_kl(sva)
 end
 
-_prior_kl(sva::SparseVariationalApproximation{Centered}) = KL(sva.q, sva.fz)
+_prior_kl(sva::SparseVariationalApproximation{Centered}) = kldivergence(sva.q, sva.fz)
 
 function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     m_ε = mean(sva.q)
