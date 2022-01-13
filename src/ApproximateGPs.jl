@@ -12,7 +12,6 @@ using SpecialFunctions: loggamma
 using ChainRulesCore: ignore_derivatives, NoTangent
 using ChainRulesCore: ChainRulesCore
 using FillArrays: Fill
-using KLDivergences: KL
 using IrrationalConstants: log2π, sqrt2π
 using PDMats: chol_lower
 
