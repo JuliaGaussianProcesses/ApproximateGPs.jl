@@ -327,11 +327,13 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
     function newton_pullback(Δf_opt)
         ∂self = NoTangent()
 
-        ∂dist_y_given_f = @ChainRulesCore.not_implemented(
+        ∂dist_y_given_f = ChainRulesCore.@not_implemented(
             "gradient of Newton's method w.r.t. likelihood parameters"
         )
 
-        ∂ys = @ChainRulesCore.not_implemented("gradient of Newton's method w.r.t. observations")
+        ∂ys = ChainRulesCore.@not_implemented(
+            "gradient of Newton's method w.r.t. observations"
+        )
 
         # ∂K = df/dK Δf
         ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
