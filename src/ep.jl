@@ -179,14 +179,12 @@ end
 function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=150)
     # TODO: combine with expected_loglik / move into GPLikelihoods
     xs, ws = gausshermite(n_points)
-    fs = √2 * std(cav_i) * xs .+ mean(cav_i)
-    scale = (1 / √π)
+    fs = (sqrt2 * std(cav_i)) .* xs .+ mean(cav_i)
     lik_ws = lik_eval_i.(fs) .* ws
     fs_lik_ws = fs .* lik_ws
-    fs²_lik_ws = fs .* fs_lik_ws
-    m0 = scale * sum(lik_ws)
-    m1 = scale * sum(fs_lik_ws)
-    m2 = scale * sum(fs²_lik_ws)
+    m0 = invsqrtπ * sum(lik_ws)
+    m1 = invsqrtπ * sum(fs_lik_ws)
+    m2 = invsqrtπ * dot(fs_lik_ws, fs)
     matched_Z = m0
     matched_mean = m1 / m0
     matched_var = m2 / m0 - matched_mean^2
