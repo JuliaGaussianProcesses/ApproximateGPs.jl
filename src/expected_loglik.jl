@@ -75,14 +75,12 @@ function expected_loglik(
     xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
     # The expectation is done over 
-    return invsqrtπ * sum(
-        Broadcast.instantiate(
-            Broadcast.broadcasted(y, q_f) do yᵢ, q_fᵢ  # Loop over every pair
-                # of marginal distribution q(fᵢ) and observation yᵢ
-                expected_loglik(gh, yᵢ, q_fᵢ, lik, (xs, ws))
-            end,
-        ),
-    )
+    return sum(Broadcast.instantiate(
+        Broadcast.broadcasted(y, q_f) do yᵢ, q_fᵢ  # Loop over every pair
+            # of marginal distribution q(fᵢ) and observation yᵢ
+            expected_loglik(gh, yᵢ, q_fᵢ, lik, (xs, ws))
+        end,
+    ))
 end
 
 # Compute the expected_loglik for one observation and a marginal distributions
@@ -91,7 +89,7 @@ function expected_loglik(
 )
     μ = mean(q_f)
     σ̃ = sqrt2 * std(q_f)
-    sum(Broadcast.instantiate(
+    return invsqrtπ * sum(Broadcast.instantiate(
         Broadcast.broadcasted(xs, ws) do x, w # Loop over every
             # pair of Gauss-Hermite point x with weight w
             f = σ̃ * x + μ

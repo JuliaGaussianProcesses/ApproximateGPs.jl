@@ -54,10 +54,9 @@
         # Test differentiation with variational parameters
         for lik in likelihoods_to_test
             y = rand.(rng, lik.(rand.(Normal.(μs, σs))))
-            gμ, glogσ = 
-                Zygote.gradient(μs, log.(σs)) do μ, logσ
-                    ApproximateGPs.expected_loglik(gh, y, Normal.(μ, exp.(logσ)), lik)
-                end
+            gμ, glogσ = Zygote.gradient(μs, log.(σs)) do μ, logσ
+                ApproximateGPs.expected_loglik(gh, y, Normal.(μ, exp.(logσ)), lik)
+            end
             @test all(isfinite, gμ)
             @test all(isfinite, glogσ)
         end
@@ -65,16 +64,23 @@
         # Test GaussianLikelihood parameter
         σ = 1.0
         y = randn(rng, N)
-        glogσ = only(Zygote.gradient(log(σ)) do x
-            ApproximateGPs.expected_loglik(gh, y, Normal.(μs, σs), GaussianLikelihood(exp(x)))
-        end)
+        glogσ = only(
+            Zygote.gradient(log(σ)) do x
+                ApproximateGPs.expected_loglik(
+                    gh, y, Normal.(μs, σs), GaussianLikelihood(exp(x))
+                )
+            end,
+        )
         @test isfinite(glogσ)
         # Test GammaLikelihood parameter
         α = 2.0
         y = rand.(rng, Gamma.(α, rand(N)))
-        glogα = only(Zygote.gradient(log(α)) do x
-            ApproximateGPs.expected_loglik(gh, y, Normal.(μs, σs), GammaLikelihood(exp(x)))
-        end
+        glogα = only(
+            Zygote.gradient(log(α)) do x
+                ApproximateGPs.expected_loglik(
+                    gh, y, Normal.(μs, σs), GammaLikelihood(exp(x))
+                )
+            end,
         )
         @test isfinite(glogα)
     end
