@@ -65,28 +65,39 @@ function expected_loglik(
     return sum(lls) / mc.n_samples
 end
 
+# Compute the expected_loglik over a collection of observations and marginal distributions
 function expected_loglik(
-    gh::GaussHermite, ys::AbstractVector, q_fs::AbstractVector{<:Normal}, lik
+    gh::GaussHermite, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik
 )
     # Compute the expectation via Gauss-Hermite quadrature
     # using a reparameterisation by change of variable
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
     # size(fs): (length(y), n_points)
+    # The expectation is done over 
     return invsqrtπ * sum(
         Broadcast.instantiate(
-            Broadcast.broadcasted(q_fs, ys) do q_f, y
-                μ = mean(q_f)
-                σ̃ = sqrt2 * std(q_f)
-                sum(Broadcast.instantiate(
-                    Broadcast.broadcasted(xs, ws) do x, w
-                        f = σ̃ * x + μ
-                        loglikelihood(lik(f), y) * w
-                    end,
-                ))
+            Broadcast.broadcasted(y, q_f) do yᵢ, q_fᵢ  # Loop over every pair
+                # of marginal distribution q(fᵢ) and observation yᵢ
+                expected_loglik(gh, yᵢ, q_fᵢ, lik, (xs, ws))
             end,
         ),
     )
+end
+
+# Compute the expected_loglik for one observation and a marginal distributions
+function expected_loglik(
+    gh::GaussHermite, y, q_f::Normal, lik, (xs, ws)=gausshermite(gh.n_points)
+)
+    μ = mean(q_f)
+    σ̃ = sqrt2 * std(q_f)
+    sum(Broadcast.instantiate(
+        Broadcast.broadcasted(xs, ws) do x, w # Loop over every
+            # pair of Gauss-Hermite point x with weight w
+            f = σ̃ * x + μ
+            loglikelihood(lik(f), y) * w
+        end,
+    ))
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
