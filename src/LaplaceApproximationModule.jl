@@ -4,7 +4,6 @@ using ..API
 
 export LaplaceApproximation
 export build_laplace_objective, build_laplace_objective!
-export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
 
 using ForwardDiff: ForwardDiff
 using Distributions
@@ -57,7 +56,7 @@ Compute an approximation to the log of the marginal likelihood (also known as
 
 This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
 """
-function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+function API.approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     return laplace_lml(lfx, ys; la.newton_kwargs...)
 end
 
