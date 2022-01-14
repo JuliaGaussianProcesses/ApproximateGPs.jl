@@ -11,7 +11,6 @@ using FastGaussQuadrature
 using SpecialFunctions
 using ChainRulesCore
 using FillArrays
-using KLDivergences
 using PDMats: chol_lower
 using IrrationalConstants: sqrt2, invsqrtπ
 
