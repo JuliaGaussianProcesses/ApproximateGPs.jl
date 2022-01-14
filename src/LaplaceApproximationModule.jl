@@ -10,13 +10,11 @@ using Distributions
 using LinearAlgebra
 using Statistics
 using StatsBase
-using FastGaussQuadrature
-using SpecialFunctions
-using ChainRulesCore
-using FillArrays
-using PDMats: chol_lower
 
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using ChainRulesCore: ignore_derivatives, NoTangent, @thunk
+using ChainRulesCore: ChainRulesCore
+
+using AbstractGPs: LatentFiniteGP, ApproxPosteriorGP
 
 # Implementation follows Rasmussen & Williams, Gaussian Processes for Machine
 # Learning, the MIT Press, 2006. In the following referred to as 'RW'.
@@ -329,11 +327,11 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
     function newton_pullback(Δf_opt)
         ∂self = NoTangent()
 
-        ∂dist_y_given_f = @not_implemented(
+        ∂dist_y_given_f = @ChainRulesCore.not_implemented(
             "gradient of Newton's method w.r.t. likelihood parameters"
         )
 
-        ∂ys = @not_implemented("gradient of Newton's method w.r.t. observations")
+        ∂ys = @ChainRulesCore.not_implemented("gradient of Newton's method w.r.t. observations")
 
         # ∂K = df/dK Δf
         ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')

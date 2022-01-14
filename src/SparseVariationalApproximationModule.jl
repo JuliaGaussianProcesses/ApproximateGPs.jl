@@ -1,10 +1,10 @@
 module SparseVariationalApproximationModule
 
 using ..API
-using ..ApproximateGPs: _chol_cov, _cov
 
 export SparseVariationalApproximation, Centered, NonCentered
 
+using ..ApproximateGPs: _chol_cov, _cov
 using Distributions
 using LinearAlgebra
 using Statistics
@@ -12,7 +12,7 @@ using StatsBase
 using FastGaussQuadrature
 using SpecialFunctions
 using ChainRulesCore
-using FillArrays
+using FillArrays: Fill
 using PDMats: chol_lower
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
