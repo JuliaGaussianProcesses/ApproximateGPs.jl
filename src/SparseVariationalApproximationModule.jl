@@ -9,9 +9,6 @@ using Distributions
 using LinearAlgebra
 using Statistics
 using StatsBase
-using FastGaussQuadrature
-using SpecialFunctions
-using ChainRulesCore
 using FillArrays: Fill
 using PDMats: chol_lower
 
