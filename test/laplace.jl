@@ -114,7 +114,7 @@
             function eval_newton_inner_loop(theta)
                 k = with_lengthscale(Matern52Kernel(), exp(theta))
                 K = kernelmatrix(k, xs)
-                f, cache = ApproximateGPs._newton_inner_loop(
+                f, cache = LaplaceApproximationModule._newton_inner_loop(
                     dist_y_given_f, ys, K; f_init=zero(xs), maxiter=100
                 )
                 return f
@@ -133,7 +133,7 @@
 
             function newton_inner_loop_from_L(dist_y_given_f, ys, L; kwargs...)
                 K = L'L
-                return ApproximateGPs.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
+                return LaplaceApproximationModule.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
             end
 
             function ChainRulesCore.frule(
@@ -149,7 +149,7 @@
                 ΔK = ΔL'L + L'ΔL
                 return frule(
                     (Δself, Δdist_y_given_f, Δys, ΔK),
-                    ApproximateGPs.newton_inner_loop,
+                    LaplaceApproximationModule.newton_inner_loop,
                     dist_y_given_f,
                     ys,
                     K;
@@ -162,7 +162,7 @@
             )
                 K = L'L
                 f_opt, newton_from_K_pullback = rrule(
-                    ApproximateGPs.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
+                    LaplaceApproximationModule.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
                 )
 
                 function newton_from_L_pullback(Δf_opt)
@@ -254,7 +254,7 @@
         lf = build_latent_gp(theta0)
         lfx = lf(X)
 
-        res_array = ApproximateGPs.laplace_steps(lfx, Y)
+        res_array = LaplaceApproximationModule.laplace_steps(lfx, Y)
         res = res_array[end]
         @test res.q isa MvNormal
     end
