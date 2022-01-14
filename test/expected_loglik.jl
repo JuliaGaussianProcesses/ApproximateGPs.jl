@@ -34,7 +34,10 @@
         end
         y = rand.(rng, lik.(zeros(10)))
 
-        results = map(m -> SparseVariationalApproximationModule.expected_loglik(m, y, q_f, lik), methods)
+        results = map(
+            m -> SparseVariationalApproximationModule.expected_loglik(m, y, q_f, lik),
+            methods,
+        )
         @test all(x -> isapprox(x, results[end]; atol=1e-6, rtol=1e-3), results)
     end
 
@@ -44,5 +47,6 @@
     @test SparseVariationalApproximationModule.expected_loglik(
         GaussHermite(), zeros(10), q_f, GaussianLikelihood()
     ) isa Real
-    @test SparseVariationalApproximationModule._default_quadrature(θ -> Normal(0, θ)) isa GaussHermite
+    @test SparseVariationalApproximationModule._default_quadrature(θ -> Normal(0, θ)) isa
+        GaussHermite
 end
