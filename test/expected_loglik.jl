@@ -49,16 +49,16 @@
     @testset "testing Zygote compatibility with GaussHermite" begin # see issue #82
         N = 10
         gh = GaussHermite(12)
-        μ = randn(rng, N)
-        σ = rand(rng, N)
+        μs = randn(rng, N)
+        σs = rand(rng, N)
         for lik in likelihoods_to_test
-            y = rand.(rng, lik.(rand.(Normal.(μ, σ))))
-            g = only(
-                Zygote.gradient(μ) do x
-                    ApproximateGPs.expected_loglik(gh, y, Normal.(x, σ), lik)
-                end,
-            )
-            @test all(isfinite, g)
+            y = rand.(rng, lik.(rand.(Normal.(μs, σs))))
+            gμ, glogσ = 
+                Zygote.gradient(μs, log.(σs)) do μ, logσ
+                    ApproximateGPs.expected_loglik(gh, y, Normal.(μ, exp.(logσ), lik))
+                end
+            @test all(isfinite, gμ)
+            @test all(isfinite, glogσ)
         end
     end
 end
