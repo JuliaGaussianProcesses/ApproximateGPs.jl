@@ -73,7 +73,6 @@ function expected_loglik(
     # using a reparameterisation by change of variable
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
-    # The expectation is done over 
     return sum(Broadcast.instantiate(
         Broadcast.broadcasted(y, q_f) do yᵢ, q_fᵢ  # Loop over every pair
             # of marginal distribution q(fᵢ) and observation yᵢ
