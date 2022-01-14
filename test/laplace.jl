@@ -133,7 +133,9 @@
 
             function newton_inner_loop_from_L(dist_y_given_f, ys, L; kwargs...)
                 K = L'L
-                return LaplaceApproximationModule.newton_inner_loop(dist_y_given_f, ys, K; kwargs...)
+                return LaplaceApproximationModule.newton_inner_loop(
+                    dist_y_given_f, ys, K; kwargs...
+                )
             end
 
             function ChainRulesCore.frule(
@@ -162,7 +164,11 @@
             )
                 K = L'L
                 f_opt, newton_from_K_pullback = rrule(
-                    LaplaceApproximationModule.newton_inner_loop, dist_y_given_f, ys, K; kwargs...
+                    LaplaceApproximationModule.newton_inner_loop,
+                    dist_y_given_f,
+                    ys,
+                    K;
+                    kwargs...,
                 )
 
                 function newton_from_L_pullback(Δf_opt)
