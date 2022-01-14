@@ -1,5 +1,5 @@
 # ApproximateGPs API
 
 ```@autodocs
-Modules = [ApproximateGPs]
+Modules = [ApproximateGPs, ApproximateGPs.API, ApproximateGPs.SparseVariationalApproximationModule, ApproximateGPs.LaplaceApproximationModule]
 ```
