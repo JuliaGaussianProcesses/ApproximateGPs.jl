@@ -2,4 +2,5 @@
 
 ```@autodocs
 Modules = [ApproximateGPs.SparseVariationalApproximationModule]
+Private = false
 ```
