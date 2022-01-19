@@ -1,1 +1,1 @@
-@deprecate SVGP SparseVariationalApproximation
+@deprecate SVGP(args...) SparseVariationalApproximation(Centered(), args...)
