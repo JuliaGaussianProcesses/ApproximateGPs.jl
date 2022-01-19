@@ -12,6 +12,7 @@ using SpecialFunctions
 using ChainRulesCore
 using FillArrays
 using PDMats: chol_lower
+using IrrationalConstants: sqrt2, invsqrtπ
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 
