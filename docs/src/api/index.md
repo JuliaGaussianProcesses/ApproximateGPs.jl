@@ -4,3 +4,8 @@
 Modules = [ApproximateGPs, ApproximateGPs.API]
 Private = false
 ```
+```@docs
+SparseVariationalApproximation
+LaplaceApproximation
+posterior
+```
