@@ -8,6 +8,7 @@ const OUTDIR = ARGS[2]
 # Activate environment
 # Note that each example's Project.toml must include Literate as a dependency
 using Pkg: Pkg
+using InteractiveUtils
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
