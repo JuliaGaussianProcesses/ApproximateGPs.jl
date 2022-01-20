@@ -14,6 +14,7 @@ using StatsBase
 using ChainRulesCore: ignore_derivatives, NoTangent, @thunk
 using ChainRulesCore: ChainRulesCore
 
+import AbstractGPs
 using AbstractGPs: LatentFiniteGP, ApproxPosteriorGP
 
 # Implementation follows Rasmussen & Williams, Gaussian Processes for Machine
