@@ -12,7 +12,7 @@ const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
 io = IOBuffer()
-Pkg.status(; io=io)
+Pkg.status(;io=io)
 pkg_status = String(take!(io))
 
 using Literate: Literate
@@ -45,11 +45,12 @@ function preprocess(content)
     content = replace(content, r"^##$."ms => "")
     # adds the current version of the packages
     append = """
-    #### Packages Version
-    ```julia
-        $(pkg_status)
-    ```
+    # #### Packages Version
+    # ```julia
+    $(replace(pkg_status, r"^"m => "# "))
+    # ```
     """
+    # This regex add "# " at the beginning of each line
     return content * append
 end
 
