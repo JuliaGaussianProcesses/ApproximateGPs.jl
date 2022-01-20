@@ -11,6 +11,10 @@ using Pkg: Pkg
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
+io = IOBuffer()
+Pkg.status(;io=io)
+pkg_status = String(take!(io))
+
 using Literate: Literate
 
 function preprocess(content)
@@ -39,8 +43,14 @@ function preprocess(content)
 
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
-
-    return content
+    # adds the current version of the packages
+    append = """
+    #### Packages Version
+    ```julia
+        $(pkg_status)
+    ```
+    """
+    return content * append
 end
 
 function md_postprocess(content)

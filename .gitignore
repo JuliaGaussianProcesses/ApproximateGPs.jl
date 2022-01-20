@@ -8,5 +8,4 @@ tmp/
 *.jld2
 *.cov
 *.info
-/test/Manifest.toml
-/Manifest.toml
+Manifest.toml
