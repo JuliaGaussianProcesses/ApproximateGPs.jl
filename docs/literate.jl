@@ -11,9 +11,12 @@ using Pkg: Pkg
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
-io = IOBuffer()
-Pkg.status(;io=io)
-pkg_status = String(take!(io))
+pkg_status = sprint() do io
+    Pkg.status(;io=io)
+end
+manifest_status = sprint() do io
+    Pkg.status(;io=io, mode=Pkg.PKGMODE_MANIFEST)
+end
 
 using Literate: Literate
 
@@ -45,12 +48,18 @@ function preprocess(content)
     content = replace(content, r"^##$."ms => "")
     # adds the current version of the packages
     append = """
-    # #### Packages Version
+    # ### Package information
+    # #### Package version
     # ```julia
-    $(replace(pkg_status, r"^"m => "# "))
+    $(chomp(replace(pkg_status, r"^"m => "# ")))
+    # ```
+    # #### Manifest
+    # ```julia
+    $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
     """
     # This regex add "# " at the beginning of each line
+    # chomp removes trailing newlines
     return content * append
 end
 
