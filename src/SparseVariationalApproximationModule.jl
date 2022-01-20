@@ -13,7 +13,7 @@ using FillArrays: Fill
 using PDMats: chol_lower
 using IrrationalConstants: sqrt2, invsqrtπ
 
-import AbstractGPs
+using AbstractGPs: AbstractGPs
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
 using GPLikelihoods: GaussianLikelihood
 
