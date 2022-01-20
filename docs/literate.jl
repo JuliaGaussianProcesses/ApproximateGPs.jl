@@ -12,7 +12,7 @@ const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
 pkg_status = sprint() do io
-    Pkg.status(;io=io)
+    Pkg.status(; io=io)
 end
 manifest_status = sprint() do io
     Pkg.status(;io=io, mode=Pkg.PKGMODE_MANIFEST)
