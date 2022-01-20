@@ -12,10 +12,10 @@ const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
 pkg_status = sprint() do io
-    Pkg.status(; io=io)
+    Pkg.status(;io=io)
 end
 manifest_status = sprint() do io
-    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
+    Pkg.status(;io=io, mode=Pkg.PKGMODE_MANIFEST)
 end
 
 using Literate: Literate
@@ -54,9 +54,12 @@ function preprocess(content)
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
     # #### Manifest
+    # <details>
+    # <summary> Show the full Manifest </summary>
     # ```julia
     $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
+    # </details>
     """
     # This regex add "# " at the beginning of each line
     # chomp removes trailing newlines
