@@ -12,7 +12,7 @@ const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
 io = IOBuffer()
-Pkg.status(;io=io)
+Pkg.status(; io=io)
 pkg_status = String(take!(io))
 
 using Literate: Literate
