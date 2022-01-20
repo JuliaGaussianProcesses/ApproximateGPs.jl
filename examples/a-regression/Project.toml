@@ -1,5 +1,6 @@
 [deps]
 ApproximateGPs = "298c2ebc-0411-48ad-af38-99e88101b606"
+DisplayAs = "0b91fe84-8a4c-11e9-3e1d-67c38462b6d6"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
