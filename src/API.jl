@@ -1,10 +1,5 @@
 module API
 
-using Reexport
-
-@reexport using AbstractGPs
-@reexport using GPLikelihoods
-
 export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
 
 """
