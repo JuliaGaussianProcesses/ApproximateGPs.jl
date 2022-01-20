@@ -14,6 +14,7 @@ using PDMats: chol_lower
 using IrrationalConstants: sqrt2, invsqrtπ
 
 using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using GPLikelihoods: GaussianLikelihood
 
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 include("expected_loglik.jl")

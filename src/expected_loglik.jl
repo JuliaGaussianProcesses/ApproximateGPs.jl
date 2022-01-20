@@ -1,3 +1,4 @@
+using GPLikelihoods
 using FastGaussQuadrature: gausshermite
 using SpecialFunctions: loggamma
 using ChainRulesCore: ChainRulesCore
