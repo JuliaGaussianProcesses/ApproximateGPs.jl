@@ -48,18 +48,26 @@ function preprocess(content)
     content = replace(content, r"^##$."ms => "")
     # adds the current version of the packages
     append = """
-    # ### Package information
+    # ### Package and system information
     # #### Package version
     # ```julia
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
     # #### Manifest
-    # <details>
-    # <summary> Show the full Manifest </summary>
+    ```@raw html
+    <details>
+    <summary> Show the full Manifest </summary>
+    ```
     # ```julia
     $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
-    # </details>
+    ```@raw html
+    </details>
+    ```
+    # #### Computer information
+    # ```julia
+    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    # ```
     """
     # This regex add "# " at the beginning of each line
     # chomp removes trailing newlines
