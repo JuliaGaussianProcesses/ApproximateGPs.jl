@@ -30,7 +30,11 @@ N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
-DisplayAs.PNG(scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false))
+DisplayAs.PNG(
+    scatter(
+        x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false
+    ),
+)
 
 # ## Set up a Flux model
 #
@@ -209,4 +213,6 @@ scatter(
     color=1,
 )
 plot!(-1:0.001:1, post; label="Posterior", color=4)
-DisplayAs.PNG(sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5))
+DisplayAs.PNG(
+    sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
+)
