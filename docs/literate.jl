@@ -15,7 +15,7 @@ pkg_status = sprint() do io
     Pkg.status(; io=io)
 end
 manifest_status = sprint() do io
-    Pkg.status(;io=io, mode=Pkg.PKGMODE_MANIFEST)
+    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
 end
 
 using Literate: Literate
