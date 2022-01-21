@@ -14,7 +14,15 @@ using PDMats: chol_lower
 using IrrationalConstants: sqrt2, invsqrtπ
 
 using AbstractGPs: AbstractGPs
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, posterior, marginals, At_A, diag_At_A
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    posterior,
+    marginals,
+    At_A,
+    diag_At_A
 using GPLikelihoods: GaussianLikelihood
 
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
