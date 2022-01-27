@@ -9,9 +9,16 @@ const OUTDIR = ARGS[2]
 # Note that each example's Project.toml must include Literate as a dependency
 using Pkg: Pkg
 
+using InteractiveUtils
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
+pkg_status = sprint() do io
+    Pkg.status(; io=io)
+end
+manifest_status = sprint() do io
+    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
+end
 
 using Literate: Literate
 
@@ -45,11 +52,35 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    content =
-        content *
-        "\n\n# ---\n# [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment"
-
-    return content
+    # adds the current version of the packages
+    append = """
+    # ### Package and system information
+    # #### Package version
+    # ```julia
+    $(chomp(replace(pkg_status, r"^"m => "# ")))
+    # ```
+    # #### Manifest
+    # ```@raw html
+    # <details>
+    # <summary> Show the full Manifest </summary>
+    # ```
+    # ```julia
+    $(chomp(replace(manifest_status, r"^"m => "# ")))
+    # ```
+    # ```@raw html
+    # </details>
+    # ```
+    # #### Computer information
+    # ```julia
+    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    # ```
+    #
+    # ---
+    # [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
+    """
+    # This regex add "# " at the beginning of each line
+    # chomp removes trailing newlines
+    return content * append
 end
 
 function md_postprocess(content)
