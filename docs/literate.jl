@@ -59,6 +59,10 @@ function preprocess(content)
     # ```julia
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
+    # #### Computer information
+    # ```julia
+    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    # ```
     # #### Manifest
     # ```@raw html
     # <details>
@@ -70,11 +74,6 @@ function preprocess(content)
     # ```@raw html
     # </details>
     # ```
-    # #### Computer information
-    # ```julia
-    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
-    # ```
-    #
     # ---
     # [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
     """
