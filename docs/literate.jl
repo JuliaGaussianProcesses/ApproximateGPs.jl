@@ -22,7 +22,8 @@ end
 
 using Literate: Literate
 
-const MANIFEST_OUT = "$(EXAMPLE).Manifest.toml"
+const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
+mkpath(joinpath(OUTDIR, EXAMPLE))
 cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
 function preprocess(content)
@@ -64,16 +65,18 @@ function preprocess(content)
     $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
     # ```
     # #### Manifest
+    """ *
     # ```@raw html
     # <details>
     # <summary> Show the full Manifest </summary>
     # ```
     # ```julia
-    $(chomp(replace(manifest_status, r"^"m => "# ")))
+# $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
     # ```@raw html
     # </details>
     # ```
+    """
     # ---
     # [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
     """
