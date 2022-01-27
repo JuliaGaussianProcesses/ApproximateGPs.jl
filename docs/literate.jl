@@ -45,7 +45,9 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    content = content * "\n\n# ---\n# [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment"
+    content =
+        content *
+        "\n\n# ---\n# [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment"
 
     return content
 end
