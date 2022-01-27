@@ -54,6 +54,10 @@ function preprocess(content)
     # ```julia
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
+    # #### Computer information
+    # ```julia
+    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    # ```
     # #### Manifest
     # ```@raw html
     # <details>
@@ -65,10 +69,7 @@ function preprocess(content)
     # ```@raw html
     # </details>
     # ```
-    # #### Computer information
-    # ```julia
-    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
-    # ```
+
     """
     # This regex add "# " at the beginning of each line
     # chomp removes trailing newlines
