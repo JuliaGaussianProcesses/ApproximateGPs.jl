@@ -65,23 +65,24 @@ function preprocess(content)
     $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
     # ```
     # #### Manifest
-    """ *
+    # Click [here to download the Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
+    """
+    # This regex add "# " at the beginning of each line
+    # chomp removes trailing newlines
+
+    # The following gives a preview of the manifest
+    # embedded in a "spoiler", but this is unfortunately very buggy
     # ```@raw html
     # <details>
     # <summary> Show the full Manifest </summary>
     # ```
     # ```julia
-# $(chomp(replace(manifest_status, r"^"m => "# ")))
+    # $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
     # ```@raw html
     # </details>
     # ```
-    """
-    # ---
-    # [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
-    """
-    # This regex add "# " at the beginning of each line
-    # chomp removes trailing newlines
+
     return content * append
 end
 
