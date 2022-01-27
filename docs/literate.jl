@@ -8,10 +8,15 @@ const OUTDIR = ARGS[2]
 # Activate environment
 # Note that each example's Project.toml must include Literate as a dependency
 using Pkg: Pkg
+
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
+
 using Literate: Literate
+
+const MANIFEST_OUT = "$(EXAMPLE).Manifest.toml"
+cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
@@ -39,6 +44,8 @@ function preprocess(content)
 
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
+
+    content = content * "\n\n# ---\n# [Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment"
 
     return content
 end
