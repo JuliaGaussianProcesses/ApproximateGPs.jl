@@ -55,16 +55,16 @@ function preprocess(content)
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
     # #### Manifest
-    ```@raw html
-    <details>
-    <summary> Show the full Manifest </summary>
-    ```
+    # ```@raw html
+    # <details>
+    # <summary> Show the full Manifest </summary>
+    # ```
     # ```julia
     $(chomp(replace(manifest_status, r"^"m => "# ")))
     # ```
-    ```@raw html
-    </details>
-    ```
+    # ```@raw html
+    # </details>
+    # ```
     # #### Computer information
     # ```julia
     $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
