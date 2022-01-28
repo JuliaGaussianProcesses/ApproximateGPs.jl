@@ -14,11 +14,10 @@ using Distributions
 using LinearAlgebra
 
 using Plots
-## We save plots as PNG files to reduce their size
+## We output plots as PNG to reduce their size
 default(; fmt=:png, palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
-#nb
-#nb ## Regardless of the `fmt` setting above, by default in notebooks Literate also saves
-#nb ## the SVG output: https://github.com/fredrikekre/Literate.jl/issues/61
+#nb ## Regardless of the `fmt` setting, by default Literate saves also the SVG output
+#nb ## in notebooks: https://github.com/fredrikekre/Literate.jl/issues/61
 #nb ## We use DisplayAs to ensure that only the PNG output is saved.
 #nb using DisplayAs
 
