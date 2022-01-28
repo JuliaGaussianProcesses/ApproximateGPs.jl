@@ -61,11 +61,11 @@ function preprocess(content)
     $(chomp(replace(pkg_status, r"^"m => "# ")))
     # ```
     # #### Computer information
-    # ```julia
+    # ```
     $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
     # ```
     # #### Manifest
-    # Click [here to download the Manifest.toml]($(MANIFEST_OUT)) for this notebook's package environment
+    # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
     """
     # This regex add "# " at the beginning of each line
     # chomp removes trailing newlines
