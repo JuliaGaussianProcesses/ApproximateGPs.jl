@@ -12,7 +12,6 @@
 using ApproximateGPs
 using Distributions
 using LinearAlgebra
-#jl using DisplayAs
 
 using Plots
 default(; fmt=:png, palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
@@ -30,10 +29,7 @@ N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
-plt = scatter(
-    x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false
-)
-#jl DisplayAs.PNG(plt)
+scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false)
 
 # ## Set up a Flux model
 #
@@ -149,7 +145,7 @@ model = SVGPModel(k_init, z_init, m_init, A_init);
 # very poor fit to the data, as expected:
 
 init_post = model_posterior(model)
-plt = scatter(
+scatter(
     x,
     y;
     xlabel="x",
@@ -158,8 +154,7 @@ plt = scatter(
     markeralpha=0.1,
     label="Training Data",
 )
-plot!(plt, -1:0.001:1, init_post; label="Initial Posterior", color=4)
-#jl DisplayAs.PNG(plt)
+plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
 
 # ## Training the model
 #
@@ -200,7 +195,7 @@ loss(model, x, y)
 
 post = model_posterior(model)
 
-plt = scatter(
+scatter(
     x,
     y;
     markershape=:xcross,
@@ -212,6 +207,5 @@ plt = scatter(
     label="Training Data",
     color=1,
 )
-plot!(plt, -1:0.001:1, post; label="Posterior", color=4)
-sticks!(plt, model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
-#jl DisplayAs.PNG(plt)
+plot!(-1:0.001:1, post; label="Posterior", color=4)
+sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
