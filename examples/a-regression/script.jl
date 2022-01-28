@@ -31,10 +31,10 @@ x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
 
-scatter(
+plt = scatter(
     x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false
 )
-DisplayAs.PNG(ans) # hide
+DisplayAs.PNG(plt) # hide
 
 # ## Set up a Flux model
 #
@@ -150,7 +150,7 @@ model = SVGPModel(k_init, z_init, m_init, A_init);
 # very poor fit to the data, as expected:
 
 init_post = model_posterior(model)
-scatter(
+plt = scatter(
     x,
     y;
     xlabel="x",
@@ -159,8 +159,8 @@ scatter(
     markeralpha=0.1,
     label="Training Data",
 )
-plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
-DisplayAs.PNG(ans) # hide
+plot!(plt, -1:0.001:1, init_post; label="Initial Posterior", color=4)
+DisplayAs.PNG(plt) # hide
 
 # ## Training the model
 #
@@ -201,7 +201,7 @@ loss(model, x, y)
 
 post = model_posterior(model)
 
-scatter(
+plt = scatter(
     x,
     y;
     markershape=:xcross,
@@ -213,6 +213,6 @@ scatter(
     label="Training Data",
     color=1,
 )
-plot!(-1:0.001:1, post; label="Posterior", color=4)
-sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
-DisplayAs.PNG(ans) # hide
+plot!(plt, -1:0.001:1, post; label="Posterior", color=4)
+sticks!(plt, model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
+DisplayAs.PNG(plt) # hide
