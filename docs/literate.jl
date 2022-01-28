@@ -8,10 +8,23 @@ const OUTDIR = ARGS[2]
 # Activate environment
 # Note that each example's Project.toml must include Literate as a dependency
 using Pkg: Pkg
+
+using InteractiveUtils
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
+pkg_status = sprint() do io
+    Pkg.status(; io=io)
+end
+manifest_status = sprint() do io
+    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
+end
+
 using Literate: Literate
+
+const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
+mkpath(joinpath(OUTDIR, EXAMPLE))
+cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
@@ -40,7 +53,37 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    return content
+    # adds the current version of the packages
+    append = """
+    # ### Package and system information
+    # #### Package version
+    # ```julia
+    $(chomp(replace(pkg_status, r"^"m => "# ")))
+    # ```
+    # #### Computer information
+    # ```
+    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    # ```
+    # #### Manifest
+    # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
+    """
+    # This regex add "# " at the beginning of each line
+    # chomp removes trailing newlines
+
+    # The following gives a preview of the manifest
+    # embedded in a "spoiler", but this is unfortunately very buggy
+    # ```@raw html
+    # <details>
+    # <summary> Show the full Manifest </summary>
+    # ```
+    # ```julia
+    # $(chomp(replace(manifest_status, r"^"m => "# ")))
+    # ```
+    # ```@raw html
+    # </details>
+    # ```
+
+    return content * append
 end
 
 function md_postprocess(content)
