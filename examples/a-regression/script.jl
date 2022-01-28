@@ -12,7 +12,7 @@
 using ApproximateGPs
 using Distributions
 using LinearAlgebra
-using DisplayAs #hide
+#jl using DisplayAs
 
 using Plots
 default(; fmt=:png, palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
@@ -33,7 +33,7 @@ y = g.(x) + 0.3 * randn(N)
 plt = scatter(
     x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false
 )
-DisplayAs.PNG(plt) #hide
+#jl DisplayAs.PNG(plt)
 
 # ## Set up a Flux model
 #
@@ -159,7 +159,7 @@ plt = scatter(
     label="Training Data",
 )
 plot!(plt, -1:0.001:1, init_post; label="Initial Posterior", color=4)
-DisplayAs.PNG(plt) #hide
+#jl DisplayAs.PNG(plt)
 
 # ## Training the model
 #
@@ -214,4 +214,4 @@ plt = scatter(
 )
 plot!(plt, -1:0.001:1, post; label="Posterior", color=4)
 sticks!(plt, model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
-DisplayAs.PNG(plt) #hide
+#jl DisplayAs.PNG(plt)
