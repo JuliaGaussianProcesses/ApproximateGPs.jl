@@ -30,10 +30,7 @@ N = 10000 # Number of training points
 x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
-
-scatter(
-    x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false
-)
+scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false)
 DisplayAs.PNG(ans) # hide
 
 # ## Set up a Flux model
