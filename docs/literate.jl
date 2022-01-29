@@ -56,22 +56,23 @@ function preprocess(content)
     # <details></details> seems to be buggy in the notebook, so is avoided for now
     info_footer = """
     #md # ```@raw html
-    #md # <details>
-    #md # <summary>Package and system information</summary>
+    # <details>
+    # <summary><h3>Click to expand package and system information</h3></summary>
     #md # ```
-    #nb # ### Package and system information
-    # #### Package version
+    #
+    # #### Package versions
     # ```julia
     $(literate_format(pkg_status))
     # ```
-    # #### Computer information
+    # #### System information
     # ```
     $(literate_format(sprint(InteractiveUtils.versioninfo)))
     # ```
     # #### Manifest
     # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
+    #
     #md # ```@raw html
-    #md # </details>
+    # </details>
     #md # ```
     """
 
