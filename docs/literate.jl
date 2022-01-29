@@ -16,9 +16,6 @@ Pkg.instantiate()
 pkg_status = sprint() do io
     Pkg.status(; io=io)
 end
-manifest_status = sprint() do io
-    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
-end
 
 using Literate: Literate
 
@@ -53,37 +50,32 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    # adds the current version of the packages
-    append = """
-    # ### Package and system information
+    """ The regex adds "# " at the beginning of each line; chomp removes trailing newlines """
+    literate_format(s) = chomp(replace(s, r"^"m => "# "))
+
+    # <details></details> seems to be buggy in the notebook, so is avoided for now
+    info_footer = """
+    #md # ```@raw html
+    #md # <details>
+    #md # <summary>Package and system information</summary>
+    #md # ```
+    #nb # ### Package and system information
     # #### Package version
     # ```julia
-    $(chomp(replace(pkg_status, r"^"m => "# ")))
+    $(literate_format(pkg_status))
     # ```
     # #### Computer information
     # ```
-    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
+    $(literate_format(sprint(InteractiveUtils.versioninfo)))
     # ```
     # #### Manifest
     # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
+    #md # ```@raw html
+    #md # </details>
+    #md # ```
     """
-    # This regex add "# " at the beginning of each line
-    # chomp removes trailing newlines
 
-    # The following gives a preview of the manifest
-    # embedded in a "spoiler", but this is unfortunately very buggy
-    # ```@raw html
-    # <details>
-    # <summary> Show the full Manifest </summary>
-    # ```
-    # ```julia
-    # $(chomp(replace(manifest_status, r"^"m => "# ")))
-    # ```
-    # ```@raw html
-    # </details>
-    # ```
-
-    return content * append
+    return content * info_footer
 end
 
 function md_postprocess(content)
