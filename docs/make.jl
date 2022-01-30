@@ -15,7 +15,7 @@ examples = filter!(isdir, readdir(joinpath(@__DIR__, "..", "examples"); join=tru
 let script = """
 using Pkg
 Pkg.activate(ARGS[1])
-Pkg.develop(PackageSpec(; path=relpath("$PATH_ApproximateGPs", ARGS[1])))
+Pkg.develop(PackageSpec(; path=relpath(\"$PATH_ApproximateGPs\", ARGS[1])))
 Pkg.instantiate()
 """
     for example in examples
