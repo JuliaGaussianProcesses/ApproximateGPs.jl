@@ -1,13 +1,18 @@
+using ApproximateGPs
+
 ### Process examples
 # Always rerun examples
 const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 ispath(EXAMPLES_OUT) && rm(EXAMPLES_OUT; recursive=true)
 mkpath(EXAMPLES_OUT)
 
+# Obtain path of ApproximateGPs so we can run examples with the same version
+const PATH_ApproximateGPs = dirname(dirname(pathof(ApproximateGPs)))
+
 # Install and precompile all packages
 # Workaround for https://github.com/JuliaLang/Pkg.jl/issues/2219
 examples = filter!(isdir, readdir(joinpath(@__DIR__, "..", "examples"); join=true))
-let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.instantiate()"
+let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.develop(PackageSpec(; path=$PATH_ApproximateGPs)); Pkg.instantiate()"
     for example in examples
         if !success(`$(Base.julia_cmd()) -e $script $example`)
             error(
@@ -38,8 +43,6 @@ isempty(processes) || success(processes) || error("some examples were not run su
 
 ### Build documentation
 using Documenter
-
-using ApproximateGPs
 
 # Doctest setup
 DocMeta.setdocmeta!(
