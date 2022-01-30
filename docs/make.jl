@@ -12,7 +12,7 @@ const PATH_ApproximateGPs = dirname(dirname(pathof(ApproximateGPs)))
 # Install and precompile all packages
 # Workaround for https://github.com/JuliaLang/Pkg.jl/issues/2219
 examples = filter!(isdir, readdir(joinpath(@__DIR__, "..", "examples"); join=true))
-let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.develop(PackageSpec(; path=relpath(\"$PATH_ApproximateGPs\", ARGS[1]))); Pkg.instantiate()"
+let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.develop(PackageSpec(; path=relpath(\"$PATH_ApproximateGPs\", pwd()))); Pkg.instantiate()"
     for example in examples
         if !success(`$(Base.julia_cmd()) -e $script $example`)
             error(
