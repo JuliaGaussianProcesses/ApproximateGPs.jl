@@ -23,6 +23,12 @@ const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
 mkpath(joinpath(OUTDIR, EXAMPLE))
 cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
+function escapeHTML(s::String)
+    # adapted from HttpCommon.jl
+    # Refer to http://stackoverflow.com/a/7382028/3822752 for spec. links
+    return replace(s, "&"=>"&amp;", "\""=>"&quot;", "'"=>"&#39;", "<"=>"&lt;", ">"=>"&gt;")
+end
+
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
     sub = SubstitutionString(
@@ -58,20 +64,17 @@ function preprocess(content)
     #md # ```@raw html
     # <details>
     # <summary><h3>Click to expand package and system information</h3></summary>
-    #md # ```
     #
-    # #### Package versions
-    # ```julia
-    $(literate_format(pkg_status))
-    # ```
-    # #### System information
-    # ```
-    $(literate_format(sprint(InteractiveUtils.versioninfo)))
-    # ```
-    # #### Manifest
-    # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
-    #
-    #md # ```@raw html
+    # <h4>Package versions</h4>
+    # <pre>
+    $(literate_format(escapeHTML(pkg_status)))
+    # </pre>
+    # <h4>System information</h4>
+    # <pre>
+    $(literate_format(escapeHTML(sprint(InteractiveUtils.versioninfo))))
+    # </pre>
+    # <h4>Manifest</h4>
+    # To reproduce this notebook's package environment, you can <a href="$(MANIFEST_OUT)">download the full Manifest.toml</a>.
     # </details>
     #md # ```
     """
