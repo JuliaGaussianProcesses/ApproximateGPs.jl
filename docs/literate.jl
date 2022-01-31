@@ -82,7 +82,9 @@ function preprocess(content)
     # <h4>Manifest</h4>
     # To reproduce this notebook's package environment, you can
     #nb # <a href="$(MANIFEST_OUT)">download the full Manifest.toml</a>.
+    #md # ```
     #md # [download the full Manifest.toml]($(MANIFEST_OUT)).
+    #md # ```@raw html
     # </details>
     #md # ```
     """
