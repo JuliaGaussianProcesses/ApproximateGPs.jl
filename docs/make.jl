@@ -7,7 +7,7 @@ ispath(EXAMPLES_OUT) && rm(EXAMPLES_OUT; recursive=true)
 mkpath(EXAMPLES_OUT)
 
 # Obtain path of ApproximateGPs so we can run examples with the same version
-const PATH_ApproximateGPs = dirname(dirname(pathof(ApproximateGPs)))
+const PATH_ApproximateGPs = pkgdir(ApproximateGPs)
 
 # Install and precompile all packages
 # Workaround for https://github.com/JuliaLang/Pkg.jl/issues/2219
