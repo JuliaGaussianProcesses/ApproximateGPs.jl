@@ -23,12 +23,15 @@ const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
 mkpath(joinpath(OUTDIR, EXAMPLE))
 cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
-function escapeHTML(s::String)
-    # adapted from HttpCommon.jl
+""" adapted from HttpCommon.jl """
+function escapeHTML(i::String)
     # Refer to http://stackoverflow.com/a/7382028/3822752 for spec. links
-    return replace(
-        s, "&" => "&amp;", "\"" => "&quot;", "'" => "&#39;", "<" => "&lt;", ">" => "&gt;"
-    )
+    o = replace(i, "&"=>"&amp;")
+    o = replace(o, "\""=>"&quot;")
+    o = replace(o, "'"=>"&#39;")
+    o = replace(o, "<"=>"&lt;")
+    o = replace(o, ">"=>"&gt;")
+    return o
 end
 
 function preprocess(content)
