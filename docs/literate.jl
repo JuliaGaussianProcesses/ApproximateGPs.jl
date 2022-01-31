@@ -80,7 +80,9 @@ function preprocess(content)
     $(literate_format(escapeHTML(sprint(InteractiveUtils.versioninfo))))
     # </pre>
     # <h4>Manifest</h4>
-    # To reproduce this notebook's package environment, you can <a href="$(MANIFEST_OUT)">download the full Manifest.toml</a>.
+    # To reproduce this notebook's package environment, you can
+    #nb <a href="$(MANIFEST_OUT)">download the full Manifest.toml</a>.
+    #md [download the full Manifest.toml]($(MANIFEST_OUT)).
     # </details>
     #md # ```
     """
