@@ -26,7 +26,9 @@ cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force
 function escapeHTML(s::String)
     # adapted from HttpCommon.jl
     # Refer to http://stackoverflow.com/a/7382028/3822752 for spec. links
-    return replace(s, "&"=>"&amp;", "\""=>"&quot;", "'"=>"&#39;", "<"=>"&lt;", ">"=>"&gt;")
+    return replace(
+        s, "&" => "&amp;", "\"" => "&quot;", "'" => "&#39;", "<" => "&lt;", ">" => "&gt;"
+    )
 end
 
 function preprocess(content)
