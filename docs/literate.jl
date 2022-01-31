@@ -53,6 +53,7 @@ function preprocess(content)
 # [Julia source file](@__REPO_ROOT_URL__/examples/@__NAME__/script.jl).
 #md # The corresponding notebook can be viewed in [nbviewer](@__NBVIEWER_ROOT_URL__/examples/@__NAME__.ipynb).*
 #nb # The rendered HTML can be viewed [in the docs](https://juliagaussianprocesses.github.io/ApproximateGPs.jl/dev/examples/@__NAME__/).*
+# ---
 #
         """,
     )
@@ -66,6 +67,7 @@ function preprocess(content)
 
     # <details></details> seems to be buggy in the notebook, so is avoided for now
     info_footer = """
+    # ---
     #md # ```@raw html
     # <details>
     # <summary><strong>Package and system information (click to expand)</strong></summary>
