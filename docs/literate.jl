@@ -26,11 +26,11 @@ cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force
 """ adapted from HttpCommon.jl """
 function escapeHTML(i::String)
     # Refer to http://stackoverflow.com/a/7382028/3822752 for spec. links
-    o = replace(i, "&"=>"&amp;")
-    o = replace(o, "\""=>"&quot;")
-    o = replace(o, "'"=>"&#39;")
-    o = replace(o, "<"=>"&lt;")
-    o = replace(o, ">"=>"&gt;")
+    o = replace(i, "&" => "&amp;")
+    o = replace(o, "\"" => "&quot;")
+    o = replace(o, "'" => "&#39;")
+    o = replace(o, "<" => "&lt;")
+    o = replace(o, ">" => "&gt;")
     return o
 end
 
