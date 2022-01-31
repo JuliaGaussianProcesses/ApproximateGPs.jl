@@ -54,7 +54,7 @@ function preprocess(content)
 #md # The corresponding notebook can be viewed in [nbviewer](@__NBVIEWER_ROOT_URL__/examples/@__NAME__.ipynb).*
 #nb # The rendered HTML can be viewed [in the docs](https://juliagaussianprocesses.github.io/ApproximateGPs.jl/dev/examples/@__NAME__/).*
 #
-# ---
+#md # ---
 #
         """,
     )
