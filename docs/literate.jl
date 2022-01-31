@@ -63,8 +63,7 @@ function preprocess(content)
     info_footer = """
     #md # ```@raw html
     # <details>
-    # <summary><h3>Click to expand package and system information</h3></summary>
-    #
+    # <summary><strong>Package and system information (click to expand)</strong></summary>
     # <h4>Package versions</h4>
     # <pre>
     $(literate_format(escapeHTML(pkg_status)))
