@@ -53,7 +53,8 @@ function preprocess(content)
 # [Julia source file](@__REPO_ROOT_URL__/examples/@__NAME__/script.jl).
 #md # The corresponding notebook can be viewed in [nbviewer](@__NBVIEWER_ROOT_URL__/examples/@__NAME__.ipynb).*
 #nb # The rendered HTML can be viewed [in the docs](https://juliagaussianprocesses.github.io/ApproximateGPs.jl/dev/examples/@__NAME__/).*
-# <hr />
+#
+# ---
 #
         """,
     )
@@ -67,8 +68,8 @@ function preprocess(content)
 
     # <details></details> seems to be buggy in the notebook, so is avoided for now
     info_footer = """
-    # <hr />
     #md # ```@raw html
+    # <hr />
     # <details>
     # <summary><strong>Package and system information (click to expand)</strong></summary>
     # <h4>Package versions</h4>
@@ -81,10 +82,9 @@ function preprocess(content)
     # </pre>
     # <h4>Manifest</h4>
     # To reproduce this notebook's package environment, you can
-    #nb # <a href="$(MANIFEST_OUT)">download the full Manifest.toml</a>.
-    #md # ```
-    #md # [download the full Manifest.toml]($(MANIFEST_OUT)).
-    #md # ```@raw html
+    #nb # <a href="$(MANIFEST_OUT)">
+    #md # <a href="../$(MANIFEST_OUT)">
+    # download the full Manifest.toml</a>.
     # </details>
     #md # ```
     """
