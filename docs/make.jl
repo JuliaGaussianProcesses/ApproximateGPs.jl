@@ -37,7 +37,6 @@ function instantiate_script(mod; org, name=string(nameof(mod)), devbranch="maste
                 @info "Run examples with $name version $tag_nobuild"
                 return """
 using Pkg
-Pkg.activate(ARGS[1])
 Pkg.add(PackageSpec(; name="$name", version="$version"))
 Pkg.instantiate()
 """
@@ -51,7 +50,6 @@ Pkg.instantiate()
                     @info "Run examples with $name commit $sha"
                     return """
 using Pkg
-Pkg.activate(ARGS[1])
 Pkg.add(PackageSpec(; name="$name", rev="$sha"))
 Pkg.instantiate()
 """
@@ -65,7 +63,6 @@ Pkg.instantiate()
     @info "Run examples with $name, local path $pkgdir_mod"
     return """
 using Pkg
-Pkg.activate(ARGS[1])
 Pkg.develop(PackageSpec(; path="$pkgdir_mod"))
 Pkg.instantiate()
 """
@@ -76,7 +73,7 @@ end
 examples = filter!(isdir, readdir(joinpath(@__DIR__, "..", "examples"); join=true))
 let script = instantiate_script(ApproximateGPs; org="JuliaGaussianProcesses")
     for example in examples
-        if !success(`$(Base.julia_cmd()) -e $script $example`)
+        if !success(`$(Base.julia_cmd()) --project=$example -e $script`)
             error(
                 "project environment of example ",
                 basename(example),
