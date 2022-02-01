@@ -38,7 +38,7 @@ function instantiate_script(mod; org, name=string(nameof(mod)), devbranch="maste
                 return """
 using Pkg
 Pkg.activate(ARGS[1])
-Pkg.add(PackageSpec(; name=$name, version=$version))
+Pkg.add(PackageSpec(; name="$name", version="$version"))
 Pkg.instantiate()
 """
             end
@@ -52,7 +52,7 @@ Pkg.instantiate()
                     return """
 using Pkg
 Pkg.activate(ARGS[1])
-Pkg.add(PackageSpec(; name=$name, rev=$sha))
+Pkg.add(PackageSpec(; name="$name", rev="$sha"))
 Pkg.instantiate()
 """
                 end
@@ -66,7 +66,7 @@ Pkg.instantiate()
     return """
 using Pkg
 Pkg.activate(ARGS[1])
-Pkg.develop(PackageSpec(; path=pkgdir_mod))
+Pkg.develop(PackageSpec(; path="$pkgdir_mod"))
 Pkg.instantiate()
 """
 end
