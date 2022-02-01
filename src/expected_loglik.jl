@@ -151,7 +151,7 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
-    lik::GammaLikelihood{<:Any,ExpLink},
+    lik::GammaLikelihood{ExpLink},
 )
     f_μ = mean.(q_f)
     return sum(
