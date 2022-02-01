@@ -160,4 +160,4 @@ function expected_loglik(
     )
 end
 
-_default_quadrature(::GammaLikelihood{<:Any,ExpLink}) = Analytic()
+_default_quadrature(::GammaLikelihood{ExpLink}) = Analytic()
