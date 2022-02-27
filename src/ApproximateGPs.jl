@@ -5,6 +5,7 @@ using Reexport
 @reexport using GPLikelihoods
 using Distributions
 using LinearAlgebra
+using Random
 using Statistics
 using StatsBase
 using FastGaussQuadrature
@@ -14,7 +15,16 @@ using FillArrays
 using PDMats: chol_lower
 using IrrationalConstants: sqrt2, invsqrtπ
 
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    inducing_points,
+    At_A,
+    diag_At_A,
+    Xt_A_X,
+    Xt_invA_X
 
 include("utils.jl")
 
@@ -23,6 +33,7 @@ include("expected_loglik.jl")
 
 export SparseVariationalApproximation, Centered, NonCentered
 include("sparse_variational.jl")
+include("pathwise_sampling.jl")
 
 using ForwardDiff
 

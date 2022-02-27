@@ -233,7 +233,9 @@ end
 # Misc utility.
 #
 
-inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.approx.fz.x
+function AbstractGPs.inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation})
+    return f.approx.fz.x
+end
 
 #
 # elbo
