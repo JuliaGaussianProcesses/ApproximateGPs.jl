@@ -2,6 +2,7 @@ using Random
 using Test
 using ApproximateGPs
 using ApproximateGPs: _optimal_variational_posterior
+using RandomFourierFeatures
 using Flux
 using IterTools
 using AbstractGPs
