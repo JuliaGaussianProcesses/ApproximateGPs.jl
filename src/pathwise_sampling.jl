@@ -7,8 +7,10 @@ Returns a function which can be evaluated at any input locations `X`.
 argument and returns a `BayesianLinearRegressors.BasisFunctionRegressor`,
 representing a weight space approximation to the prior of `f`. An example of
 such a function can be constructed with
-`RandomFourierFeatures.build_rff_weight_space_approx`. If `num_samples` is
-supplied as an argument, returns a Vector of function samples.
+`RandomFourierFeatures.build_rff_weight_space_approx`.
+
+If `num_samples` is supplied as an argument, returns a Vector of function
+samples.
 
 Details of the method can be found in [1].
 
