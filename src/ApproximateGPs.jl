@@ -33,6 +33,8 @@ include("expected_loglik.jl")
 
 export SparseVariationalApproximation, Centered, NonCentered
 include("sparse_variational.jl")
+
+export pathwise_sample
 include("pathwise_sampling.jl")
 
 using ForwardDiff
