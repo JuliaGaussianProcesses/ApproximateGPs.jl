@@ -1,4 +1,4 @@
-function pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx) # TODO: num_samples
+function pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx)
     prior_approx = weight_space_approx(f.prior)
     prior_sample = rand(rng, prior_approx)
 
@@ -11,6 +11,35 @@ function pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_s
     posterior_sample(x) = prior_sample(x) + cov(f, x, z) * v
 
     return posterior_sample
+end
+pathwise_sample(f::ApproxPosteriorGP, wsa) = pathwise_sample(Random.GLOBAL_RNG, f, wsa)
+
+function pathwise_sample(
+    rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx, num_samples::Integer
+)
+    prior_approx = weight_space_approx(f.prior)
+    prior_samples = rand(rng, prior_approx, num_samples)
+
+    z = AbstractGPs.inducing_points(f)
+    q_u = ApproximateGPs._get_q_u(f)
+
+    us = rand(rng, q_u, num_samples)
+
+    vs = cov(f, z) \ (us - reduce(hcat, map((s) -> s(z), prior_samples)))
+
+    function create_posterior_sample_fn(prior_sample, v)
+        function posterior_sample(x)
+            return prior_sample(x) + cov(f, x, z) * v
+        end
+    end
+
+    posterior_samples = [
+        create_posterior_sample_fn(s, v) for (s, v) in zip(prior_samples, eachrow(vs))
+    ]
+    return posterior_samples
+end
+function pathwise_sample(f::ApproxPosteriorGP, wsa, n::Integer)
+    return pathwise_sample(Random.GLOBAL_RNG, f, wsa, n)
 end
 
 # Methods to get the explicit variational distribution over inducing points q(u)
