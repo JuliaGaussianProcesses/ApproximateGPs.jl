@@ -1,3 +1,20 @@
+@doc raw"""
+    pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx[, num_samples::Integer])
+
+Efficiently samples a function from a sparse approximate posterior GP `f`.
+Returns a function which can be evaluated at any input locations `X`.
+`weight_space_approx` must be a function which takes a prior `AbstractGP` as an
+argument and returns a `BayesianLinearRegressors.BasisFunctionRegressor`,
+representing a weight space approximation to the prior of `f`. An example of
+such a function can be constructed with
+`RandomFourierFeatures.build_rff_weight_space_approx`. If `num_samples` is
+supplied as an argument, returns a Vector of function samples.
+
+Details of the method can be found in [1].
+
+[1] - Wilson, James, et al. "Efficiently sampling functions from Gaussian
+process posteriors." International Conference on Machine Learning. PMLR, 2020.
+"""
 function pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx)
     prior_approx = weight_space_approx(f.prior)
     prior_sample = rand(rng, prior_approx)
@@ -38,8 +55,8 @@ function pathwise_sample(
     ]
     return posterior_samples
 end
-function pathwise_sample(f::ApproxPosteriorGP, wsa, n::Integer)
-    return pathwise_sample(Random.GLOBAL_RNG, f, wsa, n)
+function pathwise_sample(f::ApproxPosteriorGP, wsa, num_samples::Integer)
+    return pathwise_sample(Random.GLOBAL_RNG, f, wsa, num_samples)
 end
 
 # Methods to get the explicit variational distribution over inducing points q(u)
