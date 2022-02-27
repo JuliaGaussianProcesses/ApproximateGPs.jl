@@ -9,25 +9,6 @@ using Random
 
 rng = MersenneTwister(1234)
 
-# Find the exact Titsias posterior (avoid optimisation)
-# TODO: this is already (and better) solved by `_get_q_u(f::ApproxPosteriorGP{<:VFE})`
-# Replace this (and the version in `test_utils`?)
-function optimal_variational_posterior(::Centered, fz, fx, y)
-    σ² = fx.Σy[1]
-    Kuf = cov(fz, fx)
-    Kuu = Symmetric(cov(fz))
-    Σ = (Symmetric(cov(fz) + (1 / σ²) * Kuf * Kuf'))
-    m = ((1 / σ²) * Kuu * (Σ \ Kuf)) * y
-    S = Symmetric(Kuu * (Σ \ Kuu))
-    return MvNormal(m, S)
-end
-
-function optimal_variational_posterior(::NonCentered, fz, fx, y)
-    q = optimal_variational_posterior(Centered(), fz, fx, y)
-    Cuu = cholesky(Symmetric(cov(fz)))
-    return MvNormal(Cuu.L \ (mean(q) - mean(fz)), Symmetric((Cuu.L \ cov(q)) / Cuu.U))
-end
-
 # Define a GP and generate some data
 
 k = 3 * (SqExponentialKernel() ∘ ScaleTransform(10))
@@ -44,10 +25,10 @@ fz = gp(z)
 
 # Any of the following will work:
 
-# q = optimal_variational_posterior(NonCentered(), fz, fx, y)
+# q = ApproximateGPs._optimal_variational_posterior(NonCentered(), fz, fx, y)
 # ap = posterior(SparseVariationalApproximation(NonCentered(), fz, q))
 
-# q = optimal_variational_posterior(Centered(), fz, fx, y)
+# q = ApproximateGPs._optimal_variational_posterior(Centered(), fz, fx, y)
 # ap = posterior(SparseVariationalApproximation(NonCentered(), fz, q))
 
 ap = posterior(VFE(fz), fx, y)
