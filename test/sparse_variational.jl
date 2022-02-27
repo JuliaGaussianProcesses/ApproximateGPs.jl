@@ -19,7 +19,7 @@
         fz = f(z, 1e-6)
 
         # Construct approximate posterior.
-        q_Centered = optimal_variational_posterior(fz, fx, y)
+        q_Centered = _optimal_variational_posterior(Centered(), fz, fx, y)
         approx_Centered = SparseVariationalApproximation(Centered(), fz, q_Centered)
         f_approx_post_Centered = posterior(approx_Centered)
 
@@ -32,17 +32,12 @@
         end
 
         @testset "NonCentered" begin
-
             # Construct optimal approximate posterior.
-            q = optimal_variational_posterior(fz, fx, y)
-            Cuu = cholesky(Symmetric(cov(fz)))
-            q_ε = MvNormal(
-                Cuu.L \ (mean(q) - mean(fz)), Symmetric((Cuu.L \ cov(q)) / Cuu.U)
-            )
+            q_ε = _optimal_variational_posterior(NonCentered(), fz, fx, y)
 
             @testset "Check that q_ε has been properly constructed" begin
-                @test mean(q) ≈ mean(fz) + Cuu.L * mean(q_ε)
-                @test cov(q) ≈ Cuu.L * cov(q_ε) * Cuu.U
+                @test mean(q_Centered) ≈ mean(fz) + Cuu.L * mean(q_ε)
+                @test cov(q_Centered) ≈ Cuu.L * cov(q_ε) * Cuu.U
             end
 
             # Construct equivalent approximate posteriors.
@@ -79,7 +74,7 @@
         f = GP(kernel)
         fx = f(x, 0.1)
         fz = f(z)
-        q_ex = optimal_variational_posterior(fz, fx, y)
+        q_ex = _optimal_variational_posterior(Centered(), fz, fx, y)
 
         sva = SparseVariationalApproximation(fz, q_ex)
         @test elbo(sva, fx, y) isa Real
@@ -115,7 +110,7 @@
             f = GP(kernel)
             fx = f(x, lik_noise)
             fz = f(z)
-            q_ex = optimal_variational_posterior(fz, fx, y)
+            q_ex = _optimal_variational_posterior(Centered(), fz, fx, y)
 
             gpr_post = posterior(fx, y) # Exact GP regression
             vfe_post = posterior(VFE(fz), fx, y) # Titsias posterior

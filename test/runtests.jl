@@ -1,6 +1,7 @@
 using Random
 using Test
 using ApproximateGPs
+using ApproximateGPs: _optimal_variational_posterior
 using Flux
 using IterTools
 using AbstractGPs
@@ -56,6 +57,10 @@ include("test_utils.jl")
     include("sparse_variational.jl")
     println(" ")
     @info "Ran svgp tests"
+
+    include("pathwise_sampling.jl")
+    println(" ")
+    @info "Ran pathwise sampling tests"
 
     include("laplace.jl")
     println(" ")

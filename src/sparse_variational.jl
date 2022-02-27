@@ -343,3 +343,18 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
 
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
 end
+
+# Get the optimal closed form solution for the centered variational posterior q(u)
+function _optimal_variational_posterior(::Centered, fz, fx, y)
+    fz.f.mean isa AbstractGPs.ZeroMean ||
+        error("The exact posterior requires a GP with ZeroMean.")
+    post = posterior(VFE(fz), fx, y)
+    return _get_q_u(post)
+end
+
+# Get the optimal closed form solution for the non-centered variational posterior q(ε)
+function _optimal_variational_posterior(::NonCentered, fz, fx, y)
+    q_u = _optimal_variational_posterior(Centered(), fz, fx, y)
+    Cuu = cholesky(Symmetric(cov(fz)))
+    return MvNormal(Cuu.L \ (mean(q_u) - mean(fz)), Symmetric((Cuu.L \ cov(q_u)) / Cuu.U))
+end
