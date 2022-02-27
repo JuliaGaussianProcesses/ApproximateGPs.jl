@@ -38,7 +38,7 @@ x_test = ColVecs(sort(rand(input_dims, 500); dims=2))
 num_features = 1000
 rff_wsa = build_rff_weight_space_approx(rng, input_dims, num_features)
 
-function_samples = [ApproximateGPs.pathwise_sample(rng, ap, rff_wsa) for _ in 1:100]
+function_samples = ApproximateGPs.pathwise_sample(rng, ap, rff_wsa, 100)
 
 y_samples = reduce(hcat, map((f) -> f(x_test), function_samples))  # size(y_samples): (length(x_plot), n_samples)
 

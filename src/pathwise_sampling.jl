@@ -34,7 +34,7 @@ function pathwise_sample(
     end
 
     posterior_samples = [
-        create_posterior_sample_fn(s, v) for (s, v) in zip(prior_samples, eachrow(vs))
+        create_posterior_sample_fn(s, v) for (s, v) in zip(prior_samples, eachcol(vs))
     ]
     return posterior_samples
 end
