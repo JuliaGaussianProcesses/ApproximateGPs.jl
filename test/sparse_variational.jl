@@ -36,6 +36,7 @@
             q_ε = _optimal_variational_posterior(NonCentered(), fz, fx, y)
 
             @testset "Check that q_ε has been properly constructed" begin
+                Cuu = cholesky(Symmetric(cov(fz)))
                 @test mean(q_Centered) ≈ mean(fz) + Cuu.L * mean(q_ε)
                 @test cov(q_Centered) ≈ Cuu.L * cov(q_ε) * Cuu.U
             end
