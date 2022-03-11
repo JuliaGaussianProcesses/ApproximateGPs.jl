@@ -1,3 +1,33 @@
+module SparseVariationalApproximationModule
+
+using ..API
+
+export SparseVariationalApproximation, Centered, NonCentered
+
+using ..ApproximateGPs: _chol_cov, _cov
+using Distributions
+using LinearAlgebra
+using Statistics
+using StatsBase
+using FillArrays: Fill
+using PDMats: chol_lower
+using IrrationalConstants: sqrt2, invsqrtπ
+
+using AbstractGPs: AbstractGPs
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    posterior,
+    marginals,
+    At_A,
+    diag_At_A
+using GPLikelihoods: GaussianLikelihood
+
+export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+include("expected_loglik.jl")
+
 @doc raw"""
     Centered()
 
@@ -357,4 +387,6 @@ function _optimal_variational_posterior(::NonCentered, fz, fx, y)
     q_u = _optimal_variational_posterior(Centered(), fz, fx, y)
     Cuu = cholesky(Symmetric(cov(fz)))
     return MvNormal(Cuu.L \ (mean(q_u) - mean(fz)), Symmetric((Cuu.L \ cov(q_u)) / Cuu.U))
+end
+
 end
