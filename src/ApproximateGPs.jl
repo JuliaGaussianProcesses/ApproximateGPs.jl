@@ -4,6 +4,7 @@ using Reexport
 
 @reexport using AbstractGPs
 @reexport using GPLikelihoods
+
 include("API.jl")
 @reexport using .API: approx_lml
 
