@@ -1,3 +1,8 @@
+using GPLikelihoods
+using FastGaussQuadrature: gausshermite
+using SpecialFunctions: loggamma
+using ChainRulesCore: ChainRulesCore
+
 abstract type QuadratureMethod end
 struct DefaultQuadrature <: QuadratureMethod end
 struct Analytic <: QuadratureMethod end
