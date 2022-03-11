@@ -1,7 +1,5 @@
 using Random
 using Test
-using ApproximateGPs
-using ApproximateGPs: _optimal_variational_posterior
 using RandomFourierFeatures
 using Flux
 using IterTools
@@ -16,7 +14,11 @@ using Zygote
 using ChainRulesCore
 using ChainRulesTestUtils
 using FiniteDifferences
-using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
+using ApproximateGPs
+using ApproximateGPs:
+    SparseVariationalApproximationModule,
+    SparseVariationalApproximationModule._optimal_variational_posterior,
+    LaplaceApproximationModule
 
 # Writing tests:
 # 1. The file structure of the test should match precisely the file structure of src.
@@ -58,9 +60,9 @@ include("test_utils.jl")
 
     include("sparse_variational.jl")
     println(" ")
-    @info "Ran svgp tests"
+    @info "Ran sparse variational tests"
 
-    include("pathwise_sampling.jl")
+    include("PathwiseSamplingModule.jl")
     println(" ")
     @info "Ran pathwise sampling tests"
 

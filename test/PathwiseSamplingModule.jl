@@ -40,21 +40,21 @@
     end
 
     @testset "Centered SVA" begin
-        q = ApproximateGPs._optimal_variational_posterior(Centered(), fz, fx, y)
+        q = _optimal_variational_posterior(Centered(), fz, fx, y)
         ap = posterior(SparseVariationalApproximation(Centered(), fz, q))
 
         test_single_sample_stats(ap, num_samples)
         test_multi_sample_stats(ap, num_samples)
     end
     @testset "NonCentered SVA" begin
-        q = ApproximateGPs._optimal_variational_posterior(NonCentered(), fz, fx, y)
+        q = _optimal_variational_posterior(NonCentered(), fz, fx, y)
         ap = posterior(SparseVariationalApproximation(NonCentered(), fz, q))
 
         test_single_sample_stats(ap, num_samples)
         test_multi_sample_stats(ap, num_samples)
     end
     @testset "VFE" begin
-        ap = posterior(VFE(fz), fx, y)
+        ap = posterior(AbstractGPs.VFE(fz), fx, y)
 
         test_single_sample_stats(ap, num_samples)
         test_multi_sample_stats(ap, num_samples)

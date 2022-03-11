@@ -21,6 +21,9 @@ include("LaplaceApproximationModule.jl")
 @reexport using .LaplaceApproximationModule:
     build_laplace_objective, build_laplace_objective!
 
+include("PathwiseSamplingModule.jl")
+@reexport using .PathwiseSamplingModule: pathwise_sample
+
 include("deprecations.jl")
 
 end

@@ -1,3 +1,18 @@
+module PathwiseSamplingModule
+
+export pathwise_sample
+
+using Random
+
+using ..ApproximateGPs: _chol_cov
+using ..SparseVariationalApproximationModule:
+    SparseVariationalApproximation, Centered, NonCentered, _get_q_u
+
+using AbstractGPs:
+    ApproxPosteriorGP, VFE, inducing_points, Xt_invA_X, Xt_A_X, inducing_points
+using PDMats: chol_lower
+using Distributions
+
 @doc raw"""
     pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx[, num_samples::Integer])
 
@@ -39,8 +54,8 @@ function pathwise_sample(
     prior_approx = weight_space_approx(f.prior)
     prior_samples = rand(rng, prior_approx, num_samples)
 
-    z = AbstractGPs.inducing_points(f)
-    q_u = ApproximateGPs._get_q_u(f)
+    z = inducing_points(f)
+    q_u = _get_q_u(f)
 
     us = rand(rng, q_u, num_samples)
 
@@ -61,34 +76,4 @@ function pathwise_sample(f::ApproxPosteriorGP, wsa, num_samples::Integer)
     return pathwise_sample(Random.GLOBAL_RNG, f, wsa, num_samples)
 end
 
-# Methods to get the explicit variational distribution over inducing points q(u)
-function _get_q_u(f::ApproxPosteriorGP{<:SparseVariationalApproximation{NonCentered}})
-    # u = Lε + μ where LLᵀ = cov(fz) and μ = mean(fz)
-    # q(ε) = N(m, S)
-    # => q(u) = N(Lm + μ, LSLᵀ)
-    L, μ = chol_lower(_chol_cov(f.approx.fz)), mean(f.approx.fz)
-    m, S = mean(f.approx.q), _chol_cov(f.approx.q)
-    return MvNormal(L * m + μ, Xt_A_X(S, L'))
-end
-_get_q_u(f::ApproxPosteriorGP{<:SparseVariationalApproximation{Centered}}) = f.approx.q
-
-function _get_q_u(f::ApproxPosteriorGP{<:VFE})
-    # q(u) = N(m, S)
-    # q(f_k) = N(μ_k, Σ_k)  (the predictive distribution at test inputs k)
-    # μ_k = mean(k) + K_kz * K_zz⁻¹ * m
-    # where: K_kz = cov(f.prior, k, z)
-    # implemented as: μ_k = mean(k) + K_kz * α
-    # => m = K_zz * α
-    # Σ_k = K_kk - (K_kz * K_zz⁻¹ * K_zk) + (K_kz * K_zz⁻¹ * S * K_zz⁻¹ * K_zk)
-    # interested in the last term to get S
-    # implemented as: Aᵀ * Λ_ε⁻¹ * A
-    # where: A = U⁻ᵀ * K_zk
-    # UᵀU = K_zz
-    # so, Λ_ε⁻¹ = U⁻ᵀ * S * U
-    # => S = Uᵀ * Λ_ε⁻¹ * U
-    # see https://krasserm.github.io/2020/12/12/gaussian-processes-sparse/ eqns (8) & (9)
-    U = f.data.U
-    m = U'U * f.data.α
-    S = Xt_invA_X(f.data.Λ_ε, U)
-    return MvNormal(m, S)
 end
