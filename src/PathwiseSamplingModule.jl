@@ -13,6 +13,15 @@ using AbstractGPs:
 using PDMats: chol_lower
 using Distributions
 
+struct PosteriorSample{Tapprox<:ApproxPosteriorGP,Tprior,Tv}
+    approx_post::Tapprox
+    prior_sample::Tprior
+    v::Tv
+end
+function (s::PosteriorSample)(x::AbstractVector)
+    return s.prior_sample(x) + cov(s.approx_post, x, inducing_points(s.approx_post)) * s.v
+end
+
 @doc raw"""
     pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_space_approx[, num_samples::Integer])
 
@@ -42,9 +51,7 @@ function pathwise_sample(rng::Random.AbstractRNG, f::ApproxPosteriorGP, weight_s
     u = rand(rng, q_u)
     v = cov(f, z) \ (u - prior_sample(z))
 
-    posterior_sample(x) = prior_sample(x) + cov(f, x, z) * v
-
-    return posterior_sample
+    return PosteriorSample(f, prior_sample, v)
 end
 pathwise_sample(f::ApproxPosteriorGP, wsa) = pathwise_sample(Random.GLOBAL_RNG, f, wsa)
 
@@ -61,14 +68,8 @@ function pathwise_sample(
 
     vs = cov(f, z) \ (us - reduce(hcat, map((s) -> s(z), prior_samples)))
 
-    function create_posterior_sample_fn(prior_sample, v)
-        function posterior_sample(x)
-            return prior_sample(x) + cov(f, x, z) * v
-        end
-    end
-
     posterior_samples = [
-        create_posterior_sample_fn(s, v) for (s, v) in zip(prior_samples, eachcol(vs))
+        PosteriorSample(f, s, v) for (s, v) in zip(prior_samples, eachcol(vs))
     ]
     return posterior_samples
 end
