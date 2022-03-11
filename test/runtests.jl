@@ -58,7 +58,7 @@ include("test_utils.jl")
     println(" ")
     @info "Ran expected_loglik tests"
 
-    include("sparse_variational.jl")
+    include("SparseVariationalApproximationModule.jl")
     println(" ")
     @info "Ran sparse variational tests"
 
@@ -66,7 +66,7 @@ include("test_utils.jl")
     println(" ")
     @info "Ran pathwise sampling tests"
 
-    include("laplace.jl")
+    include("LaplaceApproximationModule.jl")
     println(" ")
     @info "Ran laplace tests"
 end
