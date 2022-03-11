@@ -14,9 +14,9 @@ using PDMats: chol_lower
 using Distributions
 
 struct PosteriorSample{Tapprox<:ApproxPosteriorGP,Tprior,Tv}
-    approx_post::Tapprox
-    prior_sample::Tprior
-    v::Tv
+    approx_post::Tapprox  # The approximate posterior GP from which this sample is taken
+    prior_sample::Tprior  # A function sampled from the prior of `approx_post`
+    v::Tv  # The term needed to compute the pathwise update to the prior sample
 end
 function (s::PosteriorSample)(x::AbstractVector)
     return s.prior_sample(x) + cov(s.approx_post, x, inducing_points(s.approx_post)) * s.v
