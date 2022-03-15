@@ -58,7 +58,7 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "userguide.md",
-        "API" => "api.md",
+        "API" => ["api/index.md", "api/sparsevariational.md", "api/laplace.md"],
         "Examples" =>
             map(filter!(filename -> endswith(filename, ".md"), readdir(EXAMPLES_OUT))) do x
                 return joinpath("examples", x)

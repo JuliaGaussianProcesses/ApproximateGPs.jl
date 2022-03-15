@@ -14,7 +14,12 @@ using Distributions
 using LinearAlgebra
 
 using Plots
-default(; palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
+## We output plots as PNG to reduce their size
+default(; fmt=:png, palette=:seaborn_colorblind, legend=:outertopright, size=(700, 400))
+#nb ## Regardless of the `fmt` setting, by default Literate saves also the SVG output
+#nb ## in notebooks: https://github.com/fredrikekre/Literate.jl/issues/61
+#nb ## We use DisplayAs to ensure that only the PNG output is saved.
+#nb using DisplayAs
 
 using Random
 Random.seed!(1234);
@@ -30,6 +35,7 @@ x = rand(Uniform(-1, 1), N)
 y = g.(x) + 0.3 * randn(N)
 
 scatter(x, y; xlabel="x", ylabel="y", markershape=:xcross, markeralpha=0.1, legend=false)
+#nb DisplayAs.PNG(current())
 
 # ## Set up a Flux model
 #
@@ -155,6 +161,7 @@ scatter(
     label="Training Data",
 )
 plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
+#nb DisplayAs.PNG(current())
 
 # ## Training the model
 #
@@ -209,3 +216,4 @@ scatter(
 )
 plot!(-1:0.001:1, post; label="Posterior", color=4)
 sticks!(model.z, fill(0.13, M); label="Pseudo-points", linewidth=1.5, color=5)
+#nb DisplayAs.PNG(current())

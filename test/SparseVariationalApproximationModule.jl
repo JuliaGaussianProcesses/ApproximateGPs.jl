@@ -57,8 +57,8 @@
 
             @testset "Verify that the non-centered approximate posterior agrees with centered" begin
                 @test isapprox(
-                    ApproximateGPs._prior_kl(approx_non_Centered),
-                    ApproximateGPs._prior_kl(approx_Centered);
+                    SparseVariationalApproximationModule._prior_kl(approx_non_Centered),
+                    SparseVariationalApproximationModule._prior_kl(approx_Centered);
                     rtol=1e-5,
                 )
                 @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)

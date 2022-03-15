@@ -1,38 +1,25 @@
 module ApproximateGPs
 
 using Reexport
+
 @reexport using AbstractGPs
 @reexport using GPLikelihoods
-using Distributions
-using LinearAlgebra
-using Statistics
-using StatsBase
-using FastGaussQuadrature: gausshermite
-using SpecialFunctions: loggamma
-using ChainRulesCore: ignore_derivatives, NoTangent
-using ChainRulesCore: ChainRulesCore
-using FillArrays: Fill
-using IrrationalConstants: log2π, sqrt2π, sqrt2, invsqrtπ
-using PDMats: chol_lower
 
-using AbstractGPs: AbstractGP, FiniteGP, LatentFiniteGP, ApproxPosteriorGP, At_A, diag_At_A
+include("API.jl")
+@reexport using .API: approx_lml
 
 include("utils.jl")
 
-export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
-include("expected_loglik.jl")
+include("SparseVariationalApproximationModule.jl")
+@reexport using .SparseVariationalApproximationModule:
+    SparseVariationalApproximation, Centered, NonCentered
+@reexport using .SparseVariationalApproximationModule:
+    DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
-export SparseVariationalApproximation, Centered, NonCentered
-include("sparse_variational.jl")
-
-using ForwardDiff: ForwardDiff
-
-export LaplaceApproximation
-export build_laplace_objective, build_laplace_objective!
-export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
-include("laplace.jl")
-
-using Random: randperm
+include("LaplaceApproximationModule.jl")
+@reexport using .LaplaceApproximationModule: LaplaceApproximation
+@reexport using .LaplaceApproximationModule:
+    build_laplace_objective, build_laplace_objective!
 
 #export ExpectationPropagation  # still too experimental
 include("ep.jl")

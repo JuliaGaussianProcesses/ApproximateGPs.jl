@@ -1,3 +1,8 @@
+using GPLikelihoods
+using FastGaussQuadrature: gausshermite
+using SpecialFunctions: loggamma
+using ChainRulesCore: ChainRulesCore
+
 abstract type QuadratureMethod end
 struct DefaultQuadrature <: QuadratureMethod end
 struct Analytic <: QuadratureMethod end
@@ -65,6 +70,7 @@ function expected_loglik(
     return sum(lls) / mc.n_samples
 end
 
+# Compute the expected_loglik over a collection of observations and marginal distributions
 function expected_loglik(
     gh::GaussHermite, y::AbstractVector, q_f::AbstractVector{<:Normal}, lik
 )
@@ -72,10 +78,27 @@ function expected_loglik(
     # using a reparameterisation by change of variable
     # (see e.g. en.wikipedia.org/wiki/Gauss%E2%80%93Hermite_quadrature)
     xs, ws = gausshermite(gh.n_points)
-    # size(fs): (length(y), n_points)
-    fs = √2 * std.(q_f) .* xs' .+ mean.(q_f)
-    lls = loglikelihood.(lik.(fs), y)
-    return sum((1 / √π) * lls * ws)
+    return sum(Broadcast.instantiate(
+        Broadcast.broadcasted(y, q_f) do yᵢ, q_fᵢ  # Loop over every pair
+            # of marginal distribution q(fᵢ) and observation yᵢ
+            expected_loglik(gh, yᵢ, q_fᵢ, lik, (xs, ws))
+        end,
+    ))
+end
+
+# Compute the expected_loglik for one observation and a marginal distributions
+function expected_loglik(
+    gh::GaussHermite, y, q_f::Normal, lik, (xs, ws)=gausshermite(gh.n_points)
+)
+    μ = mean(q_f)
+    σ̃ = sqrt2 * std(q_f)
+    return invsqrtπ * sum(Broadcast.instantiate(
+        Broadcast.broadcasted(xs, ws) do x, w # Loop over every
+            # pair of Gauss-Hermite point x with weight w
+            f = σ̃ * x + μ
+            loglikelihood(lik(f), y) * w
+        end,
+    ))
 end
 
 ChainRulesCore.@non_differentiable gausshermite(n)
@@ -133,7 +156,7 @@ function expected_loglik(
     ::Analytic,
     y::AbstractVector{<:Real},
     q_f::AbstractVector{<:Normal},
-    lik::GammaLikelihood{<:Any,ExpLink},
+    lik::GammaLikelihood{ExpLink},
 )
     f_μ = mean.(q_f)
     return sum(
@@ -142,4 +165,4 @@ function expected_loglik(
     )
 end
 
-_default_quadrature(::GammaLikelihood{<:Any,ExpLink}) = Analytic()
+_default_quadrature(::GammaLikelihood{ExpLink}) = Analytic()

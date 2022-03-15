@@ -8,10 +8,22 @@ const OUTDIR = ARGS[2]
 # Activate environment
 # Note that each example's Project.toml must include Literate as a dependency
 using Pkg: Pkg
+
+using InteractiveUtils
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
+pkg_status = sprint() do io
+    Pkg.status(; io=io)
+end
+
 using Literate: Literate
+
+const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
+mkpath(joinpath(OUTDIR, EXAMPLE))
+cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
+
+using Markdown: htmlesc
 
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
@@ -33,6 +45,8 @@ function preprocess(content)
 #md # The corresponding notebook can be viewed in [nbviewer](@__NBVIEWER_ROOT_URL__/examples/@__NAME__.ipynb).*
 #nb # The rendered HTML can be viewed [in the docs](https://juliagaussianprocesses.github.io/ApproximateGPs.jl/dev/examples/@__NAME__/).*
 #
+#md # ---
+#
         """,
     )
     content = replace(content, r"^# # [^\n]*"m => sub; count=1)
@@ -40,24 +54,37 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    return content
-end
+    """ The regex adds "# " at the beginning of each line; chomp removes trailing newlines """
+    literate_format(s) = chomp(replace(s, r"^"m => "# "))
 
-function md_postprocess(content)
-    return replace(content, r"[\n]nothing #hide$"m => "")
+    # <details></details> seems to be buggy in the notebook, so is avoided for now
+    info_footer = """
+    #md # ```@raw html
+    # <hr />
+    # <h6>Package and system information</h6>
+    # <details>
+    # <summary>Package information (click to expand)</summary>
+    # <pre>
+    $(literate_format(htmlesc(pkg_status)))
+    # </pre>
+    # To reproduce this notebook's package environment, you can
+    #nb # <a href="$(MANIFEST_OUT)">
+    #md # <a href="../$(MANIFEST_OUT)">
+    # download the full Manifest.toml</a>.
+    # </details>
+    # <details>
+    # <summary>System information (click to expand)</summary>
+    # <pre>
+    $(literate_format(htmlesc(sprint(InteractiveUtils.versioninfo))))
+    # </pre>
+    # </details>
+    #md # ```
+    """
+
+    return content * info_footer
 end
 
 # Convert to markdown and notebook
 const SCRIPTJL = joinpath(EXAMPLEPATH, "script.jl")
-Literate.markdown(
-    SCRIPTJL,
-    OUTDIR;
-    name=EXAMPLE,
-    documenter=true,
-    execute=true,
-    preprocess=preprocess,
-    postprocess=md_postprocess,
-)
-Literate.notebook(
-    SCRIPTJL, OUTDIR; name=EXAMPLE, documenter=true, execute=true, preprocess=preprocess
-)
+Literate.markdown(SCRIPTJL, OUTDIR; name=EXAMPLE, execute=true, preprocess=preprocess)
+Literate.notebook(SCRIPTJL, OUTDIR; name=EXAMPLE, execute=true, preprocess=preprocess)

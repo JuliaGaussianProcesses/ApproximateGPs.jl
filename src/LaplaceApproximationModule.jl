@@ -1,3 +1,22 @@
+module LaplaceApproximationModule
+
+using ..API
+
+export LaplaceApproximation
+export build_laplace_objective, build_laplace_objective!
+
+using ForwardDiff: ForwardDiff
+using Distributions
+using LinearAlgebra
+using Statistics
+using StatsBase
+
+using ChainRulesCore: ignore_derivatives, NoTangent, @thunk
+using ChainRulesCore: ChainRulesCore
+
+using AbstractGPs: AbstractGPs
+using AbstractGPs: LatentFiniteGP, ApproxPosteriorGP
+
 # Implementation follows Rasmussen & Williams, Gaussian Processes for Machine
 # Learning, the MIT Press, 2006. In the following referred to as 'RW'.
 # Online text:
@@ -36,7 +55,7 @@ Compute an approximation to the log of the marginal likelihood (also known as
 
 This should become part of the AbstractGPs API (see JuliaGaussianProcesses/AbstractGPs.jl#221).
 """
-function approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
+function API.approx_lml(la::LaplaceApproximation, lfx::LatentFiniteGP, ys)
     return laplace_lml(lfx, ys; la.newton_kwargs...)
 end
 
@@ -423,4 +442,6 @@ function Statistics.cov(f::LaplacePosteriorGP, x::AbstractVector, y::AbstractVec
     vx = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, x))
     vy = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, y))
     return cov(f.prior.f, x, y) - vx' * vy
+end
+
 end

@@ -1,3 +1,6 @@
+using Distributions
+using LinearAlgebra
+
 # These methods to create a Cholesky directly from the factorisation will be in Julia 1.7
 # https://github.com/JuliaLang/julia/pull/39352
 if VERSION < v"1.7"

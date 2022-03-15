@@ -1,3 +1,14 @@
+using LinearAlgebra
+using Random: randperm
+
+using Distributions
+using FastGaussQuadrature: gausshermite
+using IrrationalConstants: log2π, sqrt2π, sqrt2, invsqrtπ
+using Statistics
+using StatsBase
+
+using AbstractGPs: LatentFiniteGP
+
 struct ExpectationPropagation
     maxiter::Int
     epsilon::Float64
