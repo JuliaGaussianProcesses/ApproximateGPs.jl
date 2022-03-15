@@ -16,15 +16,14 @@ Pkg.instantiate()
 pkg_status = sprint() do io
     Pkg.status(; io=io)
 end
-manifest_status = sprint() do io
-    Pkg.status(; io=io, mode=Pkg.PKGMODE_MANIFEST)
-end
 
 using Literate: Literate
 
 const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
 mkpath(joinpath(OUTDIR, EXAMPLE))
 cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
+
+using Markdown: htmlesc
 
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
@@ -46,6 +45,8 @@ function preprocess(content)
 #md # The corresponding notebook can be viewed in [nbviewer](@__NBVIEWER_ROOT_URL__/examples/@__NAME__.ipynb).*
 #nb # The rendered HTML can be viewed [in the docs](https://juliagaussianprocesses.github.io/ApproximateGPs.jl/dev/examples/@__NAME__/).*
 #
+#md # ---
+#
         """,
     )
     content = replace(content, r"^# # [^\n]*"m => sub; count=1)
@@ -53,37 +54,34 @@ function preprocess(content)
     # remove VSCode `##` block delimiter lines
     content = replace(content, r"^##$."ms => "")
 
-    # adds the current version of the packages
-    append = """
-    # ### Package and system information
-    # #### Package version
-    # ```julia
-    $(chomp(replace(pkg_status, r"^"m => "# ")))
-    # ```
-    # #### Computer information
-    # ```
-    $(chomp(replace(sprint(InteractiveUtils.versioninfo), r"^"m => "# ")))
-    # ```
-    # #### Manifest
-    # To reproduce this notebook's package environment, you can [download the full Manifest.toml]($(MANIFEST_OUT)).
-    """
-    # This regex add "# " at the beginning of each line
-    # chomp removes trailing newlines
+    """ The regex adds "# " at the beginning of each line; chomp removes trailing newlines """
+    literate_format(s) = chomp(replace(s, r"^"m => "# "))
 
-    # The following gives a preview of the manifest
-    # embedded in a "spoiler", but this is unfortunately very buggy
-    # ```@raw html
+    # <details></details> seems to be buggy in the notebook, so is avoided for now
+    info_footer = """
+    #md # ```@raw html
+    # <hr />
+    # <h6>Package and system information</h6>
     # <details>
-    # <summary> Show the full Manifest </summary>
-    # ```
-    # ```julia
-    # $(chomp(replace(manifest_status, r"^"m => "# ")))
-    # ```
-    # ```@raw html
+    # <summary>Package information (click to expand)</summary>
+    # <pre>
+    $(literate_format(htmlesc(pkg_status)))
+    # </pre>
+    # To reproduce this notebook's package environment, you can
+    #nb # <a href="$(MANIFEST_OUT)">
+    #md # <a href="../$(MANIFEST_OUT)">
+    # download the full Manifest.toml</a>.
     # </details>
-    # ```
+    # <details>
+    # <summary>System information (click to expand)</summary>
+    # <pre>
+    $(literate_format(htmlesc(sprint(InteractiveUtils.versioninfo))))
+    # </pre>
+    # </details>
+    #md # ```
+    """
 
-    return content * append
+    return content * info_footer
 end
 
 # Convert to markdown and notebook
