@@ -75,8 +75,9 @@ closure passes its arguments to `build_latent_gp`, which must return the
 - `newton_maxiter=100`: maximum number of Newton steps.
 """
 function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
-    # TODO assumes type of `xs` will be same as `mean(lfx.fx)`
-    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
+    f = nothing  # will be mutated in-place to "warm-start" the Newton steps
+    # f should be similar(lfx(xs)), but to construct lfx we would need the arguments
+    # instead, we make use of Julia even allowing assignments to change variables outside a closure
     return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
 end
 
@@ -98,7 +99,13 @@ function build_laplace_objective!(
             # Zygote does not like the try/catch within @info etc.
             @debug "Objective arguments: $args"
             # Zygote does not like in-place assignments either
-            if initialize_f
+            if f === nothing
+                # Here we make use of Julia's scoping in closures: f will be
+                # assigned to despite being outside this function's scope, for
+                # more details see
+                # https://discourse.julialang.org/t/referencing-local-variable-before-assignment-results-in-unexpected-behavior/58088
+                f = mean(lfx.fx)
+            elseif initialize_f
                 f .= mean(lfx.fx)
             end
         end

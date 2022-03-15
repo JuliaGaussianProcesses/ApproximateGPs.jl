@@ -264,4 +264,13 @@
         res = res_array[end]
         @test res.q isa MvNormal
     end
+
+    @testset "GitHub issue #109" begin
+        build_latent_gp() = LatentGP(GP(SEKernel()), BernoulliLikelihood(), 1e-8)
+
+        x = ColVecs(randn(2, 5))
+        _, y = rand(build_latent_gp()(x))
+
+        build_laplace_objective(build_latent_gp, x, y)()
+    end
 end
