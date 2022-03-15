@@ -14,6 +14,7 @@ using Zygote
 using ChainRulesCore
 using ChainRulesTestUtils
 using FiniteDifferences
+using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
 
 # Writing tests:
 # 1. The file structure of the test should match precisely the file structure of src.
@@ -53,11 +54,11 @@ include("test_utils.jl")
     println(" ")
     @info "Ran expected_loglik tests"
 
-    include("sparse_variational.jl")
+    include("SparseVariationalApproximationModule.jl")
     println(" ")
-    @info "Ran svgp tests"
+    @info "Ran sva tests"
 
-    include("laplace.jl")
+    include("LaplaceApproximationModule.jl")
     println(" ")
     @info "Ran laplace tests"
 end

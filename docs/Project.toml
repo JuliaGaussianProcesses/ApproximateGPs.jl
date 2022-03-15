@@ -3,5 +3,5 @@ ApproximateGPs = "298c2ebc-0411-48ad-af38-99e88101b606"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 
 [compat]
-ApproximateGPs = "0.2"
+ApproximateGPs = "0.3"
 Documenter = "0.27"

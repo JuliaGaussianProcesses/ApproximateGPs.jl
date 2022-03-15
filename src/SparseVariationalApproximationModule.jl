@@ -1,3 +1,33 @@
+module SparseVariationalApproximationModule
+
+using ..API
+
+export SparseVariationalApproximation, Centered, NonCentered
+
+using ..ApproximateGPs: _chol_cov, _cov
+using Distributions
+using LinearAlgebra
+using Statistics
+using StatsBase
+using FillArrays: Fill
+using PDMats: chol_lower
+using IrrationalConstants: sqrt2, invsqrtπ
+
+using AbstractGPs: AbstractGPs
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    posterior,
+    marginals,
+    At_A,
+    diag_At_A
+using GPLikelihoods: GaussianLikelihood
+
+export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+include("expected_loglik.jl")
+
 @doc raw"""
     Centered()
 
@@ -340,4 +370,6 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     trace_term = sum(L .^ 2)  # TODO remove AD workaround
 
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
+end
+
 end
