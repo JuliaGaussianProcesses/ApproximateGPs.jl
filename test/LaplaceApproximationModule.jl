@@ -271,6 +271,7 @@
         x = ColVecs(randn(2, 5))
         _, y = rand(build_latent_gp()(x))
 
-        build_laplace_objective(build_latent_gp, x, y)()
+        objective = build_laplace_objective(build_latent_gp, x, y)
+        _ = objective()  # check that it works
     end
 end
