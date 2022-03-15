@@ -1,10 +1,8 @@
 using Random
 using Test
-using ApproximateGPs
 using Flux
 using IterTools
 using AbstractGPs
-using AbstractGPs: LatentFiniteGP, TestUtils
 using Distributions
 using LogExpFunctions: logistic
 using LinearAlgebra
@@ -14,6 +12,8 @@ using Zygote
 using ChainRulesCore
 using ChainRulesTestUtils
 using FiniteDifferences
+
+using ApproximateGPs
 using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
 
 # Writing tests:
