@@ -23,16 +23,7 @@ const MANIFEST_OUT = joinpath(EXAMPLE, "Manifest.toml")
 mkpath(joinpath(OUTDIR, EXAMPLE))
 cp(joinpath(EXAMPLEPATH, "Manifest.toml"), joinpath(OUTDIR, MANIFEST_OUT); force=true)
 
-""" adapted from HttpCommon.jl """
-function escapeHTML(i::String)
-    # Refer to http://stackoverflow.com/a/7382028/3822752 for spec. links
-    o = replace(i, "&" => "&amp;")
-    o = replace(o, "\"" => "&quot;")
-    o = replace(o, "'" => "&#39;")
-    o = replace(o, "<" => "&lt;")
-    o = replace(o, ">" => "&gt;")
-    return o
-end
+using Markdown: htmlesc
 
 function preprocess(content)
     # Add link to nbviewer below the first heading of level 1
@@ -74,11 +65,11 @@ function preprocess(content)
     # <summary><strong>Package and system information (click to expand)</strong></summary>
     # <h4>Package versions</h4>
     # <pre>
-    $(literate_format(escapeHTML(pkg_status)))
+    $(literate_format(htmlesc(pkg_status)))
     # </pre>
     # <h4>System information</h4>
     # <pre>
-    $(literate_format(escapeHTML(sprint(InteractiveUtils.versioninfo))))
+    $(literate_format(htmlesc(pkg_status)))
     # </pre>
     # <h4>Manifest</h4>
     # To reproduce this notebook's package environment, you can
