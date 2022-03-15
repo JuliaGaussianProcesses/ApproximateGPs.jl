@@ -61,21 +61,22 @@ function preprocess(content)
     info_footer = """
     #md # ```@raw html
     # <hr />
+    # <h6>Package and system information</h6>
     # <details>
-    # <summary><strong>Package and system information (click to expand)</strong></summary>
-    # <h4>Package versions</h4>
+    # <summary>Package information (click to expand)</summary>
     # <pre>
     $(literate_format(htmlesc(pkg_status)))
     # </pre>
-    # <h4>System information</h4>
-    # <pre>
-    $(literate_format(htmlesc(pkg_status)))
-    # </pre>
-    # <h4>Manifest</h4>
     # To reproduce this notebook's package environment, you can
     #nb # <a href="$(MANIFEST_OUT)">
     #md # <a href="../$(MANIFEST_OUT)">
     # download the full Manifest.toml</a>.
+    # </details>
+    # <details>
+    # <summary>System information (click to expand)</summary>
+    # <pre>
+    $(literate_format(htmlesc(sprint(InteractiveUtils.versioninfo))))
+    # </pre>
     # </details>
     #md # ```
     """
