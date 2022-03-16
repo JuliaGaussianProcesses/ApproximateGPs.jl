@@ -1,18 +1,19 @@
+using LinearAlgebra
 using Random
 using Test
-using Flux
-using IterTools
-using AbstractGPs
-using Distributions
-using LogExpFunctions: logistic
-using LinearAlgebra
-using PDMats
-using Optim
-using Zygote
+
 using ChainRulesCore
 using ChainRulesTestUtils
+using Distributions
 using FiniteDifferences
+using Flux
+using IterTools
+using LogExpFunctions: logistic
+using Optim
+using PDMats
+using Zygote
 
+using AbstractGPs
 using ApproximateGPs
 using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
 
