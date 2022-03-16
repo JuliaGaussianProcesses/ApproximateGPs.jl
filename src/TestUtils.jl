@@ -35,6 +35,17 @@ function build_latent_gp(theta)
     return LatentGP(GP(kernel), dist_y_given_f, 1e-8)
 end
 
+"""
+    test_approximation_predictions(approx)
+
+Test whether the prediction interface for `approx` works and whether in the
+conjugate case `posterior(approx, LatentGP(f, GaussianLikelihood(), jitter)(x), y)`
+gives approximately the same answer as exact GP regression.
+
+Does not test `approx_lml`!
+
+Do not rely on this as the only test of a new approximation!
+"""
 function test_approximation_predictions(approx)
     rng = MersenneTwister(123456)
     N_cond = 5
@@ -45,6 +56,7 @@ function test_approximation_predictions(approx)
     f = GP(Matern32Kernel())
     # Sample from prior.
     x = collect(range(-1.0, 1.0; length=N_cond))
+    # TODO: Change to x = ColVecs(rand(2, N_cond)) once #109 is fixed
     noise_scale = 0.1
     fx = f(x, noise_scale^2)
     y = rand(rng, fx)
