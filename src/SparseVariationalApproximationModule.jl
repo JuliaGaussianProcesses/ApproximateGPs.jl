@@ -196,6 +196,13 @@ function AbstractGPs.posterior(
     return posterior(sva)
 end
 
+function AbstractGPs.posterior(
+    sva::SparseVariationalApproximation, lfx::LatentFiniteGP, ::Any
+)
+    @assert sva.fz.f === lfx.fx.f
+    return posterior(sva)
+end
+
 #
 # Various methods implementing the Internal AbstractGPs API.
 # See AbstractGPs.jl API docs for more info.
@@ -268,6 +275,12 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 #
 # elbo
 #
+
+function API.approx_lml(
+    sva::SparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys; kwargs...
+)
+    return elbo(sva, l_fx, ys; kwargs...)
+end
 
 """
     elbo(
