@@ -31,8 +31,6 @@
             AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
         end
 
-        ApproximateGPs.TestUtils.test_approximation_predictions(approx_Centered)
-
         @testset "NonCentered" begin
 
             # Construct optimal approximate posterior.
@@ -50,8 +48,6 @@
             # Construct equivalent approximate posteriors.
             approx_non_Centered = SparseVariationalApproximation(NonCentered(), fz, q_ε)
             f_approx_post_non_Centered = posterior(approx_non_Centered)
-
-            ApproximateGPs.TestUtils.test_approximation_predictions(approx_non_Centered)
 
             @testset "AbstractGPs interface - NonCentered" begin
                 AbstractGPs.TestUtils.test_internal_abstractgps_interface(
