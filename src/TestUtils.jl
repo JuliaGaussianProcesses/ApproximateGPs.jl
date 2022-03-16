@@ -36,22 +36,39 @@ function build_latent_gp(theta)
 end
 
 """
+    test_approx_lml(approx)
+
+Test whether in the conjugate case `approx_lml(approx, LatentGP(f,
+GaussianLikelihood(), jitter)(x), y)` gives approximately the same answer as
+the log marginal likelihood in exact GP regression.
+
+!!! todo
+    Not yet implemented.
+
+    Will not necessarily work for approximations that rely on optimization such
+    as `SparseVariationalApproximation`.
+
+!!! todo
+    Also test gradients (for hyperparameter optimization).
+"""
+function test_approx_lml end
+
+"""
     test_approximation_predictions(approx)
 
 Test whether the prediction interface for `approx` works and whether in the
 conjugate case `posterior(approx, LatentGP(f, GaussianLikelihood(), jitter)(x), y)`
-gives approximately the same answer as exact GP regression.
+gives approximately the same answer as the exact GP regression posterior.
 
 !!! note
     Should be satisfied by all approximate inference methods, but note that
     this does not currently apply for some approximations which rely on
     optimization such as `SparseVariationalApproximation`.
 
-!!! note
-    Does not test `approx_lml`!
-
 !!! warning
     Do not rely on this as the only test of a new approximation!
+
+See `test_approx_lml`.
 """
 function test_approximation_predictions(approx)
     rng = MersenneTwister(123456)
