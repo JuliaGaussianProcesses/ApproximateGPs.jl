@@ -42,13 +42,16 @@ Test whether the prediction interface for `approx` works and whether in the
 conjugate case `posterior(approx, LatentGP(f, GaussianLikelihood(), jitter)(x), y)`
 gives approximately the same answer as exact GP regression.
 
-Should be satisfied by all approximate inference methods, but note that this
-does not currently apply for some approximations which rely on optimization
-such as `SparseVariationalApproximation`.
+!!! note
+    Should be satisfied by all approximate inference methods, but note that
+    this does not currently apply for some approximations which rely on
+    optimization such as `SparseVariationalApproximation`.
 
-Does not test `approx_lml`!
+!!! note
+    Does not test `approx_lml`!
 
-Do not rely on this as the only test of a new approximation!
+!!! warning
+    Do not rely on this as the only test of a new approximation!
 """
 function test_approximation_predictions(approx)
     rng = MersenneTwister(123456)
