@@ -6,9 +6,9 @@ using ChainRulesCore
 using ChainRulesTestUtils
 using Distributions
 using FiniteDifferences
-using Flux
+using Flux: Flux
 using IterTools
-using LogExpFunctions: logistic
+using LogExpFunctions: softplus
 using Optim
 using PDMats
 using Zygote
