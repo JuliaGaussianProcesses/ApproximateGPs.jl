@@ -5,7 +5,7 @@ using Random
 using Test
 
 using Distributions
-using LogExpFunctions: logistic
+using LogExpFunctions: logistic, softplus
 
 using AbstractGPs
 using ApproximateGPs
