@@ -1,7 +1,7 @@
 name = "ApproximateGPs"
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 authors = ["JuliaGaussianProcesses Team"]
-version = "0.3.3"
+version = "0.3.4"
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
@@ -31,6 +31,7 @@ FillArrays = "0.12, 0.13"
 ForwardDiff = "0.10"
 GPLikelihoods = "0.3"
 IrrationalConstants = "0.1"
+LogExpFunctions = "0.3"
 PDMats = "0.11"
 Reexport = "1"
 SpecialFunctions = "1, 2"
