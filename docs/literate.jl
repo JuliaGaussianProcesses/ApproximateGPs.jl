@@ -11,11 +11,13 @@ using Pkg: Pkg
 
 using InteractiveUtils
 const EXAMPLEPATH = joinpath(@__DIR__, "..", "examples", EXAMPLE)
+const PKGDIR = joinpath(@__DIR__, "..")
 Pkg.activate(EXAMPLEPATH)
 Pkg.instantiate()
 pkg_status = sprint() do io
     Pkg.status(; io=io)
 end
+Pkg.develop(Pkg.PackageSpec(path=PKGDIR))
 
 using Literate: Literate
 
