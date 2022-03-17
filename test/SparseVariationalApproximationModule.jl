@@ -28,7 +28,9 @@
         b = randn(rng, N_b)
 
         @testset "AbstractGPs interface - Centered" begin
-            AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
+            AbstractGPs.TestUtils.test_internal_abstractgps_interface(
+                rng, f_approx_post_Centered, a, b
+            )
         end
 
         @testset "NonCentered" begin
