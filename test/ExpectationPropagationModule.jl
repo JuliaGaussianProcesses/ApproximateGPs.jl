@@ -14,7 +14,7 @@
 
         cav_i = Normal(0.8231, 3.213622)  # random numbers
         lik_eval_i = f -> pdf(Bernoulli(logistic(f)), true)
-        Z_gh, q_gh = ApproximateGPs.moment_match(cav_i, lik_eval_i; n_points=100)
+        Z_gh, q_gh = ExpectationPropagationModule.moment_match(cav_i, lik_eval_i; n_points=100)
         Z_quad, q_quad = moment_match_quadgk(cav_i, lik_eval_i)
         @test Z_gh ≈ Z_quad
         @test mean(q_gh) ≈ mean(q_quad)
@@ -23,6 +23,6 @@
 
     @testset "predictions" begin
         approx = ApproximateGPs.ExpectationPropagation(; n_gh=500)
-        test_approximation_predictions(approx)
+        ApproximateGPs.TestUtils.test_approximation_predictions(approx)
     end
 end

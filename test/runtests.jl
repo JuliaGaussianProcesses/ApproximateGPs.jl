@@ -15,7 +15,7 @@ using Zygote
 
 using AbstractGPs
 using ApproximateGPs
-using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
+using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule, ExpectationPropagationModule
 
 using QuadGK
 
@@ -65,7 +65,7 @@ include("test_utils.jl")
     println(" ")
     @info "Ran laplace tests"
 
-    include("ep.jl")
+    include("ExpectationPropagationModule.jl")
     println(" ")
     @info "Ran ep tests"
 end

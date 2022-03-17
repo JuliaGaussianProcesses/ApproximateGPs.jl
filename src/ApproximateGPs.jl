@@ -21,8 +21,9 @@ include("LaplaceApproximationModule.jl")
 @reexport using .LaplaceApproximationModule:
     build_laplace_objective, build_laplace_objective!
 
-#export ExpectationPropagation  # still too experimental
-include("ep.jl")
+include("ExpectationPropagationModule.jl")
+using .ExpectationPropagationModule: ExpectationPropagation
+#@reexport using .ExpectationPropagationModule: ExpectationPropagation  # still too experimental
 
 include("deprecations.jl")
 

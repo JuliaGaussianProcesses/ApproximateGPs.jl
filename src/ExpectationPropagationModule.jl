@@ -1,3 +1,9 @@
+module ExpectationPropagationModule
+
+using ..API
+
+export ExpectationPropagation
+
 using LinearAlgebra
 using Random: randperm
 
@@ -200,4 +206,6 @@ function moment_match(cav_i::Union{Normal,NormalCanon}, lik_eval_i; n_points=150
     matched_mean = m1 / m0
     matched_var = m2 / m0 - matched_mean^2
     return (; Z=matched_Z, q=Normal(matched_mean, sqrt(matched_var)))
+end
+
 end
