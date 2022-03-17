@@ -2,6 +2,7 @@ module ApproximateGPs
 
 using Reexport
 
+@reexport using AbstractGPs
 @reexport using GPLikelihoods
 
 include("API.jl")
@@ -21,5 +22,7 @@ include("LaplaceApproximationModule.jl")
     build_laplace_objective, build_laplace_objective!
 
 include("deprecations.jl")
+
+include("TestUtils.jl")
 
 end
