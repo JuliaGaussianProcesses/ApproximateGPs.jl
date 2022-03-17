@@ -2,6 +2,7 @@ module ApproximateGPs
 
 using Reexport
 
+@reexport using AbstractGPs
 @reexport using GPLikelihoods
 
 include("API.jl")
