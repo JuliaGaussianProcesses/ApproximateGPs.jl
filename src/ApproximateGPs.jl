@@ -26,4 +26,6 @@ include("ep.jl")
 
 include("deprecations.jl")
 
+include("TestUtils.jl")
+
 end

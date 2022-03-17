@@ -1,4 +1,8 @@
 @testset "laplace" begin
+    generate_data = ApproximateGPs.TestUtils.generate_data
+    dist_y_given_f = ApproximateGPs.TestUtils.dist_y_given_f
+    build_latent_gp = ApproximateGPs.TestUtils.build_latent_gp
+
     function optimize_elbo(
         build_latent_gp,
         theta0,
@@ -27,7 +31,7 @@
         # in Gaussian case, Laplace converges to f_opt in one step; we need the
         # second step to compute the cache at f_opt rather than f_init!
         approx = LaplaceApproximation(; maxiter=2)
-        test_approximation_predictions(approx)
+        ApproximateGPs.TestUtils.test_approximation_predictions(approx)
     end
 
     @testset "gradients" begin
