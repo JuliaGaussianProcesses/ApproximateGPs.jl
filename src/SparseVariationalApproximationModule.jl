@@ -19,6 +19,7 @@ using AbstractGPs:
     FiniteGP,
     LatentFiniteGP,
     ApproxPosteriorGP,
+    elbo,
     posterior,
     marginals,
     At_A,
@@ -279,7 +280,7 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 function API.approx_lml(
     sva::SparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys; kwargs...
 )
-    return elbo(sva, l_fx, ys; kwargs...)
+    return AbstractGPs.elbo(sva, l_fx, ys; kwargs...)
 end
 
 """
