@@ -75,14 +75,29 @@ closure passes its arguments to `build_latent_gp`, which must return the
 - `newton_maxiter=100`: maximum number of Newton steps.
 """
 function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
-    f = nothing  # will be mutated in-place to "warm-start" the Newton steps
-    # f should be similar(lfx(xs)), but to construct lfx we would need the arguments
+    cache = LaplaceObjectiveCache(nothing)
+    # cache.f_init will be mutated in-place to "warm-start" the Newton steps
+    # f_init should be similar(mean(lfx.fx)), but to construct lfx we would need the arguments
     # instead, we make use of Julia even allowing assignments to change variables outside a closure
-    return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
+    return build_laplace_objective!(cache, build_latent_gp, xs, ys; kwargs...)
 end
 
 function build_laplace_objective!(
-    f,
+    f_init::Vector,
+    build_latent_gp,
+    xs,
+    ys;
+    kwargs...
+)
+    return build_laplace_objective!(LaplaceObjectiveCache(f_init), build_latent_gp, xs, ys; kwargs...)
+end
+
+mutable struct LaplaceObjectiveCache
+    f_init::Union{Nothing,Vector}
+end
+
+function build_laplace_objective!(
+    cache::LaplaceObjectiveCache,
     build_latent_gp,
     xs,
     ys;
@@ -99,22 +114,22 @@ function build_laplace_objective!(
             # Zygote does not like the try/catch within @info etc.
             @debug "Objective arguments: $args"
             # Zygote does not like in-place assignments either
-            if f === nothing
+            if cache.f_init === nothing
                 # Here we make use of Julia's scoping in closures: f will be
                 # assigned to despite being outside this function's scope, for
                 # more details see
                 # https://discourse.julialang.org/t/referencing-local-variable-before-assignment-results-in-unexpected-behavior/58088
-                f = mean(lfx.fx)
+                cache.f_init = mean(lfx.fx)
             elseif initialize_f
-                f .= mean(lfx.fx)
+                cache.f_init .= mean(lfx.fx)
             end
         end
         f_opt, lml = laplace_f_and_lml(
-            lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
+            lfx, ys; f_init=cache.f_init, maxiter=newton_maxiter, callback=newton_callback
         )
         ignore_derivatives() do
             if newton_warmstart
-                f .= f_opt
+                cache.f_init .= f_opt
                 initialize_f = false
             end
         end
