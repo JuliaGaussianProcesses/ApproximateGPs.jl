@@ -13,6 +13,7 @@ using IrrationalConstants: log2π, sqrt2π, sqrt2, invsqrtπ
 using Statistics
 using StatsBase
 
+using AbstractGPs
 using AbstractGPs: LatentFiniteGP
 
 struct ExpectationPropagation
