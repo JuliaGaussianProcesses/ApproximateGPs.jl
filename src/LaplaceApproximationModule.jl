@@ -220,7 +220,7 @@ end
 `dist_y_given_f` must be a scalar function from a Real to a Distribution object.
 `ys` and `f` are vectors of observations and latent function values, respectively.
 """
-function loglik_and_derivs(dist_y_given_f, ys, f)
+function loglik_and_derivs(dist_y_given_f, ys::AbstractVector, f::AbstractVector{<:Real})
     l(_f, _y) = logpdf(dist_y_given_f(_f), _y)
     dl(_f, _y) = ForwardDiff.derivative(__f -> l(__f, _y), _f)
     d2l(_f, _y) = ForwardDiff.derivative(__f -> dl(__f, _y), _f)
