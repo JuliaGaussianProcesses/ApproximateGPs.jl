@@ -23,9 +23,7 @@
         )
 
         lf = build_latent_gp(training_results.minimizer)
-        f_post = posterior(
-            LaplaceApproximation(; f_init=objective.cache.f_init), lf(xs), ys
-        )
+        f_post = posterior(LaplaceApproximation(; f_init=objective.cache.f), lf(xs), ys)
         return f_post, training_results
     end
 
