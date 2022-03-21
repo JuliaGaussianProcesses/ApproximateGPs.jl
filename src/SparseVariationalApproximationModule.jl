@@ -2,7 +2,10 @@ module SparseVariationalApproximationModule
 
 using ..API
 
-export SparseVariationalApproximation, Centered, NonCentered
+export SparseVariationalApproximation,
+    Centered,
+    NonCentered,
+    PseudoObsSparseVariationalApproximation
 
 using ..ApproximateGPs: _chol_cov, _cov
 using Distributions
@@ -27,6 +30,13 @@ using GPLikelihoods: GaussianLikelihood
 
 export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 include("expected_loglik.jl")
+
+"""
+    abstract type AbstractSparseVariationalApproximation end
+
+Supertype for sparse variational approximations.
+"""
+abstract type AbstractSparseVariationalApproximation end
 
 @doc raw"""
     Centered()
@@ -59,7 +69,9 @@ See also [`Centered`](@ref).
 """
 struct NonCentered end
 
-struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal}
+struct SparseVariationalApproximation{
+    Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal
+} <: AbstractSparseVariationalApproximation
     fz::Tfz
     q::Tq
 end
@@ -190,14 +202,14 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{NonCentered})
 end
 
 function AbstractGPs.posterior(
-    sva::SparseVariationalApproximation, fx::FiniteGP, ::AbstractVector{<:Real}
+    sva::AbstractSparseVariationalApproximation, fx::FiniteGP, ::AbstractVector{<:Real}
 )
     @assert sva.fz.f === fx.f
     return posterior(sva)
 end
 
 function AbstractGPs.posterior(
-    sva::SparseVariationalApproximation, lfx::LatentFiniteGP, ::Any
+    sva::AbstractSparseVariationalApproximation, lfx::LatentFiniteGP, ::Any
 )
     @assert sva.fz.f === lfx.fx.f
     return posterior(sva)
@@ -209,7 +221,7 @@ end
 #
 
 function Statistics.mean(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation}, x::AbstractVector
 )
     return mean(f.prior, x) + cov(f.prior, x, inducing_points(f)) * f.data.α
 end
@@ -224,21 +236,21 @@ end
 _A(f, x) = first(_A_and_Kuf(f, x))
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation}, x::AbstractVector
 )
     A = _A(f, x)
     return cov(f.prior, x) - At_A(A) + At_A(f.data.B' * A)
 end
 
 function Statistics.var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation}, x::AbstractVector
 )
     A = _A(f, x)
     return var(f.prior, x) - diag_At_A(A) + diag_At_A(f.data.B' * A)
 end
 
 function StatsBase.mean_and_cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation}, x::AbstractVector
 )
     A, Kuf = _A_and_Kuf(f, x)
     μ = mean(f.prior, x) + Kuf' * f.data.α
@@ -247,7 +259,7 @@ function StatsBase.mean_and_cov(
 end
 
 function StatsBase.mean_and_var(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation}, x::AbstractVector
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation}, x::AbstractVector
 )
     A, Kuf = _A_and_Kuf(f, x)
     μ = mean(f.prior, x) + Kuf' * f.data.α
@@ -256,7 +268,7 @@ function StatsBase.mean_and_var(
 end
 
 function Statistics.cov(
-    f::ApproxPosteriorGP{<:SparseVariationalApproximation},
+    f::ApproxPosteriorGP{<:AbstractSparseVariationalApproximation},
     x::AbstractVector,
     y::AbstractVector,
 )
@@ -277,14 +289,17 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 #
 
 function API.approx_lml(
-    sva::SparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys; kwargs...
+    sva::AbstractSparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys;
+    kwargs...
 )
     return elbo(sva, l_fx, ys; kwargs...)
 end
 
+_get_prior(approx::SparseVariationalApproximation) = approx.fz.f
+
 """
     elbo(
-        sva::SparseVariationalApproximation,
+        sva::AbstractSparseVariationalApproximation,
         fx::FiniteGP,
         y::AbstractVector{<:Real};
         num_data=length(y),
@@ -310,18 +325,18 @@ variational Gaussian process classification." Artificial Intelligence and
 Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
     quadrature=DefaultQuadrature(),
 )
-    @assert sva.fz.f === fx.f
+    @assert _get_prior(sva) === fx.f
     return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
 end
 
 function AbstractGPs.elbo(
-    ::SparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
+    ::AbstractSparseVariationalApproximation, ::FiniteGP, ::AbstractVector; kwargs...
 )
     return error(
         "The observation noise fx.Σy must be homoscedastic.\n",
@@ -332,7 +347,7 @@ end
 
 """
     elbo(
-        sva::SparseVariationalApproximation,
+        sva::AbstractSparseVariationalApproximation,
         lfx::LatentFiniteGP,
         y::AbstractVector;
         num_data=length(y),
@@ -342,26 +357,26 @@ end
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
 """
 function AbstractGPs.elbo(
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
     quadrature=DefaultQuadrature(),
 )
-    @assert sva.fz.f === lfx.fx.f
+    @assert _get_prior(sva) === lfx.fx.f
     return _elbo(quadrature, sva, lfx.fx, y, lfx.lik, num_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
     quadrature::QuadratureMethod,
-    sva::SparseVariationalApproximation,
+    sva::AbstractSparseVariationalApproximation,
     fx::FiniteGP,
     y::AbstractVector,
     lik,
     num_data::Integer,
 )
-    @assert sva.fz.f === fx.f
+    @assert _get_prior(sva) === fx.f
 
     f_post = posterior(sva)
     q_f = marginals(f_post(fx.x))
@@ -383,6 +398,169 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     trace_term = sum(L .^ 2)  # TODO remove AD workaround
 
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
+end
+
+
+
+#
+# Pseudo-Observation Parametrisations of q(u).
+#
+
+
+@doc raw"""
+    PseudoObsSparseVariationalApproximation(
+        likelihood, f::AbstractGP, z::AbstractVector
+    )
+
+Parametrises `q(f(z))`, the approximate posterior at `f(z)`, using a surrogate likelihood,
+`likelihood`: `q(f(z)) ∝ p(f(z)) likelihood(f(z))`.
+"""
+struct PseudoObsSparseVariationalApproximation{
+    Tlikelihood, Tf<:AbstractGP, Tz<:AbstractVector
+} <: AbstractSparseVariationalApproximation
+    likelihood::Tlikelihood
+    f::Tf
+    z::Tz
+end
+
+_get_prior(approx::PseudoObsSparseVariationalApproximation) = approx.f
+
+@doc raw"""
+    ObsCovLikelihood(S::AbstractMatrix{<:Real}, y::AbstractVector{<:Real})
+
+Chooses `likelihood(u) = N(y; u, S)`. `length(y)` must be equal to the number of
+pseudo-points utilised in the sparse variational approximation.
+"""
+struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real}, Ty<:AbstractVector{<:Real}}
+    S::TS
+    y::Ty
+end
+
+@doc raw"""
+    PseudoObsSparseVariationalApproximation(
+        f::AbstractGP,
+        z::AbstractVector,
+        S::AbstractMatrix{<:Real},
+        y::AbstractVector{<:Real},
+    )
+
+Convenience constuctor.
+Equivalent to
+```julia
+PseudoObsSparseVariationalApproximation(ObsCovLikelihood(S, y), f, z)
+```
+"""
+function PseudoObsSparseVariationalApproximation(
+    f::AbstractGP, z::AbstractVector, S::AbstractMatrix{<:Real}, y::AbstractVector{<:Real}
+)
+    return PseudoObsSparseVariationalApproximation(ObsCovLikelihood(S, y), f, z)
+end
+
+function AbstractGPs.posterior(
+    approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood}
+)
+    f = approx.f
+    z = approx.z
+    y = approx.likelihood.y
+    S = approx.likelihood.S
+    return posterior(f(z, S), y)
+end
+
+function _prior_kl(
+    approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood}
+)
+    f = approx.f
+    z = approx.z
+    y = approx.likelihood.y
+    S = approx.likelihood.S
+
+    # log marginal probability of pseudo-observations.
+    logp_pseudo_obs = logpdf(f(z, S), y)
+
+    # pseudo-reconstruction term.
+    m, C = mean_and_cov(posterior(approx)(z))
+    S_chol = cholesky(AbstractGPs._symmetric(S))
+    pseudo_lik = -(
+        length(y) * AbstractGPs.log2π + logdet(S_chol) + sum(abs2, S_chol.U' \ (y - m))
+    ) / 2
+    trace_term = tr(S_chol \ C) / 2
+    return -logp_pseudo_obs + pseudo_lik - trace_term
+end
+
+@doc raw"""
+    DecoupledObsCovLikelihood(
+        S::AbstractMatrix{<:Real}, v::AbstractVector, y::AbstractVector{<:Real}
+    )
+
+Chooses `likelihood(u) = N(y; f(v), S)` where `length(y)` need not be equal to the number
+of pseudo-points, where `f` is the GP to which this likelihood specifies the approximate
+posterior over `f(z)`.
+"""
+struct DecoupledObsCovLikelihood{
+    TS<:Diagonal{<:Real}, Tv<:AbstractVector, Ty<:AbstractVector{<:Real}
+}
+    S::TS
+    v::Tv
+    y::Ty
+end
+
+@doc raw"""
+    PseudoObsSparseVariationalApproximation(
+        f::AbstractGP,
+        z::AbstractVector,
+        S::Diagonal{<:Real},
+        v::AbstractVector,
+        y::AbstractVector{<:Real},
+    )
+
+Convenience constructor.
+Equivalent to
+```julia
+PseudoObsSparseVariationalApproximation(DecoupledObsCovLikelihood(S, v, y), f, z)
+```
+"""
+function PseudoObsSparseVariationalApproximation(
+    f::AbstractGP,
+    z::AbstractVector,
+    S::Diagonal{<:Real},
+    v::AbstractVector,
+    y::AbstractVector{<:Real},
+)
+    return PseudoObsSparseVariationalApproximation(DecoupledObsCovLikelihood(S, v, y), f, z)
+end
+
+function AbstractGPs.posterior(
+    approx::PseudoObsSparseVariationalApproximation{<:DecoupledObsCovLikelihood}
+)
+    f = approx.f
+    z = approx.z
+    y = approx.likelihood.y
+    S = approx.likelihood.S
+    v = approx.likelihood.v
+    return posterior(AbstractGPs.VFE(f(z, 1e-9)), f(v, S), y)
+end
+
+function _prior_kl(
+    approx::PseudoObsSparseVariationalApproximation{<:DecoupledObsCovLikelihood}
+)
+    f = approx.f
+    z = approx.z
+    y = approx.likelihood.y
+    S = approx.likelihood.S
+    v = approx.likelihood.v
+
+    # log marginal probability of pseudo-observations. Utilises DTC code.
+    logp_pseudo_obs = AbstractGPs.dtc(AbstractGPs.VFE(f(z)), f(v, S), y)
+
+    # pseudo-reconstruction term.
+    m̂, Ĉ = mean_and_cov(posterior(approx)(z, 1e-18))
+    At = cholesky(AbstractGPs._symmetric(cov(f(z, 1e-18)))) \ cov(f, z, v)
+    m = mean(f, v) + At' * (m̂ - mean(f, z))
+    pseudo_loglik = sum(map((m, s, y) -> logpdf(Normal(m, sqrt(s)), y), m, diag(S), y))
+    pseudo_trace_term = sum(Ĉ .* (At * (S \ At'))) / 2
+    pseudo_reconstruction = (pseudo_loglik - pseudo_trace_term)
+
+    return -logp_pseudo_obs + pseudo_reconstruction
 end
 
 end

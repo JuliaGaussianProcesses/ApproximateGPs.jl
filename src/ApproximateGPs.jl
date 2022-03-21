@@ -14,6 +14,10 @@ include("SparseVariationalApproximationModule.jl")
     SparseVariationalApproximation, Centered, NonCentered
 @reexport using .SparseVariationalApproximationModule:
     DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
+@reexport using .SparseVariationalApproximationModule:
+    PseudoObsSparseVariationalApproximation,
+    ObsCovLikelihood,
+    DecoupledObsCovLikelihood
 
 include("LaplaceApproximationModule.jl")
 @reexport using .LaplaceApproximationModule: LaplaceApproximation
