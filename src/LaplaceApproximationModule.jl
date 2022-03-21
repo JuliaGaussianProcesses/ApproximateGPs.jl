@@ -89,7 +89,9 @@ function build_laplace_objective!(
     ys;
     kwargs...
 )
-    return build_laplace_objective!(LaplaceObjectiveCache(f_init), build_latent_gp, xs, ys; kwargs...)
+    return build_laplace_objective!(
+        LaplaceObjectiveCache(f_init), build_latent_gp, xs, ys; kwargs...
+    )
 end
 
 mutable struct LaplaceObjectiveCache
