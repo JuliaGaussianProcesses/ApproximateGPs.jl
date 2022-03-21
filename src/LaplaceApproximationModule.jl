@@ -82,13 +82,7 @@ function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
     return build_laplace_objective!(cache, build_latent_gp, xs, ys; kwargs...)
 end
 
-function build_laplace_objective!(
-    f_init::Vector,
-    build_latent_gp,
-    xs,
-    ys;
-    kwargs...
-)
+function build_laplace_objective!(f_init::Vector, build_latent_gp, xs, ys; kwargs...)
     return build_laplace_objective!(
         LaplaceObjectiveCache(f_init), build_latent_gp, xs, ys; kwargs...
     )
