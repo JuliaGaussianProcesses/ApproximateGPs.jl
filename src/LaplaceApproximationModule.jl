@@ -75,13 +75,25 @@ closure passes its arguments to `build_latent_gp`, which must return the
 - `newton_maxiter=100`: maximum number of Newton steps.
 """
 function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
-    # TODO assumes type of `xs` will be same as `mean(lfx.fx)`
-    f = similar(xs, length(xs))  # will be mutated in-place to "warm-start" the Newton steps
-    return build_laplace_objective!(f, build_latent_gp, xs, ys; kwargs...)
+    cache = LaplaceObjectiveCache(nothing)
+    # cache.f will be mutated in-place to "warm-start" the Newton steps
+    # f should be similar(mean(lfx.fx)), but to construct lfx we would need the arguments
+    # so we set it to `nothing` initially, and set it to mean(lfx.fx) within the objective
+    return build_laplace_objective!(cache, build_latent_gp, xs, ys; kwargs...)
+end
+
+function build_laplace_objective!(f_init::Vector, build_latent_gp, xs, ys; kwargs...)
+    return build_laplace_objective!(
+        LaplaceObjectiveCache(f_init), build_latent_gp, xs, ys; kwargs...
+    )
+end
+
+mutable struct LaplaceObjectiveCache
+    f::Union{Nothing,Vector}
 end
 
 function build_laplace_objective!(
-    f,
+    cache::LaplaceObjectiveCache,
     build_latent_gp,
     xs,
     ys;
@@ -98,16 +110,18 @@ function build_laplace_objective!(
             # Zygote does not like the try/catch within @info etc.
             @debug "Objective arguments: $args"
             # Zygote does not like in-place assignments either
-            if initialize_f
-                f .= mean(lfx.fx)
+            if cache.f === nothing
+                cache.f = mean(lfx.fx)
+            elseif initialize_f
+                cache.f .= mean(lfx.fx)
             end
         end
         f_opt, lml = laplace_f_and_lml(
-            lfx, ys; f_init=f, maxiter=newton_maxiter, callback=newton_callback
+            lfx, ys; f_init=cache.f, maxiter=newton_maxiter, callback=newton_callback
         )
         ignore_derivatives() do
             if newton_warmstart
-                f .= f_opt
+                cache.f .= f_opt
                 initialize_f = false
             end
         end
