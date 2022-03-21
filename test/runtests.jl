@@ -15,7 +15,10 @@ using Zygote
 
 using AbstractGPs
 using ApproximateGPs
-using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule, ExpectationPropagationModule
+using ApproximateGPs:
+    SparseVariationalApproximationModule,
+    LaplaceApproximationModule,
+    ExpectationPropagationModule
 
 using QuadGK
 
