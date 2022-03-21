@@ -77,8 +77,8 @@ closure passes its arguments to `build_latent_gp`, which must return the
 function build_laplace_objective(build_latent_gp, xs, ys; kwargs...)
     cache = LaplaceObjectiveCache(nothing)
     # cache.f will be mutated in-place to "warm-start" the Newton steps
-    # f_init should be similar(mean(lfx.fx)), but to construct lfx we would need the arguments
-    # instead, we make use of Julia even allowing assignments to change variables outside a closure
+    # f should be similar(mean(lfx.fx)), but to construct lfx we would need the arguments
+    # so we set it to `nothing` initially, and set it to mean(lfx.fx) within the objective
     return build_laplace_objective!(cache, build_latent_gp, xs, ys; kwargs...)
 end
 
@@ -111,10 +111,6 @@ function build_laplace_objective!(
             @debug "Objective arguments: $args"
             # Zygote does not like in-place assignments either
             if cache.f === nothing
-                # Here we make use of Julia's scoping in closures: f will be
-                # assigned to despite being outside this function's scope, for
-                # more details see
-                # https://discourse.julialang.org/t/referencing-local-variable-before-assignment-results-in-unexpected-behavior/58088
                 cache.f = mean(lfx.fx)
             elseif initialize_f
                 cache.f .= mean(lfx.fx)
