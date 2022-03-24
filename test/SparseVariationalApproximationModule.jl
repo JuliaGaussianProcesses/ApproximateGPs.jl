@@ -190,4 +190,96 @@
             @test all(isapprox.(cov(gpr_post, x), cov(svgp_post, x), atol=1e-4))
         end
     end
+    @testset "PseudoObs" begin
+        rng = Xoshiro(123456)
+
+        # Generate data.
+        f = GP(sin, SEKernel())
+        x = range(-5.0, 5.0; length=11)
+        s = 0.1
+        y = rand(rng, f(x, s))
+
+        z = range(-6.0, 6.0; length=7)
+
+        @testset "Coupled Formulation" begin
+
+            # Generate pseudo-data.
+            ŷ = randn(rng, length(z))
+            _S = randn(rng, length(z), length(z))
+            Ŝ = _S * _S' + I
+
+            # Construct approximate posterior.
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, ŷ
+            )
+
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, ŷ
+            )
+            approx_posterior = posterior(approx)
+            AbstractGPs.TestUtils.test_internal_abstractgps_interface(
+                rng, approx_posterior, x, z
+            )
+
+            # Check that the posterior is close to an equivalent Centered approximation.
+            @testset "compare against equivalent centered" begin
+                qu = approx_posterior(z, 1e-12)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
+                approx_post_centered = posterior(approx_centered)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
+                approx_post_x = approx_posterior(x, s)
+                approx_post_centered_x = approx_post_centered(x, s)
+                @test mean(approx_post_x) ≈ mean(approx_post_centered_x)
+                @test cov(approx_post_x) ≈ cov(approx_post_centered_x)
+                @test elbo(approx, f(x, s), y) ≈ elbo(approx_centered, f(x, s), y)
+            end
+
+            # Check that Zygote is able to run. Assume correctness of result.
+            Zygote.gradient(elbo, approx, f(x, s), y)
+        end
+        @testset "Decoupled Formulation" begin
+
+            # Generate pseudo-data.
+            v = range(-5.0, 5.0; length=9)
+            ŷ = randn(rng, length(v))
+            Ŝ = Diagonal(rand(rng, length(v)) .+ 0.1)
+
+            # Construct approximate posterior.
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, v, ŷ
+            )
+
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, v, ŷ
+            )
+            approx_posterior = posterior(approx)
+            AbstractGPs.TestUtils.test_internal_abstractgps_interface(
+                rng, approx_posterior, x, z
+            )
+
+            # Check that the posterior is close to an equivalent Centered approximation.
+            @testset "compare against equivalent centered" begin
+                qu = approx_posterior(z, 1e-12)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
+                approx_post_centered = posterior(approx_centered)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
+                approx_post_x = approx_posterior(x, s)
+                approx_post_centered_x = approx_post_centered(x, s)
+                @test mean(approx_post_x) ≈ mean(approx_post_centered_x)
+                @test cov(approx_post_x) ≈ cov(approx_post_centered_x)
+                @test elbo(approx, f(x, s), y) ≈ elbo(approx_centered, f(x, s), y)
+            end
+
+            # Check that Zygote is able to run. Assume correctness of result.
+            Zygote.gradient(elbo, approx, f(x, s), y)
+        end
+    end
 end
