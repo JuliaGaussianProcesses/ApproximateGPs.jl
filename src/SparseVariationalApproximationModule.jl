@@ -68,8 +68,10 @@ See also [`Centered`](@ref).
 """
 struct NonCentered end
 
-struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal} <:
-       AbstractSparseVariationalApproximation
+struct SparseVariationalApproximation{
+    Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal
+} <: AbstractSparseVariationalApproximation
+    fz::Tfz
     q::Tq
 end
 
@@ -411,7 +413,7 @@ Parametrises `q(f(z))`, the approximate posterior at `f(z)`, using a surrogate l
 """
 struct PseudoObsSparseVariationalApproximation{
     Tlikelihood,Tf<:AbstractGP,Tz<:AbstractVector
-}
+} <: AbstractSparseVariationalApproximation
     likelihood::Tlikelihood
     f::Tf
     z::Tz
@@ -426,6 +428,7 @@ Chooses `likelihood(u) = N(y; u, S)`. `length(y)` must be equal to the number of
 pseudo-points utilised in the sparse variational approximation.
 """
 struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real},Ty<:AbstractVector{<:Real}}
+    S::TS
     y::Ty
 end
 
@@ -460,6 +463,7 @@ function AbstractGPs.posterior(
 end
 
 function _prior_kl(approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood})
+    f = approx.f
     z = approx.z
     y = approx.likelihood.y
     S = approx.likelihood.S
