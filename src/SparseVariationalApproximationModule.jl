@@ -476,6 +476,7 @@ function _prior_kl(approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikel
     S_chol = cholesky(AbstractGPs._symmetric(S))
     quad_form = sum(abs2, S_chol.U' \ (y - m))
     pseudo_lik = -(length(y) * AbstractGPs.log2π + logdet(S_chol) + quad_form) / 2
+    trace_term = tr(S_chol \ C) / 2
     return -logp_pseudo_obs + pseudo_lik - trace_term
 end
 
