@@ -209,7 +209,9 @@
             Ŝ = _S * _S' + I
 
             # Construct approximate posterior.
-            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(f, z, Ŝ, ŷ)
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, ŷ
+            )
 
             approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
                 f, z, Ŝ, ŷ
@@ -222,7 +224,9 @@
             # Check that the posterior is close to an equivalent Centered approximation.
             @testset "compare against equivalent centered" begin
                 qu = approx_posterior(z, 1e-12)
-                approx_centered = SparseVariationalApproximation(Centered(), f(z, 1e-12), qu)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
                 approx_post_centered = posterior(approx_centered)
                 approx_centered = SparseVariationalApproximation(
                     Centered(), f(z, 1e-12), qu
@@ -245,7 +249,9 @@
             Ŝ = Diagonal(rand(rng, length(v)) .+ 0.1)
 
             # Construct approximate posterior.
-            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(f, z, Ŝ, v, ŷ)
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, v, ŷ
+            )
 
             approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
                 f, z, Ŝ, v, ŷ
@@ -258,7 +264,9 @@
             # Check that the posterior is close to an equivalent Centered approximation.
             @testset "compare against equivalent centered" begin
                 qu = approx_posterior(z, 1e-12)
-                approx_centered = SparseVariationalApproximation(Centered(), f(z, 1e-12), qu)
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
                 approx_post_centered = posterior(approx_centered)
                 approx_centered = SparseVariationalApproximation(
                     Centered(), f(z, 1e-12), qu

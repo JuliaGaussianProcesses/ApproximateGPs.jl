@@ -404,8 +404,6 @@ end
 # Pseudo-Observation Parametrisations of q(u).
 #
 
-
-@doc raw"""
     PseudoObsSparseVariationalApproximation(
         likelihood, f::AbstractGP, z::AbstractVector
     )
@@ -414,8 +412,8 @@ Parametrises `q(f(z))`, the approximate posterior at `f(z)`, using a surrogate l
 `likelihood`: `q(f(z)) ∝ p(f(z)) likelihood(f(z))`.
 """
 struct PseudoObsSparseVariationalApproximation{
-    Tlikelihood, Tf<:AbstractGP, Tz<:AbstractVector
-} <: AbstractSparseVariationalApproximation
+    Tlikelihood,Tf<:AbstractGP,Tz<:AbstractVector
+    Tlikelihood,Tf<:AbstractGP,Tz<:AbstractVector
     likelihood::Tlikelihood
     f::Tf
     z::Tz
@@ -429,8 +427,8 @@ _get_prior(approx::PseudoObsSparseVariationalApproximation) = approx.f
 Chooses `likelihood(u) = N(y; u, S)`. `length(y)` must be equal to the number of
 pseudo-points utilised in the sparse variational approximation.
 """
-struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real}, Ty<:AbstractVector{<:Real}}
-    S::TS
+struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real},Ty<:AbstractVector{<:Real}}
+struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real},Ty<:AbstractVector{<:Real}}
     y::Ty
 end
 
@@ -493,8 +491,8 @@ of pseudo-points, where `f` is the GP to which this likelihood specifies the app
 posterior over `f(z)`.
 """
 struct DecoupledObsCovLikelihood{
-    TS<:Diagonal{<:Real}, Tv<:AbstractVector, Ty<:AbstractVector{<:Real}
-}
+    TS<:Diagonal{<:Real},Tv<:AbstractVector,Ty<:AbstractVector{<:Real}
+    TS<:Diagonal{<:Real},Tv<:AbstractVector,Ty<:AbstractVector{<:Real}
     S::TS
     v::Tv
     y::Ty
