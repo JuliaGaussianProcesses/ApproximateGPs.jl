@@ -399,7 +399,6 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
 end
 
-
 # Pseudo-Observation Parametrisations of q(u).
 
 @doc raw"""
