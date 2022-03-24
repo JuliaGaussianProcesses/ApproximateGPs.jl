@@ -3,9 +3,7 @@ module SparseVariationalApproximationModule
 using ..API
 
 export SparseVariationalApproximation,
-    Centered,
-    NonCentered,
-    PseudoObsSparseVariationalApproximation
+    Centered, NonCentered, PseudoObsSparseVariationalApproximation
 
 using ..ApproximateGPs: _chol_cov, _cov
 using Distributions
@@ -71,9 +69,8 @@ See also [`Centered`](@ref).
 struct NonCentered end
 
 struct SparseVariationalApproximation{
-    Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal
-} <: AbstractSparseVariationalApproximation
-    fz::Tfz
+struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal} <:
+       AbstractSparseVariationalApproximation
     q::Tq
 end
 
@@ -291,8 +288,10 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 
 function API.approx_lml(
     sva::AbstractSparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys;
-    kwargs...
-)
+    sva::AbstractSparseVariationalApproximation,
+    l_fx::Union{FiniteGP,LatentFiniteGP},
+    ys;
+    kwargs...,
     return AbstractGPs.elbo(sva, l_fx, ys; kwargs...)
 end
 
@@ -402,8 +401,6 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
 end
 
 
-
-#
 # Pseudo-Observation Parametrisations of q(u).
 #
 
@@ -468,9 +465,7 @@ function AbstractGPs.posterior(
 end
 
 function _prior_kl(
-    approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood}
-)
-    f = approx.f
+function _prior_kl(approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood})
     z = approx.z
     y = approx.likelihood.y
     S = approx.likelihood.S
@@ -482,9 +477,9 @@ function _prior_kl(
     m, C = mean_and_cov(posterior(approx)(z))
     S_chol = cholesky(AbstractGPs._symmetric(S))
     pseudo_lik = -(
-        length(y) * AbstractGPs.log2π + logdet(S_chol) + sum(abs2, S_chol.U' \ (y - m))
-    ) / 2
-    trace_term = tr(S_chol \ C) / 2
+    pseudo_lik =
+        -(length(y) * AbstractGPs.log2π + logdet(S_chol) + sum(abs2, S_chol.U' \ (y - m))) /
+        2
     return -logp_pseudo_obs + pseudo_lik - trace_term
 end
 

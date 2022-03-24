@@ -211,7 +211,9 @@
             # Construct approximate posterior.
             approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(f, z, Ŝ, ŷ)
 
-            # Check that the posterior produced satisfies the AbstractGPs API.
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, ŷ
+            )
             approx_posterior = posterior(approx)
             AbstractGPs.TestUtils.test_internal_abstractgps_interface(
                 rng, approx_posterior, x, z
@@ -222,7 +224,9 @@
                 qu = approx_posterior(z, 1e-12)
                 approx_centered = SparseVariationalApproximation(Centered(), f(z, 1e-12), qu)
                 approx_post_centered = posterior(approx_centered)
-
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
                 approx_post_x = approx_posterior(x, s)
                 approx_post_centered_x = approx_post_centered(x, s)
                 @test mean(approx_post_x) ≈ mean(approx_post_centered_x)
@@ -243,7 +247,9 @@
             # Construct approximate posterior.
             approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(f, z, Ŝ, v, ŷ)
 
-            # Check that the posterior produced satisfies the AbstractGPs API.
+            approx = ApproximateGPs.SparseVariationalApproximationModule.PseudoObsSparseVariationalApproximation(
+                f, z, Ŝ, v, ŷ
+            )
             approx_posterior = posterior(approx)
             AbstractGPs.TestUtils.test_internal_abstractgps_interface(
                 rng, approx_posterior, x, z
@@ -254,7 +260,9 @@
                 qu = approx_posterior(z, 1e-12)
                 approx_centered = SparseVariationalApproximation(Centered(), f(z, 1e-12), qu)
                 approx_post_centered = posterior(approx_centered)
-
+                approx_centered = SparseVariationalApproximation(
+                    Centered(), f(z, 1e-12), qu
+                )
                 approx_post_x = approx_posterior(x, s)
                 approx_post_centered_x = approx_post_centered(x, s)
                 @test mean(approx_post_x) ≈ mean(approx_post_centered_x)

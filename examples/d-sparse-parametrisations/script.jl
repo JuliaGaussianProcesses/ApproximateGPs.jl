@@ -100,7 +100,6 @@ q_centered = posterior(centered_approx)
 @assert mean(q_non_centered(x_pred)) ≈ mean(q_centered(x_pred))
 @assert cov(q_non_centered(x_pred)) ≈ cov(q_centered(x_pred))
 
-
 # ### Pseudo-Observation vs Centered
 #
 # The relationship between these two parametrisations is only slightly more complicated.
@@ -166,8 +165,6 @@ optimal_approx_post = posterior(VFE(f(z, jitter)), f(x, Σ), y);
 # Obviously when ``\mathbf{v} \neq \mathbf{x}`` the optimal approximate posterior cannot be
 # recovered, however, when the hope is that there exists a small pseudo-dataset which gets
 # close to the optimum.
-
-
 
 # [^Titsias]: Titsias, M. K. [Variational learning of inducing variables in sparse Gaussian processes](https://proceedings.mlr.press/v5/titsias09a.html)
 # [^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)
