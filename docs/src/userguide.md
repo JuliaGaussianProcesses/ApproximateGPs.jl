@@ -46,31 +46,9 @@ The approximate posterior constructed above will be a very poor approximation, s
 ```julia
 elbo(SparseVariationalApproximation(fz, q), fx, y)
 ```
-A detailed example of how to carry out such optimisation is given in [Regression: Sparse Variational Gaussian Process for Stochastic Optimisation with Flux.jl](@ref). For an example of non-conjugate inference, see [Classification: Sparse Variational Approximation for Non-Conjugate Likelihoods with Optim's L-BFGS](@ref).
 
 # Available Parametrizations
 
-Two parametrizations of `q(u)` are presently available: [`Centered`](@ref) and [`NonCentered`](@ref).
-The `Centered` parametrization expresses `q(u)` directly in terms of its mean and covariance.
-The `NonCentered` parametrization instead parametrizes the mean and covariance of
-`ε := cholesky(cov(u)).U' \ (u - mean(u))`.
-These parametrizations are also known respectively as "Unwhitened" and "Whitened".
-
-The choice of parametrization can have a substantial impact on the time it takes for ELBO
-optimization to converge, and which parametrization is better in a particular situation is
-not generally obvious.
-That being said, the `NonCentered` parametrization often converges in fewer iterations, so it is the default --
-it is what is used in all of the examples above.
-
-If you require a particular parametrization, simply use the 3-argument version of the
-approximation constructor:
-```julia
-SparseVariationalApproximation(Centered(), fz, q)
-SparseVariationalApproximation(NonCentered(), fz, q)
-```
-
-For a general discussion around these two parametrizations, see e.g. [^Gorinova].
-For a GP-specific discussion, see e.g. section 3.4 of [^Paciorek].
-
-[^Gorinova]: Gorinova, Maria and Moore, Dave and Hoffman, Matthew [Automatic Reparameterisation of Probabilistic Programs](http://proceedings.mlr.press/v119/gorinova20a)
-[^Paciorek]: [Paciorek, Christopher Joseph. Nonstationary Gaussian processes for regression and spatial modelling. Diss. Carnegie Mellon University, 2003.](https://www.stat.berkeley.edu/~paciorek/diss/paciorek-thesis.pdf)
+There are various ways to parametrise the approximate posterior.
+See [The Various Pseudo-Point Approximation Parametrisations](@ref) for more info and
+worked examples.
