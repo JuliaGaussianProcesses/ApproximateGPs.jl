@@ -68,7 +68,6 @@ See also [`Centered`](@ref).
 """
 struct NonCentered end
 
-struct SparseVariationalApproximation{
 struct SparseVariationalApproximation{Parametrization,Tfz<:FiniteGP,Tq<:AbstractMvNormal} <:
        AbstractSparseVariationalApproximation
     q::Tq
@@ -287,11 +286,11 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 #
 
 function API.approx_lml(
-    sva::AbstractSparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys;
     sva::AbstractSparseVariationalApproximation,
     l_fx::Union{FiniteGP,LatentFiniteGP},
     ys;
     kwargs...,
+)
     return AbstractGPs.elbo(sva, l_fx, ys; kwargs...)
 end
 
@@ -402,8 +401,8 @@ end
 
 
 # Pseudo-Observation Parametrisations of q(u).
-#
 
+@doc raw"""
     PseudoObsSparseVariationalApproximation(
         likelihood, f::AbstractGP, z::AbstractVector
     )
@@ -413,7 +412,7 @@ Parametrises `q(f(z))`, the approximate posterior at `f(z)`, using a surrogate l
 """
 struct PseudoObsSparseVariationalApproximation{
     Tlikelihood,Tf<:AbstractGP,Tz<:AbstractVector
-    Tlikelihood,Tf<:AbstractGP,Tz<:AbstractVector
+}
     likelihood::Tlikelihood
     f::Tf
     z::Tz
@@ -427,7 +426,6 @@ _get_prior(approx::PseudoObsSparseVariationalApproximation) = approx.f
 Chooses `likelihood(u) = N(y; u, S)`. `length(y)` must be equal to the number of
 pseudo-points utilised in the sparse variational approximation.
 """
-struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real},Ty<:AbstractVector{<:Real}}
 struct ObsCovLikelihood{TS<:AbstractMatrix{<:Real},Ty<:AbstractVector{<:Real}}
     y::Ty
 end
@@ -462,7 +460,6 @@ function AbstractGPs.posterior(
     return posterior(f(z, S), y)
 end
 
-function _prior_kl(
 function _prior_kl(approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikelihood})
     z = approx.z
     y = approx.likelihood.y
@@ -474,10 +471,8 @@ function _prior_kl(approx::PseudoObsSparseVariationalApproximation{<:ObsCovLikel
     # pseudo-reconstruction term.
     m, C = mean_and_cov(posterior(approx)(z))
     S_chol = cholesky(AbstractGPs._symmetric(S))
-    pseudo_lik = -(
-    pseudo_lik =
-        -(length(y) * AbstractGPs.log2π + logdet(S_chol) + sum(abs2, S_chol.U' \ (y - m))) /
-        2
+    quad_form = sum(abs2, S_chol.U' \ (y - m))
+    pseudo_lik = -(length(y) * AbstractGPs.log2π + logdet(S_chol) + quad_form) / 2
     return -logp_pseudo_obs + pseudo_lik - trace_term
 end
 
@@ -492,7 +487,7 @@ posterior over `f(z)`.
 """
 struct DecoupledObsCovLikelihood{
     TS<:Diagonal{<:Real},Tv<:AbstractVector,Ty<:AbstractVector{<:Real}
-    TS<:Diagonal{<:Real},Tv<:AbstractVector,Ty<:AbstractVector{<:Real}
+}
     S::TS
     v::Tv
     y::Ty
