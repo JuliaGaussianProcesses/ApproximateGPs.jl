@@ -1,7 +1,7 @@
 name = "ApproximateGPs"
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
 authors = ["JuliaGaussianProcesses Team"]
-version = "0.3.2"
+version = "0.3.4"
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
@@ -13,11 +13,14 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GPLikelihoods = "6031954c-0455-49d7-b3b9-3e1c99afaf40"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 AbstractGPs = "0.3, 0.4, 0.5"
@@ -28,6 +31,7 @@ FillArrays = "0.12, 0.13"
 ForwardDiff = "0.10"
 GPLikelihoods = "0.3"
 IrrationalConstants = "0.1"
+LogExpFunctions = "0.3"
 PDMats = "0.11"
 Reexport = "1"
 SpecialFunctions = "1, 2"
