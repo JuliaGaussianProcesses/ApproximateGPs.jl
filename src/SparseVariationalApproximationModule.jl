@@ -298,7 +298,7 @@ which method is used to calculate the expected loglikelihood in the ELBO. See
 `GPLikelihoods.expected_loglikelihood` for more details.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
-Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
+Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = σ² * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -311,7 +311,9 @@ function AbstractGPs.elbo(
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
 )
-    return _elbo(quadrature, sva, GaussianLikelihood(fx.Σy[1]), fx, y, num_data)
+    σ² = fx.Σy[1]
+    lik = GaussianLikelihood(σ²)
+    return elbo(sva, LatentFiniteGP(fx, lik), y; num_data, quadrature)
 end
 
 function AbstractGPs.elbo(
@@ -342,27 +344,15 @@ function AbstractGPs.elbo(
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
 )
-    return _elbo(quadrature, sva, lfx.lik, lfx.fx, y, num_data)
-end
-
-# Compute the common elements of the ELBO
-function _elbo(
-    quadrature,
-    sva::SparseVariationalApproximation,
-    lik,
-    fx::FiniteGP,
-    y::AbstractVector,
-    num_data::Integer,
-)
-    sva.fz.f === fx.f || throw(
+    sva.fz.f === lfx.fx || throw(
         ArgumentError(
             "(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's",
         ),
     )
 
     f_post = posterior(sva)
-    q_f = marginals(f_post(fx.x))
-    variational_exp = expected_loglikelihood(quadrature, lik, q_f, y)
+    q_f = marginals(f_post(lfx.fx.x))
+    variational_exp = expected_loglikelihood(quadrature, lfx.lik, q_f, y)
 
     n_batch = length(y)
     scale = num_data / n_batch
