@@ -11,7 +11,6 @@ using Statistics
 using StatsBase
 using FillArrays: Fill
 using PDMats: chol_lower
-using IrrationalConstants: sqrt2, invsqrtπ
 
 using AbstractGPs: AbstractGPs
 using AbstractGPs:
@@ -24,10 +23,7 @@ using AbstractGPs:
     marginals,
     At_A,
     diag_At_A
-using GPLikelihoods: GaussianLikelihood
-
-export DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
-include("expected_loglik.jl")
+using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod
 
 @doc raw"""
     Centered()
@@ -289,7 +285,7 @@ end
         fx::FiniteGP,
         y::AbstractVector{<:Real};
         num_data=length(y),
-        quadrature=DefaultQuadrature(),
+        quadrature=GPLikelihoods.DefaultExpectationMethod(),
     )
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
@@ -297,11 +293,9 @@ svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
 svgp.fz.x` and `q(u)` is a variational distribution over inducing points `u =
 f(z)`.
 
-`quadrature` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `DefaultQuadrature()`, `Analytic()`, `GaussHermite()` and
-`MonteCarlo()`. For likelihoods with an analytic solution, `DefaultQuadrature()` uses this
-exact solution. If there is no such solution, `DefaultQuadrature()` either uses
-`GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
+`quadrature` is passed on to `GPLikelihoods.expected_loglikelihood` and selects
+which method is used to calculate the expected loglikelihood in the ELBO. See
+`GPLikelihoods.expected_loglikelihood` for more details.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
 Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
@@ -315,7 +309,7 @@ function AbstractGPs.elbo(
     fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
     y::AbstractVector{<:Real};
     num_data=length(y),
-    quadrature=DefaultQuadrature(),
+    quadrature=DefaultExpectationMethod(),
 )
     @assert sva.fz.f === fx.f
     return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
@@ -337,7 +331,7 @@ end
         lfx::LatentFiniteGP,
         y::AbstractVector;
         num_data=length(y),
-        quadrature=DefaultQuadrature(),
+        quadrature=GPLikelihoods.DefaultExpectationMethod(),
     )
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
@@ -347,7 +341,7 @@ function AbstractGPs.elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
-    quadrature=DefaultQuadrature(),
+    quadrature=DefaultExpectationMethod(),
 )
     @assert sva.fz.f === lfx.fx.f
     return _elbo(quadrature, sva, lfx.fx, y, lfx.lik, num_data)
@@ -355,7 +349,7 @@ end
 
 # Compute the common elements of the ELBO
 function _elbo(
-    quadrature::QuadratureMethod,
+    quadrature,
     sva::SparseVariationalApproximation,
     fx::FiniteGP,
     y::AbstractVector,
@@ -366,7 +360,7 @@ function _elbo(
 
     f_post = posterior(sva)
     q_f = marginals(f_post(fx.x))
-    variational_exp = expected_loglik(quadrature, y, q_f, lik)
+    variational_exp = expected_loglikelihood(quadrature, lik, q_f, y)
 
     n_batch = length(y)
     scale = num_data / n_batch
