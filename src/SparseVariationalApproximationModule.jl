@@ -354,7 +354,11 @@ function _elbo(
     y::AbstractVector,
     num_data::Integer,
 )
-    sva.fz.f === fx.f || throw(ArgumentError("(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's"))
+    sva.fz.f === fx.f || throw(
+        ArgumentError(
+            "(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's",
+        ),
+    )
 
     f_post = posterior(sva)
     q_f = marginals(f_post(fx.x))
