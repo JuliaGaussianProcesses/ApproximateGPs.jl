@@ -22,7 +22,7 @@ using AbstractGPs:
     marginals,
     At_A,
     diag_At_A
-using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod
+using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod, expected_loglikelihood
 using ..ApproximateGPs: _chol_cov, _cov
 
 @doc raw"""
