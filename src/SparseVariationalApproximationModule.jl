@@ -344,7 +344,7 @@ function AbstractGPs.elbo(
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
 )
-    sva.fz.f === lfx.fx || throw(
+    sva.fz.f === lfx.fx.f || throw(
         ArgumentError(
             "(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's",
         ),
