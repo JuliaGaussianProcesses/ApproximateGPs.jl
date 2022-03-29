@@ -13,8 +13,6 @@ include("utils.jl")
 include("SparseVariationalApproximationModule.jl")
 @reexport using .SparseVariationalApproximationModule:
     SparseVariationalApproximation, Centered, NonCentered
-@reexport using .SparseVariationalApproximationModule:
-    DefaultQuadrature, Analytic, GaussHermite, MonteCarlo
 
 include("LaplaceApproximationModule.jl")
 @reexport using .LaplaceApproximationModule: LaplaceApproximation

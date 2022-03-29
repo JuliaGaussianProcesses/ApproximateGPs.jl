@@ -51,10 +51,6 @@ using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximation
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
-    include("expected_loglik.jl")
-    println(" ")
-    @info "Ran expected_loglik tests"
-
     include("SparseVariationalApproximationModule.jl")
     println(" ")
     @info "Ran sva tests"
