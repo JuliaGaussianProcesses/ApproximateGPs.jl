@@ -311,8 +311,7 @@ function AbstractGPs.elbo(
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
 )
-    @assert sva.fz.f === fx.f
-    return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
+    return _elbo(quadrature, sva, GaussianLikelihood(fx.Σy[1]), fx, y, num_data)
 end
 
 function AbstractGPs.elbo(
@@ -343,20 +342,19 @@ function AbstractGPs.elbo(
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
 )
-    @assert sva.fz.f === lfx.fx.f
-    return _elbo(quadrature, sva, lfx.fx, y, lfx.lik, num_data)
+    return _elbo(quadrature, sva, lfx.lik, lfx.fx, y, num_data)
 end
 
 # Compute the common elements of the ELBO
 function _elbo(
     quadrature,
     sva::SparseVariationalApproximation,
+    lik,
     fx::FiniteGP,
     y::AbstractVector,
-    lik,
     num_data::Integer,
 )
-    @assert sva.fz.f === fx.f
+    sva.fz.f === fx.f || throw(ArgumentError("(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's"))
 
     f_post = posterior(sva)
     q_f = marginals(f_post(fx.x))
