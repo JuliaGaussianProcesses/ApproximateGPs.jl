@@ -4,7 +4,6 @@ using ..API
 
 export SparseVariationalApproximation, Centered, NonCentered
 
-using ..ApproximateGPs: _chol_cov, _cov
 using Distributions
 using LinearAlgebra
 using Statistics
@@ -24,6 +23,7 @@ using AbstractGPs:
     At_A,
     diag_At_A
 using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod
+using ..ApproximateGPs: _chol_cov, _cov
 
 @doc raw"""
     Centered()
