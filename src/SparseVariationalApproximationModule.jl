@@ -9,7 +9,7 @@ using LinearAlgebra
 using Statistics
 using StatsBase
 using FillArrays: Fill
-using PDMats: chol_lower
+using PDMats: chol_lower, ScalMat
 
 using AbstractGPs: AbstractGPs
 using AbstractGPs:
@@ -306,7 +306,7 @@ Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
     sva::SparseVariationalApproximation,
-    fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
+    fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Union{Diagonal{<:Real,<:Fill},ScalMat}},
     y::AbstractVector{<:Real};
     num_data=length(y),
     quadrature=DefaultExpectationMethod(),
