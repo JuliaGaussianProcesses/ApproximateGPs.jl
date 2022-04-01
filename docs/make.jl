@@ -28,7 +28,11 @@ makedocs(;
         "Home" => "index.md",
         "userguide.md",
         "API" => joinpath.(Ref("api"), ["index.md", "sparsevariational.md", "laplace.md"]),
-        "Examples" => map(basename.(filter!(isdir, readdir(joinpath(@__DIR__, "src", "examples"); join=true)))) do x
+        "Examples" => map(
+            basename.(
+                filter!(isdir, readdir(joinpath(@__DIR__, "src", "examples"); join=true)),
+            ),
+        ) do x
             joinpath("examples", x, "index.md")
         end,
     ],
