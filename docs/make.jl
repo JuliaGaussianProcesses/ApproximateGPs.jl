@@ -1,45 +1,14 @@
 ### Process examples
-# Always rerun examples
-const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
-ispath(EXAMPLES_OUT) && rm(EXAMPLES_OUT; recursive=true)
-mkpath(EXAMPLES_OUT)
-
-# Install and precompile all packages
-# Workaround for https://github.com/JuliaLang/Pkg.jl/issues/2219
-examples = filter!(isdir, readdir(joinpath(@__DIR__, "..", "examples"); join=true))
-let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.instantiate()"
-    for example in examples
-        if !success(`$(Base.julia_cmd()) -e $script $example`)
-            error(
-                "project environment of example ",
-                basename(example),
-                " could not be instantiated",
-            )
-        end
-    end
-end
-# Run examples asynchronously
-processes = let literatejl = joinpath(@__DIR__, "literate.jl")
-    map(examples) do example
-        return run(
-            pipeline(
-                `$(Base.julia_cmd()) $literatejl $(basename(example)) $EXAMPLES_OUT`;
-                stdin=devnull,
-                stdout=devnull,
-                stderr=stderr,
-            );
-            wait=false,
-        )::Base.Process
-    end
-end
-
-# Check that all examples were run successfully
-isempty(processes) || success(processes) || error("some examples were not run successfully")
+using Pkg
+Pkg.add(Pkg.PackageSpec(; url="https://github.com/JuliaGaussianProcesses/JuliaGPsDocs.jl")) # While the package is unregistered, it's a workaround
 
 ### Build documentation
 using Documenter
 
+using JuliaGPsDocs
 using ApproximateGPs
+
+JuliaGPsDocs.generate_examples(ApproximateGPs)
 
 # Doctest setup
 DocMeta.setdocmeta!(
@@ -58,11 +27,10 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "userguide.md",
-        "API" => ["api/index.md", "api/sparsevariational.md", "api/laplace.md"],
-        "Examples" =>
-            map(filter!(filename -> endswith(filename, ".md"), readdir(EXAMPLES_OUT))) do x
-                return joinpath("examples", x)
-            end,
+        "API" => joinpath.(Ref("api"), ["index.md", "sparsevariational.md", "laplace.md"]),
+        "Examples" => map(filter!(isdir, readdir("examples"))) do x
+            joinpath("examples", x, "example.md")
+        end,
     ],
     strict=true,
     checkdocs=:exports,
