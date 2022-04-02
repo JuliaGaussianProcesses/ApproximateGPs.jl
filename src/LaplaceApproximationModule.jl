@@ -179,7 +179,13 @@ function _check_laplace_inputs(
 end
 
 struct LaplaceCache{
-    Tm<:AbstractMatrix,Tv1<:AbstractVector,Tv2<:AbstractVector,Tv3<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
+    Tm<:AbstractMatrix,
+    Tv1<:AbstractVector,
+    Tv2<:AbstractVector,
+    Tv3<:AbstractVector,
+    Td<:Diagonal,
+    Tf<:Real,
+    Tc<:Cholesky,
 }
     K::Tm  # kernel matrix
     f::Tv1  # mode of posterior p(f | y)
