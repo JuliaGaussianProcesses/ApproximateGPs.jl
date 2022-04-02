@@ -179,16 +179,22 @@ function _check_laplace_inputs(
 end
 
 struct LaplaceCache{
-    Tm<:AbstractMatrix,Tv<:AbstractVector,Td<:Diagonal,Tf<:Real,Tc<:Cholesky
+    Tm<:AbstractMatrix,
+    Tv1<:AbstractVector,
+    Tv2<:AbstractVector,
+    Tv3<:AbstractVector,
+    Td<:Diagonal,
+    Tf<:Real,
+    Tc<:Cholesky,
 }
     K::Tm  # kernel matrix
-    f::Tv  # mode of posterior p(f | y)
+    f::Tv1  # mode of posterior p(f | y)
     W::Td  # diagonal matrix of ∂²/∂fᵢ² loglik
     Wsqrt::Td  # sqrt(W)
     loglik::Tf  # ∑ᵢlog p(yᵢ|fᵢ)
-    d_loglik::Tv  # ∂/∂fᵢloglik
+    d_loglik::Tv2  # ∂/∂fᵢloglik
     B_ch::Tc  # cholesky(I + Wsqrt * K * Wsqrt)
-    a::Tv  # K⁻¹ f
+    a::Tv3  # K⁻¹ f
 end
 
 function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
