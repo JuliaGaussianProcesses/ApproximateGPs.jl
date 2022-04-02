@@ -2,13 +2,14 @@
 using Pkg
 Pkg.add(Pkg.PackageSpec(; url="https://github.com/JuliaGaussianProcesses/JuliaGPsDocs.jl")) # While the package is unregistered, it's a workaround
 
-### Build documentation
-using Documenter
-
 using JuliaGPsDocs
+
 using ApproximateGPs
 
 JuliaGPsDocs.generate_examples(ApproximateGPs)
+
+### Build documentation
+using Documenter
 
 # Doctest setup
 DocMeta.setdocmeta!(
