@@ -29,21 +29,11 @@ makedocs(;
         "Home" => "index.md",
         "userguide.md",
         "API" => joinpath.(Ref("api"), ["index.md", "sparsevariational.md", "laplace.md"]),
-        "Examples" => map(
-            basename.(
-                filter!(isdir, readdir(joinpath(@__DIR__, "src", "examples"); join=true)),
-            ),
-        ) do x
-            joinpath("examples", x, "index.md")
-        end,
+        "Examples" => JuliaGPsDocs.find_generated_examples(ApproximateGPs),
     ],
     strict=true,
     checkdocs=:exports,
-    doctestfilters=[
-        r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
-        r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
-        r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
-    ],
+    doctestfilters=JuliaGPsDocs.DOCTEST_FILTERS,
 )
 
 deploydocs(;
