@@ -312,7 +312,6 @@ function AbstractGPs.elbo(
     quadrature=DefaultExpectationMethod(),
 )
     σ² = _get_homoscedastic_noise(fx.Σy)
-    σ² = fx.Σy[1]
     lik = GaussianLikelihood(σ²)
     return elbo(sva, LatentFiniteGP(fx, lik), y; num_data, quadrature)
 end
