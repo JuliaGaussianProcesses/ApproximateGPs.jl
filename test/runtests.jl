@@ -59,4 +59,8 @@ include("test_utils.jl")
     include("LaplaceApproximationModule.jl")
     println(" ")
     @info "Ran laplace tests"
+
+    include("sva_optimization.jl")
+    println(" ")
+    @info "Ran optimization test"
 end
