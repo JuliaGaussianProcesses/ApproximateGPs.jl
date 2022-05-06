@@ -10,6 +10,7 @@ using Flux: Flux
 using IterTools
 using LogExpFunctions: softplus
 using Optim
+using ParameterHandling
 using PDMats
 using Zygote
 
