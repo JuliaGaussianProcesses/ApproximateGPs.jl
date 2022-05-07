@@ -127,10 +127,10 @@ lf2.f.kernel
 # Finally, we need to construct again the (approximate) posterior given the
 # observations for the latent GP with optimised hyperparameters:
 
-f_post2 = posterior(LaplaceApproximation(; f_init=objective.f), lf2(X), Y)
+f_post2 = posterior(LaplaceApproximation(; f_init=objective.cache.f), lf2(X), Y)
 
-# By passing `f_init=objective.f` we let the Laplace approximation "warm-start"
-# at the last point of the inner-loop Newton optimisation; `objective.f` is a
+# By passing `f_init=objective.cache.f` we let the Laplace approximation "warm-start"
+# at the last point of the inner-loop Newton optimisation; `objective.cache` is a
 # field on the `objective` closure.
 
 # Let's plot samples from the approximate posterior for the optimised hyperparameters:

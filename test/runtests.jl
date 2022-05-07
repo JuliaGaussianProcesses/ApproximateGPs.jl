@@ -1,19 +1,21 @@
+using LinearAlgebra
 using Random
 using Test
-using ApproximateGPs
-using Flux
-using IterTools
-using AbstractGPs
-using AbstractGPs: LatentFiniteGP, TestUtils
-using Distributions
-using LogExpFunctions: logistic
-using LinearAlgebra
-using PDMats
-using Optim
-using Zygote
+
 using ChainRulesCore
 using ChainRulesTestUtils
+using Distributions
 using FiniteDifferences
+using Flux: Flux
+using IterTools
+using LogExpFunctions: softplus
+using Optim
+using PDMats
+using Zygote
+
+using AbstractGPs
+using ApproximateGPs
+using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
 
 # Writing tests:
 # 1. The file structure of the test should match precisely the file structure of src.
@@ -49,15 +51,11 @@ using FiniteDifferences
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
-    include("expected_loglik.jl")
+    include("SparseVariationalApproximationModule.jl")
     println(" ")
-    @info "Ran expected_loglik tests"
+    @info "Ran sva tests"
 
-    include("sparse_variational.jl")
-    println(" ")
-    @info "Ran svgp tests"
-
-    include("laplace.jl")
+    include("LaplaceApproximationModule.jl")
     println(" ")
     @info "Ran laplace tests"
 end

@@ -1,3 +1,30 @@
+module SparseVariationalApproximationModule
+
+using ..API
+
+export SparseVariationalApproximation, Centered, NonCentered
+
+using Distributions
+using LinearAlgebra
+using Statistics
+using StatsBase
+using FillArrays: Fill
+using PDMats: chol_lower, ScalMat
+
+using AbstractGPs: AbstractGPs
+using AbstractGPs:
+    AbstractGP,
+    FiniteGP,
+    LatentFiniteGP,
+    ApproxPosteriorGP,
+    elbo,
+    posterior,
+    marginals,
+    At_A,
+    diag_At_A
+using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod, expected_loglikelihood
+using ..ApproximateGPs: _chol_cov, _cov
+
 @doc raw"""
     Centered()
 
@@ -166,6 +193,13 @@ function AbstractGPs.posterior(
     return posterior(sva)
 end
 
+function AbstractGPs.posterior(
+    sva::SparseVariationalApproximation, lfx::LatentFiniteGP, ::Any
+)
+    @assert sva.fz.f === lfx.fx.f
+    return posterior(sva)
+end
+
 #
 # Various methods implementing the Internal AbstractGPs API.
 # See AbstractGPs.jl API docs for more info.
@@ -239,13 +273,19 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 # elbo
 #
 
+function API.approx_lml(
+    sva::SparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys; kwargs...
+)
+    return AbstractGPs.elbo(sva, l_fx, ys; kwargs...)
+end
+
 """
     elbo(
         sva::SparseVariationalApproximation,
         fx::FiniteGP,
         y::AbstractVector{<:Real};
         num_data=length(y),
-        quadrature=DefaultQuadrature(),
+        quadrature=GPLikelihoods.DefaultExpectationMethod(),
     )
 
 Compute the Evidence Lower BOund from [1] for the process `f = fx.f ==
@@ -253,14 +293,12 @@ svgp.fz.f` where `y` are observations of `fx`, pseudo-inputs are given by `z =
 svgp.fz.x` and `q(u)` is a variational distribution over inducing points `u =
 f(z)`.
 
-`quadrature` selects which method is used to calculate the expected loglikelihood in
-the ELBO. The options are: `DefaultQuadrature()`, `Analytic()`, `GaussHermite()` and
-`MonteCarlo()`. For likelihoods with an analytic solution, `DefaultQuadrature()` uses this
-exact solution. If there is no such solution, `DefaultQuadrature()` either uses
-`GaussHermite()` or `MonteCarlo()`, depending on the likelihood.
+`quadrature` is passed on to `GPLikelihoods.expected_loglikelihood` and selects
+which method is used to calculate the expected loglikelihood in the ELBO. See
+`GPLikelihoods.expected_loglikelihood` for more details.
 
 N.B. the likelihood is assumed to be Gaussian with observation noise `fx.Σy`.
-Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = α * I`.
+Further, `fx.Σy` must be isotropic - i.e. `fx.Σy = σ² * I`.
 
 [1] - Hensman, James, Alexander Matthews, and Zoubin Ghahramani. "Scalable
 variational Gaussian process classification." Artificial Intelligence and
@@ -268,13 +306,14 @@ Statistics. PMLR, 2015.
 """
 function AbstractGPs.elbo(
     sva::SparseVariationalApproximation,
-    fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Diagonal{<:Real,<:Fill}},
+    fx::FiniteGP{<:AbstractGP,<:AbstractVector,<:Union{Diagonal{<:Real,<:Fill},ScalMat}},
     y::AbstractVector{<:Real};
     num_data=length(y),
-    quadrature=DefaultQuadrature(),
+    quadrature=DefaultExpectationMethod(),
 )
-    @assert sva.fz.f === fx.f
-    return _elbo(quadrature, sva, fx, y, GaussianLikelihood(fx.Σy[1]), num_data)
+    σ² = fx.Σy[1]
+    lik = GaussianLikelihood(σ²)
+    return elbo(sva, LatentFiniteGP(fx, lik), y; num_data, quadrature)
 end
 
 function AbstractGPs.elbo(
@@ -293,7 +332,7 @@ end
         lfx::LatentFiniteGP,
         y::AbstractVector;
         num_data=length(y),
-        quadrature=DefaultQuadrature(),
+        quadrature=GPLikelihoods.DefaultExpectationMethod(),
     )
 
 Compute the ELBO for a LatentGP with a possibly non-conjugate likelihood.
@@ -303,26 +342,17 @@ function AbstractGPs.elbo(
     lfx::LatentFiniteGP,
     y::AbstractVector;
     num_data=length(y),
-    quadrature=DefaultQuadrature(),
+    quadrature=DefaultExpectationMethod(),
 )
-    @assert sva.fz.f === lfx.fx.f
-    return _elbo(quadrature, sva, lfx.fx, y, lfx.lik, num_data)
-end
-
-# Compute the common elements of the ELBO
-function _elbo(
-    quadrature::QuadratureMethod,
-    sva::SparseVariationalApproximation,
-    fx::FiniteGP,
-    y::AbstractVector,
-    lik,
-    num_data::Integer,
-)
-    @assert sva.fz.f === fx.f
+    sva.fz.f === lfx.fx.f || throw(
+        ArgumentError(
+            "(Latent)FiniteGP prior is not consistent with SparseVariationalApproximation's",
+        ),
+    )
 
     f_post = posterior(sva)
-    q_f = marginals(f_post(fx.x))
-    variational_exp = expected_loglik(quadrature, y, q_f, lik)
+    q_f = marginals(f_post(lfx.fx.x))
+    variational_exp = expected_loglikelihood(quadrature, lfx.lik, q_f, y)
 
     n_batch = length(y)
     scale = num_data / n_batch
@@ -340,4 +370,6 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     trace_term = sum(L .^ 2)  # TODO remove AD workaround
 
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
+end
+
 end

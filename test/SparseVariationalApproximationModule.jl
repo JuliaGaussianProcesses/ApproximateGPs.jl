@@ -28,7 +28,9 @@
         b = randn(rng, N_b)
 
         @testset "AbstractGPs interface - Centered" begin
-            TestUtils.test_internal_abstractgps_interface(rng, f_approx_post_Centered, a, b)
+            AbstractGPs.TestUtils.test_internal_abstractgps_interface(
+                rng, f_approx_post_Centered, a, b
+            )
         end
 
         @testset "NonCentered" begin
@@ -50,15 +52,15 @@
             f_approx_post_non_Centered = posterior(approx_non_Centered)
 
             @testset "AbstractGPs interface - NonCentered" begin
-                TestUtils.test_internal_abstractgps_interface(
+                AbstractGPs.TestUtils.test_internal_abstractgps_interface(
                     rng, f_approx_post_non_Centered, a, b
                 )
             end
 
             @testset "Verify that the non-centered approximate posterior agrees with centered" begin
                 @test isapprox(
-                    ApproximateGPs._prior_kl(approx_non_Centered),
-                    ApproximateGPs._prior_kl(approx_Centered);
+                    SparseVariationalApproximationModule._prior_kl(approx_non_Centered),
+                    SparseVariationalApproximationModule._prior_kl(approx_Centered);
                     rtol=1e-5,
                 )
                 @test mean(f_approx_post_non_Centered, a) ≈ mean(f_approx_post_Centered, a)
@@ -170,7 +172,7 @@
 
             # Train the SVGP model
             data = [(x, y)]
-            opt = ADAM(0.001)
+            opt = Flux.ADAM(0.001)
 
             svgp_ps = Flux.params(svgp_model)
 
