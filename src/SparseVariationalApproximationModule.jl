@@ -9,7 +9,7 @@ using LinearAlgebra
 using Statistics
 using StatsBase
 using FillArrays: Fill
-using PDMats: chol_lower, ScalMat
+using PDMats: ScalMat
 
 using AbstractGPs: AbstractGPs
 using AbstractGPs:
@@ -23,7 +23,7 @@ using AbstractGPs:
     At_A,
     diag_At_A
 using GPLikelihoods: GaussianLikelihood, DefaultExpectationMethod, expected_loglikelihood
-using ..ApproximateGPs: _chol_cov, _cov
+using ..ApproximateGPs: _chol_lower, _chol_cov, _cov
 
 @doc raw"""
     Centered()
@@ -129,7 +129,7 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{Centered})
     q, fz = sva.q, sva.fz
     m, S = mean(q), _chol_cov(q)
     Kuu = _chol_cov(fz)
-    B = chol_lower(Kuu) \ chol_lower(S)
+    B = _chol_lower(Kuu) \ _chol_lower(S)
     α = Kuu \ (m - mean(fz))
     data = (Kuu=Kuu, B=B, α=α)
     return ApproxPosteriorGP(sva, fz.f, data)
@@ -179,9 +179,9 @@ function AbstractGPs.posterior(sva::SparseVariationalApproximation{NonCentered})
     q, fz = sva.q, sva.fz
     m = mean(q)
     Kuu = _chol_cov(fz)
-    α = chol_lower(Kuu)' \ m
+    α = _chol_lower(Kuu)' \ m
     Sv = _chol_cov(q)
-    B = chol_lower(Sv)
+    B = _chol_lower(Sv)
     data = (Kuu=Kuu, B=B, α=α)
     return ApproxPosteriorGP(sva, fz.f, data)
 end
@@ -214,7 +214,7 @@ end
 # A = Lk⁻¹ Ku* is the projection matrix used in computing the predictive variance of the SparseVariationalApproximation posterior.
 function _A_and_Kuf(f, x)
     Kuf = cov(f.prior, inducing_points(f), x)
-    A = chol_lower(f.data.Kuu) \ Kuf
+    A = _chol_lower(f.data.Kuu) \ Kuf
     return A, Kuf
 end
 
@@ -366,7 +366,7 @@ function _prior_kl(sva::SparseVariationalApproximation{NonCentered})
     C_ε = _cov(sva.q)
 
     # trace_term = tr(C_ε)  # does not work due to PDMat / Zygote issues
-    L = chol_lower(_chol_cov(sva.q))
+    L = _chol_lower(_chol_cov(sva.q))
     trace_term = sum(L .^ 2)  # TODO remove AD workaround
 
     return (trace_term + m_ε'm_ε - length(m_ε) - logdet(C_ε)) / 2
