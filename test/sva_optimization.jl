@@ -5,7 +5,6 @@
     # variational approximation works properly, i.e. when a non-
     # diagonal parameterization is used for the covariance matrix,
     # the optimal value should be non-diagonal.
-      
     Random.seed!(1234)
 
     k_true = [30.0, 1.5]
@@ -15,7 +14,6 @@
     lgp = LatentGP(GP(kernel_true), BernoulliLikelihood(), jitter)
     x_true = 0:0.02:6
     f_true, y_true = rand(lgp(x_true))
-    
     μ = mean.(lgp.lik.(f_true))
 
     N = 30
@@ -28,10 +26,10 @@
         z=bounded.(range(0.1, 5.9; length=M), 0.0, 6.0),
         m=zeros(M),
         A=positive_definite(Matrix{Float64}(I, M, M)),
-    );
+    )
 
     flat_init_params, unflatten = ParameterHandling.flatten(raw_initial_params)
-    unpack = ParameterHandling.value ∘ unflatten;
+    unpack = ParameterHandling.value ∘ unflatten
 
     lik = BernoulliLikelihood()
     jitter = 1e-3
@@ -48,7 +46,7 @@
         svgp, f = build_SVGP(params)
         fx = f(x)
         return -elbo(svgp, fx, y)
-    end;
+    end
 
     opt = optimize(
         loss ∘ unpack,
