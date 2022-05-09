@@ -12,6 +12,8 @@ if VERSION < v"1.7"
     end
 end
 
+_chol_lower(a::Cholesky) = a.uplo === 'L' ? a.L : a.U'
+
 _chol_cov(q::AbstractMvNormal) = cholesky(Symmetric(cov(q)))
 _chol_cov(q::MvNormal) = cholesky(q.Σ)
 
