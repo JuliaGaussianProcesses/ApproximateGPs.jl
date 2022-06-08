@@ -15,7 +15,12 @@ using Zygote
 
 using AbstractGPs
 using ApproximateGPs
-using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
+using ApproximateGPs:
+    SparseVariationalApproximationModule,
+    LaplaceApproximationModule,
+    ExpectationPropagationModule
+
+using QuadGK
 
 # Writing tests:
 # 1. The file structure of the test should match precisely the file structure of src.
@@ -58,4 +63,8 @@ include("test_utils.jl")
     include("LaplaceApproximationModule.jl")
     println(" ")
     @info "Ran laplace tests"
+
+    include("ExpectationPropagationModule.jl")
+    println(" ")
+    @info "Ran ep tests"
 end
