@@ -172,7 +172,7 @@
 
             # Train the SVGP model
             data = [(x, y)]
-            opt = Flux.ADAM(0.001)
+            opt = Flux.Adam(0.001)
 
             svgp_ps = Flux.params(svgp_model)
 
