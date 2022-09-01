@@ -168,8 +168,11 @@ function _check_laplace_inputs(
     lfx::LatentFiniteGP, ys; f_init=nothing, maxiter=100, newton_kwargs...
 )
     fx = lfx.fx
-    @assert mean(fx) == zero(mean(fx))  # might work with non-zero prior mean but not checked
-    @assert length(ys) == length(fx)  # LaplaceApproximation currently does not support multi-latent likelihoods
+    mean(fx) == zero(mean(fx)) ||
+        error("non-zero prior mean currently not supported: discuss on GitHub issue #89")
+    length(ys) == length(fx) || error(
+        "LaplaceApproximation currently does not support multi-latent likelihoods; please open an issue on GitHub",
+    )
     dist_y_given_f = lfx.lik
     K = cov(fx)
     if isnothing(f_init)
@@ -357,7 +360,9 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
         )
 
         # ∂K = df/dK Δf
-        ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
+        ∂K = ChainRulesCore.@thunk(
+            cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik'
+        )
 
         return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
     end

@@ -1,7 +1,7 @@
-# # Binary Classification with Laplace approximation
+# # Binary Classification with different approximations
 #
 # This example demonstrates how to carry out non-conjugate Gaussian process
-# inference using the Laplace approximation.
+# inference using Laplace approximation and Expectation Propagation.
 #
 # For a basic introduction to the functionality of this library, please refer
 # to the [User Guide](@ref).
@@ -78,6 +78,8 @@ lf = build_latent_gp(theta0)
 
 lf.f.kernel
 
+# ## Approximate inference with Laplace approximation
+#
 # We can now compute the Laplace approximation ``q(f)`` to the true posterior
 # ``p(f | y)``:
 
@@ -104,7 +106,7 @@ plot_samples!(Xgrid, f_post)
 # process regression, the maximization objective is the marginal likelihood.
 # Here, we can only optimise an _approximation_ to the marginal likelihood.
 
-# ## Optimise the hyperparameters
+# ### Optimise the hyperparameters
 #
 # ApproximateGPs provides a convenience function `build_laplace_objective` that
 # constructs an objective function for optimising the hyperparameters, based on
@@ -137,3 +139,28 @@ f_post2 = posterior(LaplaceApproximation(; f_init=objective.cache.f), lf2(X), Y)
 
 p2 = plot_data()
 plot_samples!(Xgrid, f_post2)
+
+# ## Approximate inference with Expectation Propagation (EP)
+#
+# !!! warning
+#     The EP implementation is currently just an experimental prototype and may
+#     not work for your use-case. Any help welcome!
+
+# For initial hyperparameter values:
+
+f_post_ep = posterior(ApproximateGPs.ExpectationPropagation(), lf(X), Y)
+
+p3 = plot_data()
+plot_samples!(Xgrid, f_post_ep)
+
+# For optimized hyperparameter values:
+#
+# !!! warning
+#     The approximate (log) marginal likelihood for EP has not yet been
+#     implemented. Here we re-use the optimized hyperparameters from the
+#     Laplace approximation for illustration purposes.
+
+f_post_ep2 = posterior(ApproximateGPs.ExpectationPropagation(), lf2(X), Y)
+
+p4 = plot_data()
+plot_samples!(Xgrid, f_post_ep2)

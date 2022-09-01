@@ -28,6 +28,8 @@
     end
 
     @testset "predictions" begin
+        # in Gaussian case, Laplace converges to f_opt in one step; we need the
+        # second step to compute the cache at f_opt rather than f_init!
         approx = LaplaceApproximation(; maxiter=2)
         ApproximateGPs.TestUtils.test_approximation_predictions(approx)
     end
