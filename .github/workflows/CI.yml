@@ -47,6 +47,8 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         with:
           coverage: ${{ matrix.coverage || false }}
+        env:
+          GROUP: ApproximateGPs
       - uses: julia-actions/julia-processcoverage@v1
         if: matrix.coverage
       - name: Send coverage
