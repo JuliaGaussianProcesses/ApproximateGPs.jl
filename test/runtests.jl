@@ -17,6 +17,8 @@ using AbstractGPs
 using ApproximateGPs
 using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
 
+const GROUP = get(ENV, "GROUP", "All")
+
 # Writing tests:
 # 1. The file structure of the test should match precisely the file structure of src.
 #   Amongst other things, this means that there should be exactly 1 test file per src file.
@@ -51,11 +53,17 @@ using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximation
 include("test_utils.jl")
 
 @testset "ApproximateGPs" begin
-    include("SparseVariationalApproximationModule.jl")
-    println(" ")
-    @info "Ran sva tests"
+    if GROUP == "All" || GROUP == "ApproximateGPs"
+        include("SparseVariationalApproximationModule.jl")
+        println(" ")
+        @info "Ran sva tests"
 
-    include("LaplaceApproximationModule.jl")
-    println(" ")
-    @info "Ran laplace tests"
+        include("LaplaceApproximationModule.jl")
+        println(" ")
+        @info "Ran laplace tests"
+    end
+
+    if GROUP == "All" || GROUP == "CUDA"
+        # TODO: Add GPU tests
+    end
 end

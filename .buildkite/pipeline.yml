@@ -1,0 +1,18 @@
+env:
+  GROUP: CUDA
+  SECRET_CODECOV_TOKEN: "uiRWUIXMbYhGHf1qi52m97OO/4CPS7mInmgEO8NX4+2kEghmWMp7zleKqYDOjeIPjnG/GH7jD4OMErNUmbtXrTvTzoTgoqYT++kw3TJHQXDAWJm11WfLEKyD6LbuwV8luM7TG3uW3hqeUsFCifSp3Lo0Me+Pzev1lKppV8pu6KVeeMt8Zl+obV3Bw6xKPwRM14K2MWEB0mDDbTCR/Lwt3neC2GowfK/6jHUw1MN2Kt9tcwowmOUWNiPOt+1+XG3ZeGiVAXLDm9v1UgMfA3dT3ieb4CL8+vV3MfvP8mR5wbDkAsw/rJJ26QCRWQBdx1t80hcLPLUoCJUqmO6TFRhkTQ==;U2FsdGVkX1/PrcQ6ghQHBpLyD4aaMBivpIOp/LwwGoqw8Jh8LGSC5HsKvPuLwS043Vs2UazP2Ctvrzru6ChQ8Q=="
+
+steps:
+  - label: "Julia v1"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1"
+      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-coverage#v1:
+          codecov: true
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    if: build.message !~ /\[skip tests\]/
+    timeout_in_minutes: 60
+
