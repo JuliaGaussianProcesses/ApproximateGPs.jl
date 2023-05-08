@@ -273,10 +273,10 @@ inducing_points(f::ApproxPosteriorGP{<:SparseVariationalApproximation}) = f.appr
 # elbo
 #
 
-function API.approx_lml(
+function AbstractGPs.approx_log_evidence(
     sva::SparseVariationalApproximation, l_fx::Union{FiniteGP,LatentFiniteGP}, ys; kwargs...
 )
-    return AbstractGPs.elbo(sva, l_fx, ys; kwargs...)
+    return elbo(sva, l_fx, ys; kwargs...)
 end
 
 """
