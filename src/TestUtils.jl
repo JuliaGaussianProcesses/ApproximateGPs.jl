@@ -36,7 +36,7 @@ function build_latent_gp(theta)
 end
 
 """
-    test_approx_lml(approx)
+    test_approx_log_evidence(approx)
 
 Test whether in the conjugate case `approx_lml(approx, LatentGP(f,
 GaussianLikelihood(), jitter)(x), y)` gives approximately the same answer as
@@ -51,7 +51,7 @@ the log marginal likelihood in exact GP regression.
 !!! todo
     Also test gradients (for hyperparameter optimization).
 """
-function test_approx_lml end
+function test_approx_log_evidence end
 
 """
     test_approximation_predictions(approx)

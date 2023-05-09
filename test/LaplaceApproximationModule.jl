@@ -33,14 +33,14 @@
     end
 
     @testset "gradients" begin
-        @testset "approx_lml" begin
+        @testset "approx_log_evidence" begin
             X, Y = generate_data()
 
             Random.seed!(123)
             theta0 = rand(2)
             function objective(theta)
                 lf = build_latent_gp(theta)
-                lml = approx_lml(LaplaceApproximation(), lf(X), Y)
+                lml = approx_log_evidence(LaplaceApproximation(), lf(X), Y)
                 return -lml
             end
             fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
@@ -145,7 +145,7 @@
         @testset "reference optimum" begin
             function objective(theta)
                 lf = build_latent_gp(theta)
-                return -approx_lml(LaplaceApproximation(), lf(X), Y)
+                return -approx_log_evidence(LaplaceApproximation(), lf(X), Y)
             end
 
             @testset "NelderMead" begin
