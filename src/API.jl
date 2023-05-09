@@ -1,7 +1,7 @@
 module API
 
-export approx_lml  # TODO move to AbstractGPs, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/issues/221
+export approx_lml  # this was moved into AbstractGPs.approx_log_evidence, see https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/pull/361
 
-@deprecate approx_lml(approx, lfx::LatentFiniteGP, ys) approx_log_evidence(approx, lfx, ys)
+@deprecate approx_lml(approx, lfx, ys) approx_log_evidence(approx, lfx, ys)
 
 end
