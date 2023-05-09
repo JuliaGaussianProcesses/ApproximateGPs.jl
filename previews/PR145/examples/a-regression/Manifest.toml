@@ -26,11 +26,11 @@ version = "3.6.1"
 
 [[ApproximateGPs]]
 deps = ["AbstractGPs", "ChainRulesCore", "Distributions", "FastGaussQuadrature", "FillArrays", "ForwardDiff", "GPLikelihoods", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "PDMats", "Random", "Reexport", "SpecialFunctions", "Statistics", "StatsBase", "Test"]
-git-tree-sha1 = "921eb5052774cf8c0d2cabe0af750ffe866da23c"
-repo-rev = "46618bf675784714b80154b2bcd5897e0d3d8966"
+git-tree-sha1 = "d82d0369f7b288076308bbe4fef9023eced8933b"
+repo-rev = "bc43d3bcf1f44e204c10981ceea24385dad04fad"
 repo-url = "/home/runner/work/ApproximateGPs.jl/ApproximateGPs.jl"
 uuid = "298c2ebc-0411-48ad-af38-99e88101b606"
-version = "0.4.5"
+version = "0.4.6"
 
 [[ArgCheck]]
 git-tree-sha1 = "a3a402a35a2f7e0b87828ccabbd5ebfbebe356b4"
