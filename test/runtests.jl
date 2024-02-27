@@ -61,6 +61,10 @@ include("test_utils.jl")
         include("LaplaceApproximationModule.jl")
         println(" ")
         @info "Ran laplace tests"
+
+        include("FiniteBasisModule.jl")
+        println(" ")
+        @info "Ran finite basis tests"
     end
 
     if GROUP == "All" || GROUP == "CUDA"

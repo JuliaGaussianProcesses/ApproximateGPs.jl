@@ -19,6 +19,10 @@ include("LaplaceApproximationModule.jl")
 @reexport using .LaplaceApproximationModule:
     build_laplace_objective, build_laplace_objective!
 
+include("FiniteBasisModule.jl")
+@reexport using .FiniteBasisModule:
+    FFApprox, FiniteBasis, DegeneratePosterior
+
 include("deprecations.jl")
 
 include("TestUtils.jl")
