@@ -21,7 +21,7 @@ include("LaplaceApproximationModule.jl")
 
 include("FiniteBasisModule.jl")
 @reexport using .FiniteBasisModule:
-    RandomFourierFeature, FiniteBasis, DegeneratePosterior
+    FFApprox, FiniteBasis, DegeneratePosterior
 
 include("deprecations.jl")
 
