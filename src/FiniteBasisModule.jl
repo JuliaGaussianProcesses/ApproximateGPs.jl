@@ -1,6 +1,6 @@
 module FiniteBasisModule
 
-using KernelFunctions,LinearAlgebra, AbstractGPs, ArraysOfArrays
+using KernelFunctions,LinearAlgebra, AbstractGPs, ArraysOfArrays, Random
 import AbstractGPs: AbstractGP, FiniteGP
 import Statistics
 
@@ -40,9 +40,21 @@ function Statistics.cov(f::DegeneratePosterior, x::AbstractVector)
 	AbstractGPs.Xt_invA_X(f.w_prec, X')
 end
 
+function Statistics.cov(f::DegeneratePosterior, x::AbstractVector, y::AbstractVector)
+	X = weight_form(f.prior.kernel.ϕ, x)
+	Y = weight_form(f.prior.kernel.ϕ, y)
+	AbstractGPs.Xt_invA_Y(X', f.w_prec, Y')
+end
+
 function Statistics.var(f::DegeneratePosterior, x::AbstractVector)
 	X = weight_form(f.prior.kernel.ϕ, x)
 	AbstractGPs.diag_Xt_invA_X(f.w_prec, X')
+end
+
+function Statistics.rand(rng::AbstractRNG, f::DegeneratePosterior, x::AbstractVector)
+	w = f.w_mean
+	X = weight_form(f.prior.kernel.ϕ, x)
+	X * (f.w_prec.U \ randn(rng, length(x)))
 end
 
 struct RandomFourierFeature
@@ -50,7 +62,7 @@ struct RandomFourierFeature
 end
 
 RandomFourierFeature(kern::SqExponentialKernel, k::Int) = RandomFourierFeature(randn(k))
-RandomFourierFeature(rng, kern::SqExponentialKernel, k::Int) = RandomFourierFeature(randn(rng, k))
+RandomFourierFeature(rng::AbstractRNG, kern::SqExponentialKernel, k::Int) = RandomFourierFeature(randn(rng, k))
 
 
 function (f::RandomFourierFeature)(x)
