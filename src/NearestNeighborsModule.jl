@@ -3,12 +3,12 @@ using ..API
 using ChainRulesCore
 using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs
 
-@doc raw"""
-Constructs the matrix $B$ for which $f = Bf + \epsilon$ were $f$
-are the values of the GP and $\epsilon$ is a vector of zero mean
+"""
+Constructs the matrix ``B`` for which ``f = Bf + \epsilon`` were ``f``
+are the values of the GP and ``\epsilon`` is a vector of zero mean
 independent Gaussian noise. 
-This matrix builds the conditional mean for function value $f_i$
-in terms of the function values for previous $f_j$, where $j < i$.
+This matrix builds the conditional mean for function value ``f_i``
+in terms of the function values for previous ``f_j``, where ``j < i``.
 See equation (9) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
@@ -33,9 +33,9 @@ function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
     return sparse(is, js, vals, n, n)
 end
 
-@doc raw"""
-Constructs the nonzero entries of a row in the matrix $B$
-for which $f = Bf + \epsilon$ for Gaussian process values $f$.
+"""
+Constructs the nonzero entries of a row in the matrix ``B``
+for which ``f = Bf + \epsilon`` for Gaussian process values ``f``.
 """ 
 function get_row(kern, ns, p)
     return kernelmatrix(kern,ns) \ kern.(ns, p)
@@ -65,9 +65,9 @@ function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B), pts::AbstractVe
         reduce(vcat, vals), n, n), pullback       
 end
     
-@doc raw"""
-Constructs the diagonal covariance matrix for noise vector $\epsilon$
-for which $f = Bf + \epsilon$. 
+"""
+Constructs the diagonal covariance matrix for noise vector ``\epsilon``
+for which ``f = Bf + \epsilon``. 
 See equation (10) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
@@ -88,6 +88,17 @@ function make_F(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
     return Diagonal(vals)
 end
 
+
+@doc raw"""
+In a ``k``-nearest neighbor (or Vecchia) Gaussian Process approximation,
+we assume that the joint distribution ``p(f_1, f_2, f_3, \dotsc)``
+factors as ``\prod_i p(f_i | f_{i-1}, \dotsc f_{i-k})``, where each ``f_i``
+is only influenced by its ``k`` previous neighbors. This allows us to express
+the vector ``f`` as ``Bf + \epsilon`` where ``B`` is a sparse matrix with only
+``k`` entries per row and ``\epsilon`` is Gaussian distributed with diagonal
+covariance ``F``. The precision matrix of the Gaussian process at the
+specified points simplifies to ``(I-B)'F^{-1}(I-B)``. 
+"""
 struct NearestNeighbors
     k::Int
 end
