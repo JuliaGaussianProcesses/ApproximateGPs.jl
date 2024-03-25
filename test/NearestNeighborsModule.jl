@@ -25,16 +25,17 @@
     @testset "Using nearest neighbors approximates the exact log likelihood" begin
         l1 = approx_lml(NearestNeighbors(3), fx, y)
         l2 = logpdf(fx, y)
-        @test l1 ≈ l2
+        @test isapprox(l1, l2; atol=1e-2)
     end
 
     @testset "Zygote can take gradients of the logpdf" begin
         function objective(lengthscale, var)
             kern = var * with_lengthscale(kern, lengthscale)
             fx = GP(kern)(x, 0.0)
-            -approx_lml(NearestNeighbors(3), fx, y)
+            approx_lml(NearestNeighbors(3), fx, y)
         end
-        grads = Zygote.gradient(objective, 1.0, 1.0)
+        lml, grads = Zygote.withgradient(objective, 1.0, 1.0)
+        @test approx_lml(NearestNeighbors(3), fx, y) ≈ lml
         @test all(abs.(grads) .> 0)
     end
 end

@@ -1,6 +1,6 @@
 module NearestNeighborsModule
 using ..API
-
+using ChainRulesCore
 using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs
 
 @doc raw"""
@@ -13,26 +13,58 @@ See equation (9) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
 function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
-	n = length(pts)
-	js = Int[]
-	is = Int[]
-	vals = T[]
-	for i in 1:n
-		if i == 1
-			ns = T[]
-		else
-			ns = pts[max(1, i-k):i-1]
-		end
-		row = kernelmatrix(kern,ns) \ kern.(ns, pts[i])
-		start_ix = max(i-k, 1)
-		col_ixs = start_ix:(start_ix + length(row) - 1)
-		append!(js, col_ixs)
-		append!(is, fill(i, length(col_ixs)))
-		append!(vals, row)
-	end
-	return sparse(is, js, vals, n, n)
+    n = length(pts)
+    len = ((k + 1) * k) ÷ 2 + (n - k - 1) * k
+    js = Int[]
+    is = Int[]
+    vals = T[]
+    sizehint!(js, len)
+    sizehint!(is, len)
+    sizehint!(vals, len)
+    for i in 2:n
+        ns = pts[max(1, i-k):i-1]
+        row = get_row(kern, ns, pts[i])
+        start_ix = max(i-k, 1)
+        col_ixs = start_ix:(start_ix + length(row) - 1)
+        append!(js, col_ixs)
+        append!(is, fill(i, length(col_ixs)))
+        append!(vals, row)
+    end
+    return sparse(is, js, vals, n, n)
 end
 
+@doc raw"""
+Constructs the nonzero entries of a row in the matrix $B$
+for which $f = Bf + \epsilon$ for Gaussian process values $f$.
+""" 
+function get_row(kern, ns, p)
+    return kernelmatrix(kern,ns) \ kern.(ns, p)
+end
+
+function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B), pts::AbstractVector{T}, k, kern) where {T}
+    n = length(pts)
+    js = Array{Vector{Int}}(undef, n - 1)
+    is = Array{Vector{Int}}(undef, n - 1)
+    vals = Array{Vector{T}}(undef, n - 1)
+    pbs = Array{Function}(undef, n -1)
+    for i in 2:n
+        ns = pts[max(1, i-k):i-1]
+        row, pb = rrule_via_ad(cfg, get_row, kern, ns, pts[i])
+        start_ix = max(i-k, 1)
+        col_ixs = start_ix:(start_ix + length(row) - 1)
+        js[i-1] = col_ixs
+        is[i-1] = fill(i, length(col_ixs))
+        vals[i-1] = row
+        pbs[i-1] = pb
+    end   
+    function pullback(Δy)
+      d_kern = sum(pbs[i](Δy[is[i][1], js[i]])[1] for i in 1:length(is))
+      (NoTangent(), NoTangent(), NoTangent(), d_kern)
+    end
+    return sparse(reduce(vcat, is), reduce(vcat, js),
+        reduce(vcat, vals), n, n), pullback       
+end
+    
 @doc raw"""
 Constructs the diagonal covariance matrix for noise vector $\epsilon$
 for which $f = Bf + \epsilon$. 
@@ -40,27 +72,29 @@ See equation (10) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
 function make_F(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
-	n = length(pts)
-	vals = T[]
-	for i in 1:n
-		prior = kern(pts[i], pts[i])
-		if i == 1
-			push!(vals, prior)
-		else
-			ns = pts[max(1, i-k):i-1]
-			ki = kern.(ns, pts[i])
-			push!(vals, prior - dot(ki, kernelmatrix(kern, ns) \ ki))
-		end
-	end
-	return Diagonal(vals)
+    n = length(pts)
+    vals = [
+        begin
+            prior = kern(pts[i], pts[i])
+            if i == 1
+                prior
+            else
+                ns = pts[max(1, i-k):i-1]
+                ki = kern.(ns, pts[i])
+                prior - dot(ki, kernelmatrix(kern, ns) \ ki)
+            end
+        end
+    for i in 1:n]
+    return Diagonal(vals)
 end
 
 struct NearestNeighbors
-	k::Int
+    k::Int
 end
 
+"`InvRoot(U)` is a lazy representation of `inv(UU')`"
 struct InvRoot{A}
-	U::A
+    U::A
 end
 
 LinearAlgebra.logdet(A::InvRoot) = -2 * logdet(A.U) 
@@ -69,15 +103,22 @@ AbstractGPs.diag_Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.diag_A
 
 AbstractGPs.Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.At_A(A.U' * X)
 
+"""
+Make a sparse approximation of the square root of the precision matrix
+"""
+function approx_root_prec(x::AbstractVector, k::Int, kern::Kernel)
+    F = make_F(x, k, kern)
+    B = make_B(x, k, kern)
+    UpperTriangular((I - B)' * inv(sqrt(F)))
+end
+
 function AbstractGPs.posterior(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector)
-	kern = fx.f.kernel
-	F = make_F(fx.x, nn.k, kern)
-	B = make_B(fx.x, nn.k, kern)
-	U = UpperTriangular((I - B)' * inv(sqrt(F)))
-	δ = y - mean(fx)
-	α = U * (U' * δ)
-	C = InvRoot(U)
-	return AbstractGPs.PosteriorGP(fx.f, (α=α, C=C, x=fx.x, δ=δ))
+    kern = fx.f.kernel
+    U = approx_root_prec(fx.x, nn.k, kern)
+    δ = y - mean(fx)
+    α = U * (U' * δ)
+    C = InvRoot(U)
+    return AbstractGPs.PosteriorGP(fx.f, (α=α, C=C, x=fx.x, δ=δ))
 end
 
 function API.approx_lml(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector)
