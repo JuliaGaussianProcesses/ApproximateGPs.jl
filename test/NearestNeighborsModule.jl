@@ -29,13 +29,17 @@
     end
 
     @testset "Zygote can take gradients of the logpdf" begin
-        function objective(lengthscale, var)
-            kern = var * with_lengthscale(kern, lengthscale)
-            fx = GP(kern)(x, 0.0)
-            approx_lml(NearestNeighbors(3), fx, y)
+        function objective(lengthscale::Float64, var::Float64)
+            kern2 = var * with_lengthscale(kern, lengthscale)
+            fx = GP(kern2)(x, 0.0)
+            return approx_lml(NearestNeighbors(3), fx, y)
         end
         lml, grads = Zygote.withgradient(objective, 1.0, 1.0)
+        
         @test approx_lml(NearestNeighbors(3), fx, y) ≈ lml
         @test all(abs.(grads) .> 0)
+        config = Zygote.ZygoteRuleConfig()
+        test_rrule(config, objective, 1.0, 1.0;
+            rrule_f=rrule_via_ad, check_inferred=false)
     end
 end

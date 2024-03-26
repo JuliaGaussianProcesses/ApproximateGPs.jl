@@ -37,13 +37,14 @@ end
 Constructs the nonzero entries of a row in the matrix ``B``
 for which ``f = Bf + \epsilon`` for Gaussian process values ``f``.
 """ 
-function get_row(kern, ns, p)
+function get_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
     return kernelmatrix(kern,ns) \ kern.(ns, p)
 end
 
-function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B), pts::AbstractVector{T}, k, kern) where {T}
+function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B),
+        pts::AbstractVector{T}, k::Int, kern::K) where {T, K <: Kernel}
     n = length(pts)
-    js = Array{Vector{Int}}(undef, n - 1)
+    js = Array{UnitRange{Int}}(undef, n - 1)
     is = Array{Vector{Int}}(undef, n - 1)
     vals = Array{Vector{T}}(undef, n - 1)
     pbs = Array{Function}(undef, n -1)
@@ -57,14 +58,16 @@ function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B), pts::AbstractVe
         vals[i-1] = row
         pbs[i-1] = pb
     end   
+    project = ProjectTo(Tangent{K})
     function pullback(Δy)
-      d_kern = sum(pbs[i](Δy[is[i][1], js[i]])[1] for i in 1:length(is))
-      (NoTangent(), NoTangent(), NoTangent(), d_kern)
+      d_kern = sum(project(pbs[i](Δy[is[i][1], js[i]])[2])
+          for i in 1:length(is))::Tangent{K}
+      return (NoTangent(), NoTangent(), NoTangent(), d_kern)
     end
     return sparse(reduce(vcat, is), reduce(vcat, js),
         reduce(vcat, vals), n, n), pullback       
 end
-    
+   
 """
 Constructs the diagonal covariance matrix for noise vector ``\epsilon``
 for which ``f = Bf + \epsilon``. 
