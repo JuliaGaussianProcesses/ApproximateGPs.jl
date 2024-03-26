@@ -15,7 +15,8 @@ using Zygote
 
 using AbstractGPs
 using ApproximateGPs
-using ApproximateGPs: SparseVariationalApproximationModule, LaplaceApproximationModule
+using ApproximateGPs:
+    SparseVariationalApproximationModule, LaplaceApproximationModule, NearestNeighborsModule
 
 const GROUP = get(ENV, "GROUP", "All")
 
