@@ -13,61 +13,32 @@ See equation (9) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
 function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
+    rows = make_rows(pts, k, kern)
+    js = make_js(rows, k)
+    is = make_is(js)
     n = length(pts)
-    len = ((k + 1) * k) ÷ 2 + (n - k - 1) * k
-    js = Int[]
-    is = Int[]
-    vals = T[]
-    sizehint!(js, len)
-    sizehint!(is, len)
-    sizehint!(vals, len)
-    for i in 2:n
-        ns = pts[max(1, i-k):i-1]
-        row = get_row(kern, ns, pts[i])
-        start_ix = max(i-k, 1)
-        col_ixs = start_ix:(start_ix + length(row) - 1)
-        append!(js, col_ixs)
-        append!(is, fill(i, length(col_ixs)))
-        append!(vals, row)
-    end
-    return sparse(is, js, vals, n, n)
+    return sparse(reduce(vcat, is), reduce(vcat, js), reduce(vcat, rows), n, n)
 end
 
-"""
-Constructs the nonzero entries of a row in the matrix ``B``
-for which ``f = Bf + \epsilon`` for Gaussian process values ``f``.
-""" 
-function get_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
-    return kernelmatrix(kern,ns) \ kern.(ns, p)
+function make_rows(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
+    [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
 end
 
-function ChainRulesCore.rrule(cfg::RuleConfig, ::typeof(make_B),
-        pts::AbstractVector{T}, k::Int, kern::K) where {T, K <: Kernel}
-    n = length(pts)
-    js = Array{UnitRange{Int}}(undef, n - 1)
-    is = Array{Vector{Int}}(undef, n - 1)
-    vals = Array{Vector{T}}(undef, n - 1)
-    pbs = Array{Function}(undef, n -1)
-    for i in 2:n
-        ns = pts[max(1, i-k):i-1]
-        row, pb = rrule_via_ad(cfg, get_row, kern, ns, pts[i])
-        start_ix = max(i-k, 1)
-        col_ixs = start_ix:(start_ix + length(row) - 1)
-        js[i-1] = col_ixs
-        is[i-1] = fill(i, length(col_ixs))
-        vals[i-1] = row
-        pbs[i-1] = pb
-    end   
-    project = ProjectTo(Tangent{K})
-    function pullback(Δy)
-      d_kern = sum(project(pbs[i](Δy[is[i][1], js[i]])[2])
-          for i in 1:length(is))::Tangent{K}
-      return (NoTangent(), NoTangent(), NoTangent(), d_kern)
-    end
-    return sparse(reduce(vcat, is), reduce(vcat, js),
-        reduce(vcat, vals), n, n), pullback       
+function make_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
+    kernelmatrix(kern,ns) \ kern.(ns, p)
 end
-   
+
+function make_js(rows, k)
+    [begin
+        start_ix = max(i-k, 1)
+        start_ix:(start_ix + length(row) - 1)
+    end for (row, i) in zip(rows, 2:(length(rows)+1))]
+end
+
+function make_is(js)
+    [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js)+1))]
+end
+  
 """
 Constructs the diagonal covariance matrix for noise vector ``\epsilon``
 for which ``f = Bf + \epsilon``. 
