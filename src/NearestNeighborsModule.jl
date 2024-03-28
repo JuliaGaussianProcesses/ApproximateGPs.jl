@@ -1,5 +1,6 @@
 module NearestNeighborsModule
 using ..API
+using ChainRulesCore
 using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs
 
 """
@@ -20,7 +21,7 @@ function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
 end
 
 function make_rows(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
-    @inbounds [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
+    [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
 end
 
 function make_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
