@@ -20,8 +20,7 @@ include("LaplaceApproximationModule.jl")
     build_laplace_objective, build_laplace_objective!
 
 include("NearestNeighborsModule.jl")
-@reexport using .NearestNeighborsModule:
-    NearestNeighbors
+@reexport using .NearestNeighborsModule: NearestNeighbors
 
 include("deprecations.jl")
 

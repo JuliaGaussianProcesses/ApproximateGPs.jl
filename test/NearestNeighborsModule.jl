@@ -6,8 +6,7 @@
     y = sin.(x)
 
     @testset "Using all neighbors is the same as the exact GP" begin
-        opt_pred = mean_and_cov(posterior(NearestNeighbors(length(x) - 1),
-            fx, y)(x2))
+        opt_pred = mean_and_cov(posterior(NearestNeighbors(length(x) - 1), fx, y)(x2))
         pred = mean_and_cov(posterior(fx, y)(x2))
         for i in 1:2
             @test all(isapprox.(opt_pred[i], pred[i]; atol=1e-4))

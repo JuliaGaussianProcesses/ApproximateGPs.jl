@@ -4,7 +4,7 @@ using ChainRulesCore
 using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs
 
 """
-Constructs the matrix ``B`` for which ``f = Bf + \epsilon`` were ``f``
+Constructs the matrix ``B`` for which ``f = Bf + \epsilon`` where ``f``
 are the values of the GP and ``\epsilon`` is a vector of zero mean
 independent Gaussian noise. 
 This matrix builds the conditional mean for function value ``f_i``
@@ -21,11 +21,11 @@ function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
 end
 
 function make_rows(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
-    [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
+    return [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
 end
 
 function make_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
-    kernelmatrix(kern,ns) \ kern.(ns, p)
+    return kernelmatrix(kern,ns) \ kern.(ns, p)
 end
 
 function make_js(rows, k)
@@ -35,9 +35,7 @@ function make_js(rows, k)
     end for (row, i) in zip(rows, 2:(length(rows)+1))]
 end
 
-function make_is(js)
-    [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js)+1))]
-end
+make_is(js) = [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js)+1))]
   
 """
 Constructs the diagonal covariance matrix for noise vector ``\epsilon``
@@ -45,7 +43,7 @@ for which ``f = Bf + \epsilon``.
 See equation (10) of (Datta, A. Nearest neighbor sparse Cholesky
 matrices in spatial statistics. 2022).
 """
-function make_F(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
+function make_F(pts::AbstractVector, k::Int, kern::Kernel)
     n = length(pts)
     vals = [
         begin
@@ -88,13 +86,11 @@ AbstractGPs.diag_Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.diag_A
 
 AbstractGPs.Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.At_A(A.U' * X)
 
-"""
-Make a sparse approximation of the square root of the precision matrix
-"""
+# Make a sparse approximation of the square root of the precision matrix
 function approx_root_prec(x::AbstractVector, k::Int, kern::Kernel)
     F = make_F(x, k, kern)
     B = make_B(x, k, kern)
-    UpperTriangular((I - B)' * inv(sqrt(F)))
+    return UpperTriangular((I - B)' * inv(sqrt(F)))
 end
 
 function AbstractGPs.posterior(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector)
@@ -107,10 +103,10 @@ function AbstractGPs.posterior(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y
 end
 
 function API.approx_lml(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector)
-  post = posterior(nn, fx, y)
-  quadform = post.data.α' * post.data.δ
-  ld = logdet(post.data.C)
-  return -0.5 * ld -(length(y)/2) * log(2 * pi) - 0.5 * quadform
+    post = posterior(nn, fx, y)
+    quadform = post.data.α' * post.data.δ
+    ld = logdet(post.data.C)
+    return -(ld + length(y) * eltype(y)(log2π) + quadform) / 2
 end
 
 end
