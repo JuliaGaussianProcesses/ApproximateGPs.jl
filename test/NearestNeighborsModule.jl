@@ -1,7 +1,7 @@
 @testset "nearest_neighbors" begin
-    x = [1., 2., 3.5, 4.2, 5.9, 8.]
+    x = [1.0, 2.0, 3.5, 4.2, 5.9, 8.0]
     kern = SqExponentialKernel()
-    fx = GP(kern)(x, 0.0);
+    fx = GP(kern)(x, 0.0)
     x2 = 1.0:0.1:8
     y = sin.(x)
 
@@ -20,7 +20,7 @@
             @test all(isapprox.(opt_pred[i], pred[i]; atol=1e-1))
         end
     end
-    
+
     @testset "Using nearest neighbors approximates the exact log likelihood" begin
         l1 = approx_lml(NearestNeighbors(3), fx, y)
         l2 = logpdf(fx, y)
@@ -29,12 +29,12 @@
 
     @testset "Zygote can take gradients of the logpdf" begin
         function objective(lengthscale::Float64)
-            kern2 =  with_lengthscale(kern, lengthscale)
+            kern2 = with_lengthscale(kern, lengthscale)
             fx = GP(kern2)(x, 0.0)
             return approx_lml(NearestNeighbors(3), fx, y)
         end
         lml, grads = Zygote.withgradient(objective, 1.0)
-        
+
         @test approx_lml(NearestNeighbors(3), fx, y) ≈ lml
         @test all(abs.(grads) .> 0)
     end

@@ -21,22 +21,22 @@ function make_B(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
 end
 
 function make_rows(pts::AbstractVector{T}, k::Int, kern::Kernel) where {T}
-    return [make_row(kern, pts[max(1, i-k):i-1], pts[i]) for i in 2:length(pts)]
+    return [make_row(kern, pts[max(1, i - k):(i - 1)], pts[i]) for i in 2:length(pts)]
 end
 
 function make_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
-    return kernelmatrix(kern,ns) \ kern.(ns, p)
+    return kernelmatrix(kern, ns) \ kern.(ns, p)
 end
 
 function make_js(rows, k)
     return map(zip(rows, 2:(length(rows) + 1))) do (row, i)
-        start_ix = max(i-k, 1)
+        start_ix = max(i - k, 1)
         return start_ix:(start_ix + length(row) - 1)
     end
 end
 
-make_is(js) = [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js)+1))]
-  
+make_is(js) = [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js) + 1))]
+
 """
 Constructs the diagonal covariance matrix for noise vector ``\epsilon``
 for which ``f = Bf + \epsilon``. 
@@ -51,15 +51,14 @@ function make_F(pts::AbstractVector, k::Int, kern::Kernel)
             if i == 1
                 prior
             else
-                ns = pts[max(1, i-k):i-1]
+                ns = pts[max(1, i - k):(i - 1)]
                 ki = kern.(ns, pts[i])
                 prior - dot(ki, kernelmatrix(kern, ns) \ ki)
             end
-        end
-    for i in 1:n]
+        end for i in 1:n
+    ]
     return Diagonal(vals)
 end
-
 
 @doc raw"""
 In a ``k``-nearest neighbor (or Vecchia) Gaussian Process approximation,
@@ -80,9 +79,11 @@ struct InvRoot{A}
     U::A
 end
 
-LinearAlgebra.logdet(A::InvRoot) = -2 * logdet(A.U) 
+LinearAlgebra.logdet(A::InvRoot) = -2 * logdet(A.U)
 
-AbstractGPs.diag_Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.diag_At_A(A.U' * X)
+function AbstractGPs.diag_Xt_invA_X(A::InvRoot, X::AbstractVecOrMat)
+    return AbstractGPs.diag_At_A(A.U' * X)
+end
 
 AbstractGPs.Xt_invA_X(A::InvRoot, X::AbstractVecOrMat) = AbstractGPs.At_A(A.U' * X)
 
@@ -93,7 +94,9 @@ function approx_root_prec(x::AbstractVector, k::Int, kern::Kernel)
     return UpperTriangular((I - B)' * inv(sqrt(F)))
 end
 
-function AbstractGPs.posterior(nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector)
+function AbstractGPs.posterior(
+    nn::NearestNeighbors, fx::AbstractGPs.FiniteGP, y::AbstractVector
+)
     kern = fx.f.kernel
     U = approx_root_prec(fx.x, nn.k, kern)
     δ = y - mean(fx)
