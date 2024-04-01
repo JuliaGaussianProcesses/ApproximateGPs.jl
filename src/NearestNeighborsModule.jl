@@ -1,7 +1,7 @@
 module NearestNeighborsModule
 using ..API
 using ChainRulesCore
-using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs
+using KernelFunctions, LinearAlgebra, SparseArrays, AbstractGPs, IrrationalConstants
 
 """
 Constructs the matrix ``B`` for which ``f = Bf + \epsilon`` where ``f``
@@ -29,10 +29,10 @@ function make_row(kern::Kernel, ns::AbstractVector{T}, p::T) where {T}
 end
 
 function make_js(rows, k)
-    [begin
+    return map(zip(rows, 2:(length(rows) + 1))) do (row, i)
         start_ix = max(i-k, 1)
-        start_ix:(start_ix + length(row) - 1)
-    end for (row, i) in zip(rows, 2:(length(rows)+1))]
+        return start_ix:(start_ix + length(row) - 1)
+    end
 end
 
 make_is(js) = [fill(i, length(col_ix)) for (col_ix, i) in zip(js, 2:(length(js)+1))]
