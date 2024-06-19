@@ -4,7 +4,7 @@
 ApproximateGPs builds on top of [AbstractGPs.jl](https://juliagaussianprocesses.github.io/AbstractGPs.jl/dev/), so all of its features are reexported automatically by ApproximateGPs.
 ```julia
 using ApproximateGPs, Random
-rnd = MersenneTwister(1453)  # set a random seed
+rng = MersenneTwister(1453)  # set a random seed
 ```
 
 First, we construct a prior Gaussian process with a Matern-3/2 kernel and zero mean function, and sample some data. More exotic kernels can be constructed using [KernelFunctions.jl](https://juliagaussianprocesses.github.io/KernelFunctions.jl/stable/userguide/).
