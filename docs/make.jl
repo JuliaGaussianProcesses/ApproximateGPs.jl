@@ -31,11 +31,6 @@ makedocs(;
         "API" => joinpath.(Ref("api"), ["index.md", "sparsevariational.md", "laplace.md"]),
         "Examples" => JuliaGPsDocs.find_generated_examples(ApproximateGPs),
     ],
-    strict=true,
     checkdocs=:exports,
     doctestfilters=JuliaGPsDocs.DOCTEST_FILTERS,
-)
-
-deploydocs(;
-    repo="github.com/JuliaGaussianProcesses/ApproximateGPs.jl.git", push_preview=true
 )

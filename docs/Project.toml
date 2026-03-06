@@ -4,4 +4,4 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 
 [compat]
 ApproximateGPs = "0.3,0.4"
-Documenter = "0.27"
+Documenter = "1"
