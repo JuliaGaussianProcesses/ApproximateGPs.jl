@@ -6,7 +6,7 @@ using JuliaGPsDocs
 
 using ApproximateGPs
 
-JuliaGPsDocs.generate_examples(ApproximateGPs)
+JuliaGPsDocs.generate_examples(ApproximateGPs; ntasks=1)
 
 ### Build documentation
 using Documenter
