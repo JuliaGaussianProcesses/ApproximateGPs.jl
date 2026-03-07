@@ -194,7 +194,7 @@ struct LaplaceCache{
     Wsqrt::Tv3  # sqrt.(W)
     loglik::Tf  # ∑ᵢlog p(yᵢ|fᵢ)
     d_loglik::Tv4  # ∂/∂fᵢloglik
-    B_ch::Tc  # cholesky(I + Wsqrt * K * Wsqrt)
+    B_ch::Tc  # cholesky(I + Diagonal(Wsqrt) * K * Diagonal(Wsqrt))
     a::Tv5  # K⁻¹ f
 end
 
