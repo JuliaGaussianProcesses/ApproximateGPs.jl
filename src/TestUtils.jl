@@ -12,7 +12,8 @@ using ApproximateGPs
 
 function generate_data()
     X = range(0, 23.5; length=48)
-    # The random number generator changed in 1.6->1.7. The following vector was generated in Julia 1.6.
+    # The random number generator changed across older Julia releases. The following vector
+    # was generated before that change to keep this test stable across supported versions.
     # The generating code below is only kept for illustrative purposes.
     #! format: off
     Y = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]

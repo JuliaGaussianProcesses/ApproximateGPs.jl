@@ -3,9 +3,10 @@
     dist_y_given_f = ApproximateGPs.TestUtils.dist_y_given_f
     build_latent_gp = ApproximateGPs.TestUtils.build_latent_gp
 
-    quiet_gradient(f, x) = with_logger(NullLogger()) do
-        only(Zygote.gradient(f, x))
-    end
+    quiet_gradient(f, x) =
+        with_logger(NullLogger()) do
+            only(Zygote.gradient(f, x))
+        end
 
     function optimize_elbo(
         build_latent_gp,

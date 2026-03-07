@@ -358,7 +358,9 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
         )
 
         # ∂K = df/dK Δf
-        ∂K = @thunk((cache.Wsqrt .* (cache.B_ch \ (Δf_opt ./ cache.Wsqrt))) * cache.d_loglik')
+        ∂K = @thunk(
+            (cache.Wsqrt .* (cache.B_ch \ (Δf_opt ./ cache.Wsqrt))) * cache.d_loglik'
+        )
 
         return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
     end
