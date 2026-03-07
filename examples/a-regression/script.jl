@@ -81,7 +81,7 @@ struct SVGPModel
     A  # square-root of variational covariance
 end
 
-Flux.@functor SVGPModel (k, z, m, A);
+Flux.@layer SVGPModel trainable=(k, z, m, A)
 
 # Set the observation noise for our model, along with a `jitter` term
 # to help with numerical stability.

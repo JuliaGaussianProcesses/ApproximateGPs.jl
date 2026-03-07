@@ -145,7 +145,7 @@
                 m # variational mean
                 A # variational covariance sqrt (Σ = A'A)
             end
-            Flux.@functor SVGPModel (m, A) # Only train the variational parameters
+            Flux.@layer SVGPModel trainable=(m, A)
 
             function construct_parts(m::SVGPModel, x)
                 f = make_gp(make_kernel(m.k))

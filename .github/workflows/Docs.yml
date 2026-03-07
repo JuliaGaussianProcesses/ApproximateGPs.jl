@@ -28,5 +28,5 @@ jobs:
           GKSwstype: nul # turn off GR's interactive plotting for notebooks
         uses: TuringLang/actions/DocsDocumenter@main
         with:
-          julia-version: '1.6'
+          julia-version: '1'
           navbar-url: https://raw.githubusercontent.com/JuliaGaussianProcesses/.github/refs/heads/main/DocumenterNavbar/JuliaGPNavbar.html
