@@ -145,7 +145,7 @@
                 m # variational mean
                 A # variational covariance sqrt (Σ = A'A)
             end
-            Flux.@layer SVGPModel trainable=(m, A)
+            Flux.@layer SVGPModel trainable = (m, A)
 
             function construct_parts(m::SVGPModel, x)
                 f = make_gp(make_kernel(m.k))
@@ -170,7 +170,9 @@
             opt = Flux.Adam(0.001)
 
             svgp_ps = Flux.params(svgp_model)
-            Flux.train!((x, y) -> svgp_loss(svgp_model, x, y), svgp_ps, ncycle(data, 20000), opt)
+            Flux.train!(
+                (x, y) -> svgp_loss(svgp_model, x, y), svgp_ps, ncycle(data, 20000), opt
+            )
 
             ## construct the posteriors
             f_gpr = make_gp(make_kernel(k_init))
