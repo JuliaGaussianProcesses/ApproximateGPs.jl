@@ -23,7 +23,13 @@ DocMeta.setdocmeta!(
 
 makedocs(;
     sitename="ApproximateGPs.jl",
-    format=Documenter.HTML(),
+    format=Documenter.HTML(;
+        size_threshold_ignore=[
+            "examples/a-regression/index.md",
+            "examples/b-classification/index.md",
+            "examples/c-comparisons/index.md",
+        ],
+    ),
     modules=[ApproximateGPs],
     pages=[
         "Home" => "index.md",
