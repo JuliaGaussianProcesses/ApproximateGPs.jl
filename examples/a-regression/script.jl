@@ -167,15 +167,14 @@ plot!(-1:0.001:1, init_post; label="Initial Posterior", color=4)
 #
 # Training the model now simply proceeds with the usual `Flux.jl` training loop.
 
-opt = ADAM(0.001)  # Define the optimiser
-params = Flux.params(model);  # Extract the model parameters
+opt = Flux.Adam(0.001)
 
 # One of the major advantages of the SVGP model is that it allows stochastic
 # estimation of the ELBO by using minibatching of the training data. This is
 # very straightforward to achieve with `Flux.jl`'s utilities:
 
 b = 100 # minibatch size
-data_loader = Flux.Data.DataLoader((x, y); batchsize=b)
+data_loader = Flux.DataLoader((x, y); batchsize=b)
 
 # The loss (negative ELBO) before training
 
@@ -186,12 +185,13 @@ loss(model, x, y)
 
 using IterTools: ncycle
 
+params = Flux.params(model)
 Flux.train!(
     (x, y) -> loss(model, x, y; num_data=N),
     params,
     ncycle(data_loader, 300), # Train for 300 epochs
     opt,
-);
+)
 
 # Negative ELBO after training
 
