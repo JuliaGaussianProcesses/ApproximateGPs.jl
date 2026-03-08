@@ -6,7 +6,7 @@ using JuliaGPsDocs
 
 using ApproximateGPs
 
-JuliaGPsDocs.generate_examples(ApproximateGPs)
+JuliaGPsDocs.generate_examples(ApproximateGPs; ntasks=1)
 
 ### Build documentation
 using Documenter
@@ -23,7 +23,13 @@ DocMeta.setdocmeta!(
 
 makedocs(;
     sitename="ApproximateGPs.jl",
-    format=Documenter.HTML(),
+    format=Documenter.HTML(;
+        size_threshold_ignore=[
+            "examples/a-regression/index.md",
+            "examples/b-classification/index.md",
+            "examples/c-comparisons/index.md",
+        ],
+    ),
     modules=[ApproximateGPs],
     pages=[
         "Home" => "index.md",
@@ -31,11 +37,6 @@ makedocs(;
         "API" => joinpath.(Ref("api"), ["index.md", "sparsevariational.md", "laplace.md"]),
         "Examples" => JuliaGPsDocs.find_generated_examples(ApproximateGPs),
     ],
-    strict=true,
     checkdocs=:exports,
     doctestfilters=JuliaGPsDocs.DOCTEST_FILTERS,
-)
-
-deploydocs(;
-    repo="github.com/JuliaGaussianProcesses/ApproximateGPs.jl.git", push_preview=true
 )

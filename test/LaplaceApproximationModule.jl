@@ -3,6 +3,11 @@
     dist_y_given_f = ApproximateGPs.TestUtils.dist_y_given_f
     build_latent_gp = ApproximateGPs.TestUtils.build_latent_gp
 
+    quiet_gradient(f, x) =
+        with_logger(NullLogger()) do
+            only(Zygote.gradient(f, x))
+        end
+
     function optimize_elbo(
         build_latent_gp,
         theta0,
@@ -16,7 +21,7 @@
         objective = build_laplace_objective(
             build_latent_gp, xs, ys; newton_warmstart, newton_callback
         )
-        objective_grad(θ) = only(Zygote.gradient(objective, θ))
+        objective_grad(θ) = quiet_gradient(objective, θ)
 
         training_results = Optim.optimize(
             objective, objective_grad, theta0, optimizer, optim_options; inplace=false
@@ -44,7 +49,7 @@
                 return -lml
             end
             fd_grad = only(FiniteDifferences.grad(central_fdm(5, 1), objective, theta0))
-            ad_grad = only(Zygote.gradient(objective, theta0))
+            ad_grad = quiet_gradient(objective, theta0)
             @test ad_grad ≈ fd_grad rtol = 1e-6
         end
 
@@ -65,7 +70,9 @@
             end
 
             eval_newton_inner_loop(theta0)  # forward pass works
-            @test_throws ErrorException Zygote.gradient(eval_newton_inner_loop, theta0)
+            with_logger(NullLogger()) do
+                @test_throws ErrorException Zygote.gradient(eval_newton_inner_loop, theta0)
+            end
         end
 
         @testset "newton_inner_loop chain rules" begin
@@ -160,7 +167,7 @@
             @testset "gradient-based" begin
                 expected_thetahat = [7.709076337653239, 1.51820292019697]
 
-                objective_grad(θ) = only(Zygote.gradient(objective, θ))
+                objective_grad(θ) = quiet_gradient(objective, θ)
                 res = Optim.optimize(
                     objective, objective_grad, theta0, LBFGS(); inplace=false
                 )

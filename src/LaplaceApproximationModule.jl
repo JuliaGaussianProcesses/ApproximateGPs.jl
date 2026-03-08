@@ -183,18 +183,19 @@ struct LaplaceCache{
     Tv1<:AbstractVector,
     Tv2<:AbstractVector,
     Tv3<:AbstractVector,
-    Td<:Diagonal,
+    Tv4<:AbstractVector,
+    Tv5<:AbstractVector,
     Tf<:Real,
     Tc<:Cholesky,
 }
     K::Tm  # kernel matrix
     f::Tv1  # mode of posterior p(f | y)
-    W::Td  # diagonal matrix of ∂²/∂fᵢ² loglik
-    Wsqrt::Td  # sqrt(W)
+    W::Tv2  # diagonal of -∂²/∂fᵢ² loglik
+    Wsqrt::Tv3  # sqrt.(W)
     loglik::Tf  # ∑ᵢlog p(yᵢ|fᵢ)
-    d_loglik::Tv2  # ∂/∂fᵢloglik
-    B_ch::Tc  # cholesky(I + Wsqrt * K * Wsqrt)
-    a::Tv3  # K⁻¹ f
+    d_loglik::Tv4  # ∂/∂fᵢloglik
+    B_ch::Tc  # cholesky(I + Diagonal(Wsqrt) * K * Diagonal(Wsqrt))
+    a::Tv5  # K⁻¹ f
 end
 
 function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
@@ -209,12 +210,12 @@ function _laplace_train_intermediates(dist_y_given_f, ys, K, f)
     ll, d_ll, d2_ll = loglik_and_derivs(dist_y_given_f, ys, f)
 
     # inner loop iteration of RW Algorithm 3.1, lines 4-7
-    W = -Diagonal(d2_ll)
-    Wsqrt = sqrt(W)
-    B = I + Wsqrt * K * Wsqrt
+    W = -d2_ll
+    Wsqrt = sqrt.(W)
+    B = I + (Wsqrt .* K) .* Wsqrt'
     B_ch = cholesky(Symmetric(B))
-    b = W * f + d_ll
-    a = b - Wsqrt * (B_ch \ (Wsqrt * K * b))
+    b = W .* f .+ d_ll
+    a = b - Wsqrt .* (B_ch \ (Wsqrt .* (K * b)))
 
     #return (; K, f, W, Wsqrt, loglik=ll, d_loglik=d_ll, B_ch, a)
     return LaplaceCache(K, f, W, Wsqrt, ll, d_ll, B_ch, a)
@@ -321,7 +322,7 @@ function ChainRulesCore.frule(
     # fdot = (I - K grad2_log_p_y_given_f(f))⁻¹ Kdot grad_log_p_y_given_f(f)
     # (I - K grad2_log_p_y_given_f(f)) = (I + K W) = (√W)⁻¹ (I + √W K √W) √W = (√W)⁻¹ B √W
     # fdot = (√W)⁻¹ B⁻¹ √W Kdot grad_log_p_y_given_f(f)
-    ∂f_opt = cache.Wsqrt \ (cache.B_ch \ (cache.Wsqrt * (ΔK * cache.d_loglik)))
+    ∂f_opt = (cache.B_ch \ (cache.Wsqrt .* (ΔK * cache.d_loglik))) ./ cache.Wsqrt
 
     return f_opt, ∂f_opt
 end
@@ -357,7 +358,9 @@ function ChainRulesCore.rrule(::typeof(newton_inner_loop), dist_y_given_f, ys, K
         )
 
         # ∂K = df/dK Δf
-        ∂K = @thunk(cache.Wsqrt * (cache.B_ch \ (cache.Wsqrt \ Δf_opt)) * cache.d_loglik')
+        ∂K = @thunk(
+            (cache.Wsqrt .* (cache.B_ch \ (Δf_opt ./ cache.Wsqrt))) * cache.d_loglik'
+        )
 
         return (∂self, ∂dist_y_given_f, ∂ys, ∂K)
     end
@@ -379,7 +382,7 @@ function laplace_f_cov(cache)
     # = (√W⁻¹) (I - (I + √W K √W)⁻¹) (√W⁻¹)
     # = (√W⁻¹) (I - B⁻¹) (√W⁻¹)
     B_ch = cache.B_ch
-    Wsqrt_inv = inv(cache.Wsqrt)
+    Wsqrt_inv = Diagonal(inv.(cache.Wsqrt))
     return Wsqrt_inv * (I - inv(B_ch)) * Wsqrt_inv
 end
 
@@ -423,7 +426,7 @@ function _laplace_predict_intermediates(cache, prior_at_x, xnew)
     k_x_xnew = cov(prior_at_x.f, prior_at_x.x, xnew)
     f_mean = mean(prior_at_x.f, xnew) + k_x_xnew' * cache.d_loglik  # RW (3.21)
     L = cache.B_ch.L
-    v = L \ (cache.Wsqrt * k_x_xnew)  # RW (3.29)
+    v = L \ (cache.Wsqrt .* k_x_xnew)  # RW (3.29)
     return f_mean, v
 end
 
@@ -454,8 +457,8 @@ end
 
 function Statistics.cov(f::LaplacePosteriorGP, x::AbstractVector, y::AbstractVector)
     L = f.data.B_ch.L
-    vx = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, x))
-    vy = L \ (f.data.Wsqrt * cov(f.prior.f, f.prior.x, y))
+    vx = L \ (f.data.Wsqrt .* cov(f.prior.f, f.prior.x, x))
+    vy = L \ (f.data.Wsqrt .* cov(f.prior.f, f.prior.x, y))
     return cov(f.prior.f, x, y) - vx' * vy
 end
 
