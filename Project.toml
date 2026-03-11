@@ -25,7 +25,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-AbstractGPs = "0.3, 0.4, 0.5"
+AbstractGPs = "0.5.17"
 ChainRulesCore = "1.7"
 Distributions = "0.25"
 FastGaussQuadrature = "0.4, 0.5"
